@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::iter;
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub struct Render {
@@ -135,8 +136,177 @@ impl Row {
     }
 }
 
-pub trait Dimensions: Clone + Ord + Debug {
-    fn locus(&self) -> String;
+pub trait Schematic {
+    type Dims: Dimensions;
+
+    fn width(&self) -> usize;
+
+    fn columns(&self) -> Vec<String>;
+    // fn values(&self, t: T) -> Self::Dims {
+}
+
+pub struct Schema;
+
+pub struct Schema1<T> {
+    one: PhantomData<T>,
+    column_1: String,
+}
+
+pub struct Schema2<T, U> {
+    one: PhantomData<T>,
+    column_1: String,
+    two: PhantomData<U>,
+    column_2: String,
+    breakdown: Option<String>,
+}
+
+pub struct Schema3<T, U, V> {
+    one: PhantomData<T>,
+    column_1: String,
+    two: PhantomData<U>,
+    column_2: String,
+    three: PhantomData<V>,
+    column_3: String,
+    breakdown: Option<String>,
+}
+
+// pub struct Schema4<T, U, V, W>;
+// pub struct Schema5<T, U, V, W, X>;
+// pub struct Schema6<T, U, V, W, X, Y>;
+// pub struct Schema7<T, U, V, W, X, Y, Z>;
+
+impl Schema {
+    pub fn one<T>(column_1: String) -> Schema1<T> {
+        Schema1 {
+            one: PhantomData,
+            column_1,
+        }
+    }
+
+    pub fn two<T, U>(column_1: impl Into<String>, column_2: impl Into<String>) -> Schema2<T, U> {
+        Schema2 {
+            one: PhantomData,
+            column_1: column_1.into(),
+            two: PhantomData,
+            column_2: column_2.into(),
+            breakdown: None,
+        }
+    }
+
+    pub fn three<T, U, V>(
+        column_1: String,
+        column_2: String,
+        column_3: String,
+    ) -> Schema3<T, U, V> {
+        Schema3 {
+            one: PhantomData,
+            column_1,
+            two: PhantomData,
+            column_2,
+            three: PhantomData,
+            column_3,
+            breakdown: None,
+        }
+    }
+}
+
+impl<T> Schematic for Schema1<T>
+where
+    T: Display + Ord,
+{
+    type Dims = (T,);
+
+    fn width(&self) -> usize {
+        1
+    }
+
+    fn columns(&self) -> Vec<String> {
+        vec![self.column_1.clone()]
+    }
+}
+
+// impl<T> Schema1<T> {
+//     pub fn values(&self, t: T) -> (T,) {
+//         (t,)
+//     }
+// }
+
+pub enum Breakdown2 {
+    Second,
+}
+
+impl<T, U> Schematic for Schema2<T, U>
+where
+    T: Display + Ord,
+    U: Display + Ord,
+{
+    type Dims = (T, U);
+
+    fn width(&self) -> usize {
+        2
+    }
+
+    fn columns(&self) -> Vec<String> {
+        vec![self.column_1.clone(), self.column_2.clone()]
+    }
+}
+
+impl<T, U> Schema2<T, U> {
+    pub fn breakdown(mut self, breakdown: Breakdown2) -> Self {
+        self.breakdown = match breakdown {
+            Breakdown2::Second => Some(self.column_2.clone()),
+        };
+        self
+    }
+
+    // pub fn values(&self, t: T, u: U) -> (T, U) {
+    //     (t, u)
+    // }
+}
+
+pub enum Breakdown3 {
+    Second,
+    Third,
+}
+
+impl<T, U, V> Schematic for Schema3<T, U, V>
+where
+    T: Display + Ord,
+    U: Display + Ord,
+    V: Display + Ord,
+{
+    // TODO
+    type Dims = (T, U);
+
+    fn width(&self) -> usize {
+        3
+    }
+
+    fn columns(&self) -> Vec<String> {
+        vec![
+            self.column_1.clone(),
+            self.column_2.clone(),
+            self.column_3.clone(),
+        ]
+    }
+}
+
+impl<T, U, V> Schema3<T, U, V> {
+    pub fn breakdown(mut self, breakdown: Breakdown3) -> Self {
+        self.breakdown = match breakdown {
+            Breakdown3::Second => Some(self.column_2.clone()),
+            Breakdown3::Third => Some(self.column_3.clone()),
+        };
+        self
+    }
+
+    // pub fn values(&self, t: T, u: U) -> (T, U) {
+    //     (t, u)
+    // }
+}
+
+pub trait Dimensions: Ord {
+    // fn locus(&self) -> String;
 
     fn chain(&self) -> Vec<String>;
 }
@@ -151,17 +321,17 @@ impl<T> OneD<T> {
         Self { a }
     }
 }
+//
+// impl<T> Display for OneD<T> {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "asdf")
+//     }
+// }
 
-impl<T> Display for OneD<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "asdf")
-    }
-}
-
-impl<T: Clone + Display + Ord + Debug> Dimensions for OneD<T> {
-    fn locus(&self) -> String {
-        self.a.to_string()
-    }
+impl<T: Display + Ord> Dimensions for OneD<T> {
+    // fn locus(&self) -> String {
+    //     self.a.to_string()
+    // }
 
     fn chain(&self) -> Vec<String> {
         vec![self.a.to_string()]
@@ -187,16 +357,16 @@ where
         Self { primary, secondary }
     }
 }
-
-impl<T, U> Display for TwoD<T, U>
-where
-    T: Ord,
-    U: Ord,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "asdf")
-    }
-}
+//
+// impl<T, U> Display for TwoD<T, U>
+// where
+//     T: Ord,
+//     U: Ord,
+// {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "asdf")
+//     }
+// }
 
 impl<T, U> PartialOrd for TwoD<T, U>
 where
@@ -222,15 +392,62 @@ where
 
 impl<T, U> Dimensions for TwoD<T, U>
 where
-    T: Clone + Display + Ord + Debug,
-    U: Clone + Display + Ord + Debug,
+    T: Display + Ord,
+    U: Display + Ord,
 {
-    fn locus(&self) -> String {
-        self.primary.to_string()
-    }
+    // fn locus(&self) -> String {
+    //     self.primary.to_string()
+    // }
 
     fn chain(&self) -> Vec<String> {
         vec![self.primary.to_string(), self.secondary.to_string()]
+    }
+}
+//
+// impl<T, U> PartialOrd for (T, U)
+// where
+//     T: PartialOrd + Ord,
+//     U: PartialOrd + Ord,
+// {
+//     fn partial_cmp(&self, other: &TwoD<T, U>) -> Option<Ordering> {
+//         Some(self.cmp(other))
+//     }
+// }
+//
+// impl<T, U> Ord for (T, U)
+// where
+//     T: Ord,
+//     U: Ord,
+// {
+//     fn cmp(&self, other: &Self) -> Ordering {
+//         self.0.cmp(&other.0).then(self.1.cmp(&other.1))
+//     }
+// }
+
+impl<T> Dimensions for (T,)
+where
+    T: Display + Ord,
+{
+    // fn locus(&self) -> String {
+    //     self.0.to_string()
+    // }
+
+    fn chain(&self) -> Vec<String> {
+        vec![self.0.to_string()]
+    }
+}
+
+impl<T, U> Dimensions for (T, U)
+where
+    T: Display + Ord,
+    U: Display + Ord,
+{
+    // fn locus(&self) -> String {
+    //     self.0.to_string()
+    // }
+
+    fn chain(&self) -> Vec<String> {
+        vec![self.0.to_string(), self.1.to_string()]
     }
 }
 
@@ -261,16 +478,16 @@ where
     }
 }
 
-impl<T, U, V> Display for ThreeD<T, U, V>
-where
-    T: Ord,
-    U: Ord,
-    V: Ord,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "asdf")
-    }
-}
+// impl<T, U, V> Display for ThreeD<T, U, V>
+// where
+//     T: Ord,
+//     U: Ord,
+//     V: Ord,
+// {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "asdf")
+//     }
+// }
 
 impl<T, U, V> PartialOrd for ThreeD<T, U, V>
 where
@@ -299,13 +516,13 @@ where
 
 impl<T, U, V> Dimensions for ThreeD<T, U, V>
 where
-    T: Clone + Display + Ord + Debug,
-    U: Clone + Display + Ord + Debug,
-    V: Clone + Display + Ord + Debug,
+    T: Display + Ord,
+    U: Display + Ord,
+    V: Display + Ord,
 {
-    fn locus(&self) -> String {
-        self.primary.to_string()
-    }
+    // fn locus(&self) -> String {
+    //     self.primary.to_string()s
+    // }
 
     fn chain(&self) -> Vec<String> {
         vec![
@@ -316,37 +533,56 @@ where
     }
 }
 
-pub struct Categorical<D: Dimensions> {
-    data: Vec<(D, usize)>,
+pub const DEFAULT_SEPARATORS: &[&str; 3] = &[">", "-", "~"];
+
+pub struct Categorical<S>
+where
+    S: Schematic,
+    <S as Schematic>::Dims: Dimensions,
+{
+    schema: S,
+    data: Vec<(S::Dims, usize)>,
 }
 
-impl<D: Dimensions> Categorical<D> {
-    pub fn builder() -> Categorical<D> {
+impl<S: Schematic> Categorical<S> {
+    pub fn builder(schema: S) -> Categorical<S> {
         Self {
+            schema,
             data: Vec::default(),
         }
     }
 
-    pub fn add(mut self, key: D, value: usize) -> Categorical<D> {
+    pub fn add(mut self, key: S::Dims, value: usize) -> Categorical<S> {
         self.data.push((key, value));
         self
     }
 
-    pub fn render(self, config: Render) -> Flat {
-        let mut values: HashMap<String, usize> =
-            self.data.iter().map(|(k, _)| (k.locus(), 0)).collect();
+    pub fn render(self, config: Render, separators: &[&str]) -> Flat {
+        let mut values: HashMap<String, usize> = self
+            .data
+            .iter()
+            .map(|(k, _)| (k.chain()[0].clone(), 0))
+            .collect();
         let mut full_chains: HashSet<String> = HashSet::default();
-        let mut sort_keys: Vec<D> = Vec::default();
+        let mut sort_keys: Vec<&S::Dims> = Vec::default();
         let ancestor_key = |chain: &[String], dag_index: usize| chain[0..dag_index + 1].join("|");
         let mut ancestors: HashMap<String, usize> = HashMap::default();
         let mut columns = 0;
-        let mut column_widths: HashMap<usize, usize> = HashMap::default();
+        let mut column_widths: HashMap<usize, usize> = self
+            .schema
+            .columns()
+            .iter()
+            .enumerate()
+            .map(|(dag_index, c)| {
+                let j = self.schema.width() - dag_index - 1;
+                (j, c.len())
+            })
+            .collect();
         let mut maximum_value: usize = 0;
 
         for (k, v) in self.data.iter() {
-            let locus = k.locus();
             let chain = k.chain();
-            assert!(chain[0] == locus);
+            let locus = chain[0].clone();
             let full_chain = chain.join("|");
 
             if !full_chains.contains(&full_chain) {
@@ -382,31 +618,33 @@ impl<D: Dimensions> Categorical<D> {
                 maximum_value = *aggregate;
             }
 
-            if !sort_keys.contains(k) {
-                sort_keys.push(k.clone());
+            if !sort_keys.contains(&k) {
+                sort_keys.push(k);
             }
         }
 
         sort_keys.sort();
-        let mut rows = Vec::default();
+        let columns = self.schema.columns();
+        let mut rows = vec![Row::Partial {
+            key: column_widths
+                .iter()
+                .map(|(j, width)| format!("{:width$}   ", columns[*j]))
+                .collect(),
+        }];
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
-        let mut sep = "ᗒ";
+        let mut separator_index = 0;
         let mut current_locus = None;
 
         for k in sort_keys.iter() {
             let mut group_value = None;
-            let locus = k.locus();
+            let chain = k.chain();
+            let locus = chain[0].clone();
 
             match &mut current_locus {
                 Some(l) => {
                     if l != &locus {
                         current_locus.replace(locus.clone());
-
-                        if sep == "ᗒ" {
-                            sep = "ᐅ";
-                        } else {
-                            sep = "ᗒ";
-                        }
+                        separator_index = (separator_index + 1) % separators.len();
                     }
                 }
                 None => {
@@ -414,7 +652,8 @@ impl<D: Dimensions> Categorical<D> {
                 }
             }
 
-            let chain = k.chain();
+            let separator = separators[separator_index];
+
             let mut key = "".to_string();
 
             for (j, part) in chain.iter().rev().enumerate() {
@@ -434,9 +673,9 @@ impl<D: Dimensions> Categorical<D> {
 
                 if group.index == (count as f64 / 2.0).ceil() as usize - 1 {
                     if key.is_empty() {
-                        key += format!("{part:width$} {sep}").as_str();
+                        key += format!("{part:width$} {separator}").as_str();
                     } else {
-                        key += format!(" {part:width$} {sep}").as_str();
+                        key += format!(" {part:width$} {separator}").as_str();
                     }
 
                     if dag_index == 0 {
