@@ -19,7 +19,7 @@ impl Default for Render {
 }
 
 #[derive(Debug)]
-pub struct Column {
+pub(crate) struct Column {
     index: usize,
     alignment: Alignment,
     column_type: ColumnType,
@@ -32,7 +32,7 @@ enum ColumnType {
 }
 
 impl Column {
-    pub fn string(index: usize, alignment: Alignment) -> Self {
+    pub(crate) fn string(index: usize, alignment: Alignment) -> Self {
         Self {
             index,
             alignment,
@@ -40,7 +40,7 @@ impl Column {
         }
     }
 
-    pub fn count(index: usize, alignment: Alignment) -> Self {
+    pub(crate) fn count(index: usize, alignment: Alignment) -> Self {
         Self {
             index,
             alignment,
@@ -50,7 +50,7 @@ impl Column {
 }
 
 #[derive(Debug)]
-pub enum Alignment {
+pub(crate) enum Alignment {
     Left,
     Center,
     Right,
@@ -81,19 +81,6 @@ impl Column {
     fn write_final(&self, f: &mut Formatter<'_>, cell: &Cell, scale: u64) -> std::fmt::Result {
         assert_eq!(self.index, cell.column);
         write!(f, "{}", cell.value.render(scale))
-
-        //
-        // match &self.alignment {
-        //     Alignment::Left => {
-        //         write!(f, "{}", cell.value.render(scale))
-        //     }
-        //     Alignment::Center => {
-        //         write!(f, "{:^}", cell.value.render(scale))
-        //     }
-        //     Alignment::Right => {
-        //         write!(f, "{:>}", cell.value.render(scale))
-        //     }
-        // }
     }
 
     fn fill(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -107,13 +94,13 @@ impl Column {
 }
 
 #[derive(Debug)]
-pub struct Cell {
+pub(crate) struct Cell {
     column: usize,
     value: Value,
 }
 
 #[derive(Debug)]
-pub enum Value {
+pub(crate) enum Value {
     Empty,
     String(String),
     Count(u64),
@@ -140,12 +127,12 @@ impl Value {
 }
 
 #[derive(Debug, Default)]
-pub struct Row {
+pub(crate) struct Row {
     cells: Vec<Cell>,
 }
 
 impl Row {
-    pub fn push(&mut self, value: Value) {
+    pub(crate) fn push(&mut self, value: Value) {
         self.cells.push(Cell {
             column: self.cells.len(),
             value,
@@ -154,13 +141,13 @@ impl Row {
 }
 
 #[derive(Debug)]
-pub struct Grid {
+pub(crate) struct Grid {
     columns: Vec<Column>,
     rows: Vec<HashMap<usize, Cell>>,
 }
 
 impl Grid {
-    pub fn new(mut columns: Vec<Column>) -> Self {
+    pub(crate) fn new(mut columns: Vec<Column>) -> Self {
         columns.sort_by(|a, b| a.index.cmp(&b.index));
         Self {
             columns,
@@ -168,7 +155,7 @@ impl Grid {
         }
     }
 
-    pub fn add(&mut self, row: Row) {
+    pub(crate) fn add(&mut self, row: Row) {
         for (j, cell) in row.cells.iter().enumerate() {
             let column = self
                 .columns
@@ -198,7 +185,7 @@ pub struct Flat {
 }
 
 impl Flat {
-    pub fn new(maximum_count: u64, render_width: usize, grid: Grid) -> Self {
+    pub(crate) fn new(maximum_count: u64, render_width: usize, grid: Grid) -> Self {
         Self {
             maximum_count,
             render_width,
@@ -227,21 +214,6 @@ impl Display for Flat {
         let scale: u64 = self.maximum_count.div_ceil(count_width as u64);
 
         for row in self.grid.rows.iter() {
-            // for (j, column) in self.grid.columns.iter().enumerate() {
-            //     match row.get(&j) {
-            //         Some(cell) => {
-            //             if j + 1 == row.len() {
-            //                 column.write_final(f, cell, scale)?;
-            //             } else {
-            //                 column.write(f, cell, scale)?;
-            //             }
-            //         }
-            //         None => {
-            //             column.fill(f)?;
-            //         }
-            //     }
-            // }
-
             for (j, optional_cell) in filled(row) {
                 match optional_cell {
                     Some(cell) => {

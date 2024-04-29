@@ -5,5 +5,5 @@ mod schema;
 
 pub use categorical::*;
 pub use histogram::*;
-pub use render::*;
+pub use render::{Flat, Render};
 pub use schema::*;

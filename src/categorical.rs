@@ -1,6 +1,5 @@
-use crate::render::{Flat, Grid, Render};
+use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
 use crate::schema::{Dimensions, Schematic};
-use crate::{Alignment, Column, Row, Value};
 use std::collections::{HashMap, HashSet};
 
 pub const DEFAULT_SEPARATORS: &[&str; 3] = &[">", "-", "~"];
