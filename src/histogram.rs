@@ -1,9 +1,9 @@
-use crate::render::{Flat, Render, Row};
+use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
 use std::fmt::{Display, Formatter};
 
 pub struct Histogram {
     bins: usize,
-    data: Vec<(f64, usize)>,
+    data: Vec<(f64, u64)>,
     min: f64,
     max: f64,
 }
@@ -18,7 +18,7 @@ impl Histogram {
         }
     }
 
-    pub fn add(mut self, key: f64, value: usize) -> Histogram {
+    pub fn add(mut self, key: f64, value: u64) -> Histogram {
         if key < self.min {
             self.min = key;
         }
@@ -56,8 +56,8 @@ impl Histogram {
                 }
             })
             .collect();
-        let mut values: Vec<usize> = (0..bins).map(|_| 0).collect();
-        let mut maximum_value: usize = 0;
+        let mut counts: Vec<u64> = (0..bins).map(|_| 0).collect();
+        let mut maximum_count: u64 = 0;
 
         for (k, v) in data {
             // TODO: Fix for performance
@@ -66,25 +66,47 @@ impl Histogram {
                 .enumerate()
                 .find(|(_, r)| r.contains(&k))
                 .expect(format!("Key '{k}' must map to one of the aggregating bins").as_str());
-            values[index] += v;
+            counts[index] += v;
 
-            if values[index] > maximum_value {
-                maximum_value = values[index];
+            if counts[index] > maximum_count {
+                maximum_count = counts[index];
             }
         }
 
-        Flat {
-            rows: bin_ranges
-                .into_iter()
-                .zip(values)
-                .map(|(bounds, value)| Row::Full {
-                    key: bounds.to_string(),
-                    value: value,
-                })
-                .collect(),
-            maximum_value,
-            config,
+        let columns = if config.show_total {
+            vec![
+                Column::string(0, Alignment::Left),
+                Column::string(1, Alignment::Center),
+                Column::string(2, Alignment::Center),
+                Column::string(3, Alignment::Right),
+                Column::string(4, Alignment::Center),
+                Column::count(5, Alignment::Left),
+            ]
+        } else {
+            vec![
+                Column::string(0, Alignment::Left),
+                Column::string(1, Alignment::Center),
+                Column::count(2, Alignment::Left),
+            ]
+        };
+        let mut grid = Grid::new(columns);
+
+        for (bounds, count) in bin_ranges.into_iter().zip(counts) {
+            let mut row = Row::default();
+            row.push(Value::String(bounds.to_string()));
+            row.push(Value::String("  ".to_string()));
+
+            if config.show_total {
+                row.push(Value::String("[".to_string()));
+                row.push(Value::String(format!("{:>}", count)));
+                row.push(Value::String("] ".to_string()));
+            }
+
+            row.push(Value::Count(count));
+            grid.add(row);
         }
+
+        Flat::new(maximum_count, config.render_width, grid)
     }
 }
 

@@ -10,7 +10,7 @@ pub trait Schematic {
 
     fn width(&self) -> usize;
 
-    fn columns(&self) -> Vec<String>;
+    fn headers(&self) -> Vec<String>;
 }
 
 pub struct Schema;
@@ -44,10 +44,10 @@ pub struct Schema3<T, U, V> {
 // pub struct Schema7<T, U, V, W, X, Y, Z>;
 
 impl Schema {
-    pub fn one<T>(column_1: String) -> Schema1<T> {
+    pub fn one<T>(column_1: impl Into<String>) -> Schema1<T> {
         Schema1 {
             one: PhantomData,
-            column_1,
+            column_1: column_1.into(),
         }
     }
 
@@ -62,17 +62,17 @@ impl Schema {
     }
 
     pub fn three<T, U, V>(
-        column_1: String,
-        column_2: String,
-        column_3: String,
+        column_1: impl Into<String>,
+        column_2: impl Into<String>,
+        column_3: impl Into<String>,
     ) -> Schema3<T, U, V> {
         Schema3 {
             one: PhantomData,
-            column_1,
+            column_1: column_1.into(),
             two: PhantomData,
-            column_2,
+            column_2: column_2.into(),
             three: PhantomData,
-            column_3,
+            column_3: column_3.into(),
             breakdown: None,
         }
     }
@@ -88,7 +88,7 @@ where
         1
     }
 
-    fn columns(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone()]
     }
 }
@@ -108,7 +108,7 @@ where
         2
     }
 
-    fn columns(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone(), self.column_2.clone()]
     }
 }
@@ -133,14 +133,13 @@ where
     U: Display + Ord,
     V: Display + Ord,
 {
-    // TODO
-    type Dims = (T, U);
+    type Dims = (T, U, V);
 
     fn width(&self) -> usize {
         3
     }
 
-    fn columns(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![
             self.column_1.clone(),
             self.column_2.clone(),
@@ -177,11 +176,18 @@ where
     T: Display + Ord,
     U: Display + Ord,
 {
-    // fn locus(&self) -> String {
-    //     self.0.to_string()
-    // }
-
     fn chain(&self) -> Vec<String> {
         vec![self.0.to_string(), self.1.to_string()]
+    }
+}
+
+impl<T, U, V> Dimensions for (T, U, V)
+where
+    T: Display + Ord,
+    U: Display + Ord,
+    V: Display + Ord,
+{
+    fn chain(&self) -> Vec<String> {
+        vec![self.0.to_string(), self.1.to_string(), self.2.to_string()]
     }
 }

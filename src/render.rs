@@ -1,134 +1,270 @@
-use std::fmt::{Display, Formatter};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Write};
 use std::iter;
+use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug)]
 pub struct Render {
     pub render_width: usize,
-    pub show_values: bool,
+    pub show_total: bool,
 }
 
 impl Default for Render {
     fn default() -> Self {
         Self {
             render_width: 120,
-            show_values: false,
+            show_total: false,
         }
     }
 }
 
+#[derive(Debug)]
+pub struct Column {
+    index: usize,
+    alignment: Alignment,
+    column_type: ColumnType,
+}
+
+#[derive(Debug)]
+enum ColumnType {
+    String(usize),
+    Count,
+}
+
+impl Column {
+    pub fn string(index: usize, alignment: Alignment) -> Self {
+        Self {
+            index,
+            alignment,
+            column_type: ColumnType::String(0),
+        }
+    }
+
+    pub fn count(index: usize, alignment: Alignment) -> Self {
+        Self {
+            index,
+            alignment,
+            column_type: ColumnType::Count,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Alignment {
+    Left,
+    Center,
+    Right,
+}
+
+impl Column {
+    fn write(&self, f: &mut Formatter<'_>, cell: &Cell, scale: u64) -> std::fmt::Result {
+        assert_eq!(self.index, cell.column);
+
+        let width = match &self.column_type {
+            ColumnType::String(width) => *width,
+            ColumnType::Count => 0,
+        };
+
+        match &self.alignment {
+            Alignment::Left => {
+                write!(f, "{:<width$}", cell.value.render(scale))
+            }
+            Alignment::Center => {
+                write!(f, "{:^width$}", cell.value.render(scale))
+            }
+            Alignment::Right => {
+                write!(f, "{:>width$}", cell.value.render(scale))
+            }
+        }
+    }
+
+    fn write_final(&self, f: &mut Formatter<'_>, cell: &Cell, scale: u64) -> std::fmt::Result {
+        assert_eq!(self.index, cell.column);
+        write!(f, "{}", cell.value.render(scale))
+
+        //
+        // match &self.alignment {
+        //     Alignment::Left => {
+        //         write!(f, "{}", cell.value.render(scale))
+        //     }
+        //     Alignment::Center => {
+        //         write!(f, "{:^}", cell.value.render(scale))
+        //     }
+        //     Alignment::Right => {
+        //         write!(f, "{:>}", cell.value.render(scale))
+        //     }
+        // }
+    }
+
+    fn fill(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let width = match &self.column_type {
+            ColumnType::String(width) => *width,
+            ColumnType::Count => 0,
+        };
+
+        write!(f, "{:width$}", "")
+    }
+}
+
+#[derive(Debug)]
+pub struct Cell {
+    column: usize,
+    value: Value,
+}
+
+#[derive(Debug)]
+pub enum Value {
+    Empty,
+    String(String),
+    Count(u64),
+}
+
+impl Value {
+    fn render_width(&self) -> Option<usize> {
+        match &self {
+            Value::Empty => Some(0),
+            Value::String(string) => Some(UnicodeWidthStr::width(string.as_str())),
+            Value::Count(_) => None,
+        }
+    }
+
+    fn render(&self, scale: u64) -> String {
+        match &self {
+            Value::Empty => "".to_string(),
+            Value::String(string) => string.clone(),
+            Value::Count(count) => iter::repeat('*')
+                .take(count.div_ceil(scale) as usize)
+                .collect::<String>(),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Row {
+    cells: Vec<Cell>,
+}
+
+impl Row {
+    pub fn push(&mut self, value: Value) {
+        self.cells.push(Cell {
+            column: self.cells.len(),
+            value,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct Grid {
+    columns: Vec<Column>,
+    rows: Vec<HashMap<usize, Cell>>,
+}
+
+impl Grid {
+    pub fn new(mut columns: Vec<Column>) -> Self {
+        columns.sort_by(|a, b| a.index.cmp(&b.index));
+        Self {
+            columns,
+            rows: Vec::default(),
+        }
+    }
+
+    pub fn add(&mut self, row: Row) {
+        for (j, cell) in row.cells.iter().enumerate() {
+            let column = self
+                .columns
+                .get_mut(j)
+                .expect(format!("All columns must be accounted for, missing: {j}.").as_str());
+            assert_eq!(column.index, j);
+
+            if let ColumnType::String(width) = &mut column.column_type {
+                if let Some(cell_width) = cell.value.render_width() {
+                    if &cell_width > width {
+                        *width = cell_width;
+                    }
+                }
+            }
+        }
+
+        self.rows
+            .push(row.cells.into_iter().map(|c| (c.column, c)).collect());
+    }
+}
+
+#[derive(Debug)]
 pub struct Flat {
-    pub(crate) rows: Vec<Row>,
-    pub(crate) maximum_value: usize,
-    pub(crate) config: Render,
+    maximum_count: u64,
+    render_width: usize,
+    grid: Grid,
+}
+
+impl Flat {
+    pub fn new(maximum_count: u64, render_width: usize, grid: Grid) -> Self {
+        Self {
+            maximum_count,
+            render_width,
+            grid,
+        }
+    }
 }
 
 impl Display for Flat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut keys = Vec::with_capacity(self.rows.len());
-        let mut key_width = 0;
+        let mut count_width = self.render_width.saturating_sub(
+            self.grid
+                .columns
+                .iter()
+                .filter_map(|c| match &c.column_type {
+                    ColumnType::String(width) => Some(width),
+                    ColumnType::Count => None,
+                })
+                .sum(),
+        );
 
-        for row in self.rows.iter() {
-            let key = match row.render_key() {
-                Some(key_string) => {
-                    let len = key_string.chars().count();
-
-                    if key_width < len {
-                        key_width = len;
-                    }
-
-                    Some(key_string)
-                }
-                None => None,
-            };
-
-            keys.push(key);
+        if count_width < 2 {
+            count_width = 2;
         }
 
-        let mut show_width = 0;
+        let scale: u64 = self.maximum_count.div_ceil(count_width as u64);
 
-        let show: Option<usize> = if self.config.show_values {
-            let width = (self.maximum_value as f64).log10().ceil() as usize;
-            show_width = width + 3;
-            Some(width)
-        } else {
-            None
-        };
+        for row in self.grid.rows.iter() {
+            // for (j, column) in self.grid.columns.iter().enumerate() {
+            //     match row.get(&j) {
+            //         Some(cell) => {
+            //             if j + 1 == row.len() {
+            //                 column.write_final(f, cell, scale)?;
+            //             } else {
+            //                 column.write(f, cell, scale)?;
+            //             }
+            //         }
+            //         None => {
+            //             column.fill(f)?;
+            //         }
+            //     }
+            // }
 
-        let mut value_width = self
-            .config
-            .render_width
-            .saturating_sub(key_width + 2 + show_width);
-
-        if value_width < 2 {
-            value_width = 2;
-        }
-
-        let scale: usize = self.maximum_value.div_ceil(value_width);
-
-        for (i, (row, key)) in self.rows.iter().zip(keys).enumerate() {
-            match (key, row.render_value(scale, show)) {
-                (Some(key_string), Some(value_string)) => {
-                    if i + 1 == self.rows.len() {
-                        write!(f, "{key_string:key_width$}  {value_string}")?;
-                    } else {
-                        write!(f, "{key_string:key_width$}  {value_string}\n")?;
+            for (j, optional_cell) in filled(row) {
+                match optional_cell {
+                    Some(cell) => {
+                        if j + 1 == row.len() {
+                            self.grid.columns[j].write_final(f, cell, scale)?;
+                        } else {
+                            self.grid.columns[j].write(f, cell, scale)?;
+                        }
                     }
-                }
-                (Some(key_string), None) => {
-                    if i + 1 == self.rows.len() {
-                        write!(f, "{key_string}")?;
-                    } else {
-                        write!(f, "{key_string}\n")?;
-                    }
-                }
-                _ => {
-                    if i + 1 == self.rows.len() {
-                        write!(f, "")?;
-                    } else {
-                        write!(f, "\n")?;
+                    None => {
+                        self.grid.columns[j].fill(f)?;
                     }
                 }
             }
+
+            f.write_char('\n')?;
         }
 
         Ok(())
     }
 }
 
-#[derive(Debug)]
-pub enum Row {
-    Full { key: String, value: usize },
-    Partial { key: String },
-    Empty,
-}
-
-impl Row {
-    fn render_key(&self) -> Option<String> {
-        match &self {
-            Row::Full { key, .. } => Some(format!("{}", key)),
-            Row::Partial { key, .. } => Some(format!("{}", key)),
-            Row::Empty => None,
-        }
-    }
-
-    fn render_value(&self, scale: usize, show: Option<usize>) -> Option<String> {
-        match &self {
-            Row::Full { value, .. } => {
-                let show = match show {
-                    Some(width) => {
-                        format!("[{:>width$}] ", value)
-                    }
-                    None => "".to_string(),
-                };
-                Some(format!(
-                    "{}{}",
-                    show,
-                    iter::repeat('*')
-                        .take(value.div_ceil(scale))
-                        .collect::<String>(),
-                ))
-            }
-            Row::Partial { .. } | Row::Empty => None,
-        }
-    }
+fn filled<'a>(rows: &'a HashMap<usize, Cell>) -> Vec<(usize, Option<&'a Cell>)> {
+    let maximum_j: usize = *rows.keys().max().expect("Row must not be empty");
+    (0..=maximum_j).map(|j| (j, rows.get(&j))).collect()
 }
