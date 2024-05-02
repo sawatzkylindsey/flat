@@ -2,8 +2,6 @@ use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
 use crate::schema::{Dimensions, Schematic};
 use std::collections::{HashMap, HashSet};
 
-pub const DEFAULT_SEPARATORS: &[&str; 3] = &[">", "-", "~"];
-
 pub struct Categorical<S>
 where
     S: Schematic,
@@ -26,7 +24,7 @@ impl<S: Schematic> Categorical<S> {
         self
     }
 
-    pub fn render(self, config: Render, separators: &[&str]) -> Flat {
+    pub fn render(self, config: Render) -> Flat {
         let mut values: HashMap<String, u64> = self
             .data
             .iter()
@@ -93,7 +91,6 @@ impl<S: Schematic> Categorical<S> {
 
         grid.add(row);
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
-        let mut separator_index = 0;
         let mut current_locus = None;
 
         for k in sort_keys.iter() {
@@ -104,7 +101,6 @@ impl<S: Schematic> Categorical<S> {
                 Some(l) => {
                     if l != &locus {
                         current_locus.replace(locus.clone());
-                        separator_index = (separator_index + 1) % separators.len();
                     }
                 }
                 None => {
@@ -112,11 +108,44 @@ impl<S: Schematic> Categorical<S> {
                 }
             }
 
-            let separator = separators[separator_index];
-            let mut row = Row::default();
+            let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
+            let mut descendant_position = None;
 
-            for (j, part) in chain.iter().rev().enumerate() {
-                let dag_index = chain.len() - j - 1;
+            #[allow(unused_doc_comments)]
+            /// Run through the chain in dag index ascending order, which
+            /// is the "rendering" reverse order.
+            ///
+            /// For this example dag, we'll iterate as follows:
+            /// a - b ┐
+            /// c ┐   - d
+            /// e - f ┘
+            /// h ┘
+            ///
+            /// chain: ["d", "b", "a"]
+            /// dag_index | j | part | partial
+            /// ------------------------------
+            /// 0        | 2 | "d"   | "d"
+            /// 1        | 1 | "b"   | "d|b"
+            /// 2        | 0 | "a"   | "d|b|a"
+            ///
+            /// chain: ["d", "f", "c"]
+            /// dag_index | j | part | partial
+            /// ------------------------------
+            /// 0        | 2 | "d"   | "d"
+            /// 1        | 1 | "f"   | "d|f"
+            /// 2        | 0 | "c"   | "d|f|c"
+            ///
+            /// chain: ["d", "f", "e"]
+            /// dag_index | j | part | partial
+            /// ------------------------------
+            /// 0        | 2 | "d"   | "d"
+            /// 1        | 1 | "f"   | "d|f"
+            /// 2        | 0 | "e"   | "d|f|e"
+            ///
+            /// etc..
+            ///
+            for (dag_index, part) in chain.iter().enumerate() {
+                let j = chain.len() - dag_index - 1;
                 let partial = ancestor_key(chain.as_slice(), dag_index);
                 let group = column_groups.entry(j).or_default();
 
@@ -127,20 +156,53 @@ impl<S: Schematic> Categorical<S> {
                 }
 
                 let count = ancestors[&partial];
+                let position = (count as f64 / 2.0).ceil() as usize - 1;
+                let mut column_chunks = Vec::default();
 
-                if group.index == (count as f64 / 2.0).ceil() as usize - 1 {
-                    row.push(Value::String(format!("{part} ")));
+                let position = match position {
+                    position if position > group.index => Position::Above,
+                    position if position == group.index => Position::At,
+                    _ => Position::Below,
+                };
+
+                if position == Position::At {
+                    column_chunks.push(Value::String(format!("{part} ")));
 
                     if dag_index == 0 {
-                        row.push(Value::String(format!("  ")));
-                        row.push(Value::Count(
+                        column_chunks.push(Value::String(format!("  ")));
+                        column_chunks.push(Value::Count(
                             *values
                                 .get(&locus)
                                 .expect(format!("Locus {locus} must map to the value").as_str()),
                         ));
                     } else {
-                        row.push(Value::String(format!(" {separator} ")));
+                        assert!(descendant_position.is_some());
+
+                        if let Some(desc_pos) = &descendant_position {
+                            match desc_pos {
+                                Position::Above => {
+                                    column_chunks.push(Value::String(format!(" ┐")));
+                                }
+                                Position::At => {
+                                    column_chunks.push(Value::String(format!(" - ")));
+                                }
+                                Position::Below => {
+                                    column_chunks.push(Value::String(format!(" ┘")));
+                                }
+                            }
+                        }
                     }
+                }
+
+                descendant_position.replace(position);
+                column_chunks_reversed.push(column_chunks);
+            }
+
+            let mut row = Row::default();
+
+            for column_chunks in column_chunks_reversed.into_iter().rev() {
+                for value in column_chunks.into_iter() {
+                    row.push(value);
                 }
             }
 
@@ -149,6 +211,13 @@ impl<S: Schematic> Categorical<S> {
 
         Flat::new(maximum_count, config.render_width, grid)
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Position {
+    Above,
+    At,
+    Below,
 }
 
 #[derive(Debug)]

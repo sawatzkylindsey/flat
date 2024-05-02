@@ -11,15 +11,14 @@ fn categorical_1d() {
         .add(("tiger".to_string(),), 1)
         .add(("tiger".to_string(),), 3)
         .add(("tiger".to_string(),), 3);
-    let flat = builder.render(Render::default(), DEFAULT_SEPARATORS);
+    let flat = builder.render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
 animal
 shark   ****
 tiger   *******
-whale   
-"#
+whale   "#
     );
 }
 
@@ -33,18 +32,17 @@ fn categorical_2d() {
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render::default(), DEFAULT_SEPARATORS);
+    let flat = builder.render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
 length   animal
-1      > shark   ****
-4      > 
-1      - 
+1      - shark   ****
+4      ┘
+1      ┐
 4      - tiger   *******
-5      - 
-4      ~ whale   
-"#
+5      ┘
+4      - whale   "#
     );
 }
 
@@ -61,7 +59,7 @@ fn categorical_2d_breakdown() {
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render::default(), DEFAULT_SEPARATORS);
+    let flat = builder.render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -85,18 +83,17 @@ fn categorical_3d() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 3)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render::default(), DEFAULT_SEPARATORS);
+    let flat = builder.render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
 stable   length   animal
-true   > 1      > shark   ****
-false  > 4      > 
-false  - 1      - 
+true   - 1      - shark   ****
+false  - 4      ┘
+false  - 1      ┐
 false  - 4      - tiger   *******
-true   - 5      - 
-true   ~ 4      ~ whale   
-"#
+true   - 5      ┘
+true   - 4      - whale   "#
     );
 }
 
@@ -116,8 +113,7 @@ fn histogram() {
 [1.8, 3.6)  *****
 [3.6, 5.4)  *********
 [5.4, 7.2)  *************
-[7.2, 9]    *****************
-"#
+[7.2, 9]    *****************"#
     );
 }
 
@@ -147,8 +143,7 @@ fn histograsm_squish(#[case] render_width: usize) {
 [1.8, 3.6)  *
 [3.6, 5.4)  *
 [5.4, 7.2)  **
-[7.2, 9]    
-"#
+[7.2, 9]    "#
     );
 }
 
@@ -171,8 +166,7 @@ fn histogram_show_total() {
 [1.8, 3.6)  [ 5] *****
 [3.6, 5.4)  [ 9] *********
 [5.4, 7.2)  [13] *************
-[7.2, 9]    [17] *****************
-"#
+[7.2, 9]    [17] *****************"#
     );
 }
 
@@ -202,7 +196,6 @@ fn histogram_show_total_squish(#[case] render_width: usize) {
 [1.8, 3.6)  [ 5] *
 [3.6, 5.4)  [ 9] *
 [5.4, 7.2)  [13] **
-[7.2, 9]    [ 0] 
-"#
+[7.2, 9]    [ 0] "#
     );
 }

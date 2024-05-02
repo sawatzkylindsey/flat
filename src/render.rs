@@ -136,7 +136,7 @@ impl Row {
         self.cells.push(Cell {
             column: self.cells.len(),
             value,
-        })
+        });
     }
 }
 
@@ -213,7 +213,7 @@ impl Display for Flat {
 
         let scale: u64 = self.maximum_count.div_ceil(count_width as u64);
 
-        for row in self.grid.rows.iter() {
+        for (i, row) in self.grid.rows.iter().enumerate() {
             for (j, optional_cell) in filled(row) {
                 match optional_cell {
                     Some(cell) => {
@@ -229,7 +229,9 @@ impl Display for Flat {
                 }
             }
 
-            f.write_char('\n')?;
+            if i + 1 != self.grid.rows.len() {
+                f.write_char('\n')?;
+            }
         }
 
         Ok(())
