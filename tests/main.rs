@@ -46,8 +46,6 @@ length   animal
     );
 }
 
-// TODO
-#[ignore]
 #[test]
 fn categorical_2d_breakdown() {
     let schema: Schema2<String, u32> =
@@ -56,21 +54,28 @@ fn categorical_2d_breakdown() {
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
-        .add(("tiger".to_string(), 4u32), 1)
-        .add(("tiger".to_string(), 5u32), 3)
+        .add(("tiger".to_string(), 4u32), 3)
+        .add(("tiger".to_string(), 5u32), 2)
         .add(("tiger".to_string(), 1u32), 3);
     let flat = builder.render(Render::default());
+    // center
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal     1  4  5
-1      > shark  >  []
-4      >
-1      -
-4      - tiger  -  []
-5      -
-4      ~ whale  ~  []"#
+animal  | 1   4   5 |
+shark   |***  *     |
+tiger   |*** *** ** |
+whale   |           |"#
     );
+    //     // left
+    //     assert_eq!(
+    //         format!("\n{}", flat.to_string()),
+    //         r#"
+    // animal  |1   4   5  |
+    // shark   |*** *      |
+    // tiger   |*** *** ** |
+    // whale   |           |"#
+    //     );
 }
 
 #[test]

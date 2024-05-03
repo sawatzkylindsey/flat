@@ -11,6 +11,12 @@ pub trait Schematic {
     fn width(&self) -> usize;
 
     fn headers(&self) -> Vec<String>;
+
+    fn breakdown_header(&self) -> Option<String>;
+
+    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)>;
+
+    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>);
 }
 
 pub struct Schema;
@@ -25,7 +31,7 @@ pub struct Schema2<T, U> {
     column_1: String,
     two: PhantomData<U>,
     column_2: String,
-    breakdown: Option<String>,
+    breakdown: Option<(Breakdown2, String)>,
 }
 
 pub struct Schema3<T, U, V> {
@@ -35,7 +41,7 @@ pub struct Schema3<T, U, V> {
     column_2: String,
     three: PhantomData<V>,
     column_3: String,
-    breakdown: Option<String>,
+    breakdown: Option<(Breakdown3, String)>,
 }
 
 // pub struct Schema4<T, U, V, W>;
@@ -91,10 +97,32 @@ where
     fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone()]
     }
+
+    fn breakdown_header(&self) -> Option<String> {
+        None
+    }
+
+    fn path(&self, chain: Vec<String>, _dag_index: usize) -> Vec<(usize, String)> {
+        assert_eq!(chain.len(), 1);
+        vec![(0, chain[0].clone())]
+    }
+
+    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
+        assert_eq!(chain.len(), 1);
+        (chain[0].clone(), None)
+    }
 }
 
 pub enum Breakdown2 {
     Second,
+}
+
+impl Breakdown2 {
+    fn as_dag_index(&self) -> usize {
+        match &self {
+            Breakdown2::Second => 1,
+        }
+    }
 }
 
 impl<T, U> Schematic for Schema2<T, U>
@@ -109,14 +137,52 @@ where
     }
 
     fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone(), self.column_2.clone()]
+        if let Some((breakdown, _)) = &self.breakdown {
+            match breakdown {
+                Breakdown2::Second => {
+                    vec![self.column_1.clone()]
+                }
+            }
+        } else {
+            vec![self.column_1.clone(), self.column_2.clone()]
+        }
+    }
+
+    fn breakdown_header(&self) -> Option<String> {
+        self.breakdown.as_ref().map(|(_, h)| h.clone())
+    }
+
+    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
+        assert_eq!(chain.len(), 2);
+        let mut out = Vec::default();
+
+        for i in 0..dag_index + 1 {
+            if let Some((breakdown, _)) = &self.breakdown {
+                // We want to skip the breakdown column
+                if breakdown.as_dag_index() != i {
+                    out.push((i, chain[i].clone()));
+                }
+            } else {
+                out.push((i, chain[i].clone()));
+            }
+        }
+
+        out
+    }
+
+    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
+        assert_eq!(chain.len(), 2);
+        match &self.breakdown {
+            Some((Breakdown2::Second, _)) => (chain[0].clone(), Some(chain[1].clone())),
+            None => (chain[0].clone(), None),
+        }
     }
 }
 
 impl<T, U> Schema2<T, U> {
     pub fn breakdown(mut self, breakdown: Breakdown2) -> Self {
         self.breakdown = match breakdown {
-            Breakdown2::Second => Some(self.column_2.clone()),
+            Breakdown2::Second => Some((Breakdown2::Second, self.column_2.clone())),
         };
         self
     }
@@ -125,6 +191,15 @@ impl<T, U> Schema2<T, U> {
 pub enum Breakdown3 {
     Second,
     Third,
+}
+
+impl Breakdown3 {
+    fn as_dag_index(&self) -> usize {
+        match &self {
+            Breakdown3::Second => 1,
+            Breakdown3::Third => 2,
+        }
+    }
 }
 
 impl<T, U, V> Schematic for Schema3<T, U, V>
@@ -140,19 +215,68 @@ where
     }
 
     fn headers(&self) -> Vec<String> {
-        vec![
-            self.column_1.clone(),
-            self.column_2.clone(),
-            self.column_3.clone(),
-        ]
+        if let Some((breakdown, _)) = &self.breakdown {
+            match breakdown {
+                Breakdown3::Second => {
+                    vec![self.column_1.clone(), self.column_3.clone()]
+                }
+                Breakdown3::Third => {
+                    vec![self.column_1.clone(), self.column_2.clone()]
+                }
+            }
+        } else {
+            vec![
+                self.column_1.clone(),
+                self.column_2.clone(),
+                self.column_3.clone(),
+            ]
+        }
+    }
+
+    fn breakdown_header(&self) -> Option<String> {
+        self.breakdown.as_ref().map(|(_, h)| h.clone())
+    }
+    // fn headers(&self) -> Vec<String> {
+    //     vec![
+    //         self.column_1.clone(),
+    //         self.column_2.clone(),
+    //         self.column_3.clone(),
+    //     ]
+    // }
+
+    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
+        assert_eq!(chain.len(), 3);
+        let mut out = Vec::default();
+
+        for i in 0..dag_index + 1 {
+            if let Some((breakdown, _)) = &self.breakdown {
+                // We want to skip the breakdown column
+                if breakdown.as_dag_index() != i {
+                    out.push((i, chain[i].clone()));
+                }
+            } else {
+                out.push((i, chain[i].clone()));
+            }
+        }
+
+        out
+    }
+
+    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
+        assert_eq!(chain.len(), 3);
+        match &self.breakdown {
+            Some((Breakdown3::Second, _)) => (chain[0].clone(), Some(chain[2].clone())),
+            Some((Breakdown3::Third, _)) => (chain[0].clone(), Some(chain[1].clone())),
+            None => (chain[0].clone(), None),
+        }
     }
 }
 
 impl<T, U, V> Schema3<T, U, V> {
     pub fn breakdown(mut self, breakdown: Breakdown3) -> Self {
         self.breakdown = match breakdown {
-            Breakdown3::Second => Some(self.column_2.clone()),
-            Breakdown3::Third => Some(self.column_3.clone()),
+            Breakdown3::Second => Some((Breakdown3::Second, self.column_2.clone())),
+            Breakdown3::Third => Some((Breakdown3::Third, self.column_3.clone())),
         };
         self
     }

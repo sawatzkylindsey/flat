@@ -29,6 +29,7 @@ pub(crate) struct Column {
 enum ColumnType {
     String(usize),
     Count,
+    Breakdown,
 }
 
 impl Column {
@@ -47,6 +48,14 @@ impl Column {
             column_type: ColumnType::Count,
         }
     }
+
+    pub(crate) fn breakdown(index: usize, alignment: Alignment) -> Self {
+        Self {
+            index,
+            alignment,
+            column_type: ColumnType::Breakdown,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -57,36 +66,39 @@ pub(crate) enum Alignment {
 }
 
 impl Column {
-    fn write(&self, f: &mut Formatter<'_>, cell: &Cell, scale: u64) -> std::fmt::Result {
+    fn write(&self, f: &mut Formatter<'_>, cell: &Cell, view: &View) -> std::fmt::Result {
         assert_eq!(self.index, cell.column);
 
         let width = match &self.column_type {
             ColumnType::String(width) => *width,
-            ColumnType::Count => 0,
+            ColumnType::Count | ColumnType::Breakdown => view.width,
         };
 
         match &self.alignment {
             Alignment::Left => {
-                write!(f, "{:<width$}", cell.value.render(scale))
+                write!(f, "{:<width$}", cell.value.render(view.scale))
             }
             Alignment::Center => {
-                write!(f, "{:^width$}", cell.value.render(scale))
+                write!(f, "{:^width$}", cell.value.render(view.scale))
             }
             Alignment::Right => {
-                write!(f, "{:>width$}", cell.value.render(scale))
+                write!(f, "{:>width$}", cell.value.render(view.scale))
             }
         }
     }
 
-    fn write_final(&self, f: &mut Formatter<'_>, cell: &Cell, scale: u64) -> std::fmt::Result {
+    fn write_final(&self, f: &mut Formatter<'_>, cell: &Cell, view: &View) -> std::fmt::Result {
         assert_eq!(self.index, cell.column);
-        write!(f, "{}", cell.value.render(scale))
+        write!(f, "{}", cell.value.render(view.scale))
     }
 
-    fn fill(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fill(&self, f: &mut Formatter<'_>, _view: &View) -> std::fmt::Result {
         let width = match &self.column_type {
             ColumnType::String(width) => *width,
             ColumnType::Count => 0,
+            ColumnType::Breakdown => {
+                unreachable!("should never fill a breakdown");
+            }
         };
 
         write!(f, "{:width$}", "")
@@ -156,6 +168,7 @@ impl Grid {
     }
 
     pub(crate) fn add(&mut self, row: Row) {
+        assert!(!row.cells.is_empty());
         for (j, cell) in row.cells.iter().enumerate() {
             let column = self
                 .columns
@@ -196,35 +209,56 @@ impl Flat {
 
 impl Display for Flat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut count_width = self.render_width.saturating_sub(
+        let mut view_width = self.render_width.saturating_sub(
             self.grid
                 .columns
                 .iter()
                 .filter_map(|c| match &c.column_type {
                     ColumnType::String(width) => Some(width),
-                    ColumnType::Count => None,
+                    ColumnType::Count | ColumnType::Breakdown => None,
                 })
                 .sum(),
         );
+        let view_columns = self
+            .grid
+            .columns
+            .iter()
+            .map(|c| match &c.column_type {
+                ColumnType::String(_) => 0,
+                ColumnType::Count | ColumnType::Breakdown => 1,
+            })
+            .sum();
+        println!("view_width {view_width}");
+        view_width = view_width.saturating_div(view_columns);
 
-        if count_width < 2 {
-            count_width = 2;
+        if view_width < 2 {
+            view_width = 2;
         }
 
-        let scale: u64 = self.maximum_count.div_ceil(count_width as u64);
+        println!("max count {}", self.maximum_count);
+        println!("view_width {view_width}");
+        let scale: u64 = self.maximum_count.div_ceil(view_width as u64);
+        let width: usize = if scale == 1 {
+            self.maximum_count as usize
+        } else {
+            view_width
+        };
+        let view = View { width, scale };
+        println!("{view:?}");
 
         for (i, row) in self.grid.rows.iter().enumerate() {
+            println!("{:?}", filled(row));
             for (j, optional_cell) in filled(row) {
                 match optional_cell {
                     Some(cell) => {
                         if j + 1 == row.len() {
-                            self.grid.columns[j].write_final(f, cell, scale)?;
+                            self.grid.columns[j].write_final(f, cell, &view)?;
                         } else {
-                            self.grid.columns[j].write(f, cell, scale)?;
+                            self.grid.columns[j].write(f, cell, &view)?;
                         }
                     }
                     None => {
-                        self.grid.columns[j].fill(f)?;
+                        self.grid.columns[j].fill(f, &view)?;
                     }
                 }
             }
@@ -236,6 +270,12 @@ impl Display for Flat {
 
         Ok(())
     }
+}
+
+#[derive(Debug)]
+struct View {
+    width: usize,
+    scale: u64,
 }
 
 fn filled<'a>(rows: &'a HashMap<usize, Cell>) -> Vec<(usize, Option<&'a Cell>)> {

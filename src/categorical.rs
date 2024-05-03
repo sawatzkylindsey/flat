@@ -25,64 +25,75 @@ impl<S: Schematic> Categorical<S> {
     }
 
     pub fn render(self, config: Render) -> Flat {
-        let mut values: HashMap<String, u64> = self
+        if self.schema.breakdown_header().is_none() {
+            self.render_total(config)
+        } else {
+            self.render_breakdown(config)
+        }
+    }
+
+    fn render_total(self, config: Render) -> Flat {
+        assert!(self.schema.breakdown_header().is_none());
+        let get_locus = |chain: &Vec<String>| chain[0].clone();
+        let get_path = |chain: &Vec<String>, dag_index: usize| chain[0..dag_index + 1].join("|");
+        let get_full_path = |chain: Vec<String>| get_path(&chain, self.schema.width() - 1);
+        let mut counts: HashMap<String, u64> = self
             .data
             .iter()
-            .map(|(k, _)| (k.chain()[0].clone(), 0))
+            .map(|(k, _)| (get_locus(&k.chain()), 0))
             .collect();
-        let mut full_chains: HashSet<String> = HashSet::default();
-        let mut sort_keys: Vec<&S::Dims> = Vec::default();
-        let ancestor_key = |chain: &[String], dag_index: usize| chain[0..dag_index + 1].join("|");
-        let mut ancestors: HashMap<String, usize> = HashMap::default();
+        let mut full_paths: HashSet<String> = HashSet::default();
+        let mut sort_chains: Vec<&S::Dims> = Vec::default();
+        let mut path_occurrences: HashMap<String, usize> = HashMap::default();
         let mut chain_length = 0;
         let mut maximum_count: u64 = 0;
 
         for (k, v) in self.data.iter() {
             let chain = k.chain();
-            let locus = chain[0].clone();
-            let full_chain = chain.join("|");
+            let locus = get_locus(&chain);
+            let full_path = get_full_path(chain.clone());
 
-            if !full_chains.contains(&full_chain) {
-                full_chains.insert(full_chain);
+            if !full_paths.contains(&full_path) {
+                full_paths.insert(full_path);
 
                 if chain.len() > chain_length {
                     chain_length = chain.len();
                 }
 
                 for dag_index in 0..chain.len() {
-                    let partial = ancestor_key(chain.as_slice(), dag_index);
-                    ancestors
-                        .entry(partial)
+                    let path = get_path(&chain, dag_index);
+                    path_occurrences
+                        .entry(path)
                         .and_modify(|c| *c += 1)
                         .or_insert(1);
                 }
             }
 
-            let aggregate = values
-                .get_mut(&locus)
-                .expect(format!("Key/locus must map to one of the aggregating rows").as_str());
-            *aggregate += v;
+            let count = counts.get_mut(&locus).expect(
+                format!("locus '{locus}' must map to one of the aggregating rows").as_str(),
+            );
+            *count += v;
 
-            if *aggregate > maximum_count {
-                maximum_count = *aggregate;
+            if *count > maximum_count {
+                maximum_count = *count;
             }
 
-            if !sort_keys.contains(&k) {
-                sort_keys.push(k);
+            if !sort_chains.contains(&k) {
+                sort_chains.push(k);
             }
         }
 
-        sort_keys.sort();
+        sort_chains.sort();
         let mut columns = Vec::default();
 
-        for _ in 0..chain_length {
+        for _ in 0..self.schema.headers().len() {
             columns.push(Column::string(columns.len(), Alignment::Left));
             columns.push(Column::string(columns.len(), Alignment::Left));
         }
 
+        let mut row = Row::default();
         columns.push(Column::count(columns.len(), Alignment::Left));
         let mut grid = Grid::new(columns);
-        let mut row = Row::default();
 
         for name in self.schema.headers().iter().rev() {
             row.push(Value::String(name.clone()));
@@ -93,9 +104,9 @@ impl<S: Schematic> Categorical<S> {
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
         let mut current_locus = None;
 
-        for k in sort_keys.iter() {
+        for k in sort_chains.iter() {
             let chain = k.chain();
-            let locus = chain[0].clone();
+            let locus = get_locus(&chain);
 
             match &mut current_locus {
                 Some(l) => {
@@ -122,21 +133,21 @@ impl<S: Schematic> Categorical<S> {
             /// h ┘
             ///
             /// chain: ["d", "b", "a"]
-            /// dag_index | j | part | partial
+            /// dag_index | j | part | path
             /// ------------------------------
             /// 0        | 2 | "d"   | "d"
             /// 1        | 1 | "b"   | "d|b"
             /// 2        | 0 | "a"   | "d|b|a"
             ///
             /// chain: ["d", "f", "c"]
-            /// dag_index | j | part | partial
+            /// dag_index | j | part | path
             /// ------------------------------
             /// 0        | 2 | "d"   | "d"
             /// 1        | 1 | "f"   | "d|f"
             /// 2        | 0 | "c"   | "d|f|c"
             ///
             /// chain: ["d", "f", "e"]
-            /// dag_index | j | part | partial
+            /// dag_index | j | part | path
             /// ------------------------------
             /// 0        | 2 | "d"   | "d"
             /// 1        | 1 | "f"   | "d|f"
@@ -144,19 +155,19 @@ impl<S: Schematic> Categorical<S> {
             ///
             /// etc..
             ///
-            for (dag_index, part) in chain.iter().enumerate() {
+            for (dag_index, part) in chain.clone().iter().enumerate() {
                 let j = chain.len() - dag_index - 1;
-                let partial = ancestor_key(chain.as_slice(), dag_index);
+                let path = get_path(&chain, dag_index);
                 let group = column_groups.entry(j).or_default();
 
-                if group.matches(&partial) {
+                if group.matches(&path) {
                     group.increment();
                 } else {
-                    group.swap(partial.clone());
+                    group.swap(path.clone());
                 }
 
-                let count = ancestors[&partial];
-                let position = (count as f64 / 2.0).ceil() as usize - 1;
+                let occurrences = path_occurrences[&path];
+                let position = (occurrences as f64 / 2.0).ceil() as usize - 1;
                 let mut column_chunks = Vec::default();
 
                 let position = match position {
@@ -171,9 +182,9 @@ impl<S: Schematic> Categorical<S> {
                     if dag_index == 0 {
                         column_chunks.push(Value::String(format!("  ")));
                         column_chunks.push(Value::Count(
-                            *values
+                            *counts
                                 .get(&locus)
-                                .expect(format!("Locus {locus} must map to the value").as_str()),
+                                .expect(format!("locus '{locus}' must map to the value").as_str()),
                         ));
                     } else {
                         assert!(descendant_position.is_some());
@@ -211,6 +222,272 @@ impl<S: Schematic> Categorical<S> {
 
         Flat::new(maximum_count, config.render_width, grid)
     }
+
+    fn render_breakdown(self, config: Render) -> Flat {
+        assert!(self.schema.breakdown_header().is_some());
+        let get_locus = |chain: &Vec<String>| chain[0].clone();
+        let get_count_key = |chain: Vec<String>| self.schema.aggregate_key(chain);
+        let get_sub_path = |chain: Vec<String>, dag_index: usize| {
+            self.schema
+                .path(chain, dag_index)
+                .iter()
+                .fold(String::default(), |acc, (_, part)| acc + part + "|")
+        };
+        let get_full_chain = |chain: Vec<String>| self.schema.path(chain, self.schema.width() - 1);
+        let get_full_path = |chain: Vec<String>| {
+            get_full_chain(chain)
+                .iter()
+                .fold(String::default(), |acc, (_, part)| acc + part + "|")
+        };
+        let mut counts: HashMap<(String, Option<String>), u64> = HashMap::default();
+        let mut full_paths: HashSet<String> = HashSet::default();
+        let mut sort_chains: Vec<&S::Dims> = Vec::default();
+        let mut sort_breakdown_keys: Vec<String> = Vec::default();
+        let mut path_occurrences: HashMap<String, usize> = HashMap::default();
+        let mut chain_length = 0;
+        let mut maximum_count: u64 = 0;
+
+        for (k, v) in self.data.iter() {
+            let chain = k.chain();
+            let count_key = get_count_key(chain.clone());
+            let full_path = get_full_path(chain.clone());
+
+            // Only count the occurrences once per 'full path'.
+            // This is because we might have multiple entries, for example:
+            // ```
+            // Categorical::builder(schema)
+            //     .add(("whale".to_string(), 4u32), 2)
+            //     .add(("whale".to_string(), 4u32), 3)
+            // ```
+            if !full_paths.contains(&full_path) {
+                full_paths.insert(full_path);
+
+                if chain.len() > chain_length {
+                    chain_length = chain.len();
+                }
+
+                for dag_index in 0..chain.len() {
+                    let path = get_sub_path(chain.clone(), dag_index);
+                    path_occurrences
+                        .entry(path)
+                        .and_modify(|c| *c += 1)
+                        .or_insert(1);
+                }
+            }
+
+            let count = counts.entry(count_key.clone()).or_default();
+            *count += v;
+
+            if *count > maximum_count {
+                maximum_count = *count;
+            }
+
+            if !sort_chains.contains(&k) {
+                sort_chains.push(k);
+            }
+
+            let breakdown_key = count_key.1.unwrap();
+            if !sort_breakdown_keys.contains(&breakdown_key) {
+                sort_breakdown_keys.push(breakdown_key);
+            }
+        }
+
+        sort_chains.sort();
+        sort_breakdown_keys.sort();
+        let mut columns = Vec::default();
+
+        for _ in 0..self.schema.headers().len() {
+            columns.push(Column::string(columns.len(), Alignment::Left));
+            columns.push(Column::string(columns.len(), Alignment::Left));
+        }
+
+        columns.push(Column::string(columns.len(), Alignment::Center));
+
+        for i in 0..sort_breakdown_keys.len() {
+            columns.push(Column::breakdown(columns.len(), Alignment::Center));
+
+            if i + 1 < sort_breakdown_keys.len() {
+                columns.push(Column::string(columns.len(), Alignment::Left));
+            }
+        }
+
+        columns.push(Column::string(columns.len(), Alignment::Center));
+        println!("{columns:?}");
+        let mut grid = Grid::new(columns);
+
+        // TODO
+        // let breakdown = self.schema.breakdown_header().unwrap();
+        // for _ in self.schema.headers().iter() {
+        //     row.push(Value::Empty);
+        //     row.push(Value::Empty);
+        // }
+        //
+        // row.push(Value::String(breakdown));
+        // grid.add(row);
+        let mut row = Row::default();
+
+        for name in self.schema.headers().iter().rev() {
+            row.push(Value::String(name.clone()));
+            row.push(Value::Empty);
+        }
+
+        row.push(Value::String("|".to_string()));
+
+        for (k, key) in sort_breakdown_keys.iter().enumerate() {
+            row.push(Value::String(key.clone()));
+
+            if k + 1 < sort_breakdown_keys.len() {
+                row.push(Value::String(" ".to_string()));
+            }
+        }
+
+        row.push(Value::String("|".to_string()));
+        grid.add(row);
+        let mut rendered: HashSet<String> = HashSet::default();
+        let mut column_groups: HashMap<usize, Group> = HashMap::default();
+        let mut current_locus = None;
+
+        for k in sort_chains.iter() {
+            let chain = k.chain();
+            let locus = get_locus(&chain);
+
+            if !rendered.contains(&locus) {
+                rendered.insert(locus.clone());
+
+                match &mut current_locus {
+                    Some(l) => {
+                        if l != &locus {
+                            current_locus.replace(locus.clone());
+                        }
+                    }
+                    None => {
+                        current_locus = Some(locus.clone());
+                    }
+                }
+
+                let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
+                let mut descendant_position = None;
+
+                #[allow(unused_doc_comments)]
+                /// Run through the chain in dag index ascending order, which
+                /// is the "rendering" reverse order.
+                ///
+                /// For this example dag, we'll iterate as follows:
+                /// a - b ┐
+                /// c ┐   - d
+                /// e - f ┘
+                /// h ┘
+                ///
+                /// chain: ["d", "b", "a"]
+                /// dag_index | j | part | path
+                /// ------------------------------
+                /// 0        | 2 | "d"   | "d"
+                /// 1        | 1 | "b"   | "d|b"
+                /// 2        | 0 | "a"   | "d|b|a"
+                ///
+                /// chain: ["d", "f", "c"]
+                /// dag_index | j | part | path
+                /// ------------------------------
+                /// 0        | 2 | "d"   | "d"
+                /// 1        | 1 | "f"   | "d|f"
+                /// 2        | 0 | "c"   | "d|f|c"
+                ///
+                /// chain: ["d", "f", "e"]
+                /// dag_index | j | part | path
+                /// ------------------------------
+                /// 0        | 2 | "d"   | "d"
+                /// 1        | 1 | "f"   | "d|f"
+                /// 2        | 0 | "e"   | "d|f|e"
+                ///
+                /// etc..
+                ///
+                for (dag_index, part) in get_full_chain(chain.clone()).iter() {
+                    let j = chain.len() - dag_index - 1;
+                    let path = get_sub_path(chain.clone(), *dag_index);
+                    let group = column_groups.entry(j).or_default();
+
+                    if group.matches(&path) {
+                        group.increment();
+                    } else {
+                        group.swap(path.clone());
+                    }
+
+                    let occurrences = path_occurrences[&path];
+                    let position = (occurrences as f64 / 2.0).ceil() as usize - 1;
+                    let mut column_chunks = Vec::default();
+
+                    let position = match position {
+                        position if position > group.index => Position::Above,
+                        position if position == group.index => Position::At,
+                        _ => Position::Below,
+                    };
+
+                    if position == Position::At {
+                        column_chunks.push(Value::String(format!("{part} ")));
+
+                        if *dag_index == 0 {
+                            column_chunks.push(Value::String(format!("  ")));
+                            column_chunks.push(Value::String("|".to_string()));
+
+                            for (k, breakdown_key) in sort_breakdown_keys.iter().enumerate() {
+                                let count_key = (locus.clone(), Some(breakdown_key.clone()));
+
+                                match counts.get(&count_key) {
+                                    Some(count) => {
+                                        column_chunks.push(Value::Count(*count));
+                                    }
+                                    None => {
+                                        column_chunks.push(Value::Count(0));
+                                    }
+                                };
+
+                                if k + 1 != sort_breakdown_keys.len() {
+                                    column_chunks.push(Value::Empty);
+                                }
+                            }
+
+                            column_chunks.push(Value::String("|".to_string()));
+                        } else {
+                            assert!(descendant_position.is_some());
+
+                            if let Some(desc_pos) = &descendant_position {
+                                match desc_pos {
+                                    Position::Above => {
+                                        column_chunks.push(Value::String(format!(" ┐")));
+                                    }
+                                    Position::At => {
+                                        column_chunks.push(Value::String(format!(" - ")));
+                                    }
+                                    Position::Below => {
+                                        column_chunks.push(Value::String(format!(" ┘")));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    descendant_position.replace(position);
+                    column_chunks_reversed.push(column_chunks);
+                }
+
+                println!("{column_chunks_reversed:?}");
+                let mut row = Row::default();
+
+                for column_chunks in column_chunks_reversed.into_iter().rev() {
+                    for value in column_chunks.into_iter() {
+                        println!("{value:?}");
+                        row.push(value);
+                    }
+
+                    println!();
+                }
+
+                grid.add(row);
+            }
+        }
+
+        Flat::new(maximum_count, config.render_width, grid)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -236,9 +513,9 @@ impl Default for Group {
 }
 
 impl Group {
-    fn matches(&self, locus: &String) -> bool {
+    fn matches(&self, path: &String) -> bool {
         match &self.locus {
-            Some(l) => l == locus,
+            Some(l) => l == path,
             None => false,
         }
     }
