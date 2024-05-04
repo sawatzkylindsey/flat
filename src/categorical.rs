@@ -6,6 +6,7 @@ pub struct Categorical<S>
 where
     S: Schematic,
     <S as Schematic>::Dims: Dimensions,
+    <S as Schematic>::SortDims: Ord,
 {
     schema: S,
     data: Vec<(S::Dims, u64)>,
@@ -43,7 +44,7 @@ impl<S: Schematic> Categorical<S> {
             .map(|(k, _)| (get_locus(&k.chain()), 0))
             .collect();
         let mut full_paths: HashSet<String> = HashSet::default();
-        let mut sort_chains: Vec<&S::Dims> = Vec::default();
+        let mut sort_chains: Vec<S::SortDims> = Vec::default();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
         let mut chain_length = 0;
         let mut maximum_count: u64 = 0;
@@ -78,8 +79,10 @@ impl<S: Schematic> Categorical<S> {
                 maximum_count = *count;
             }
 
-            if !sort_chains.contains(&k) {
-                sort_chains.push(k);
+            let sort_dims = self.schema.sort_dims(k);
+
+            if !sort_chains.contains(&sort_dims) {
+                sort_chains.push(sort_dims);
             }
         }
 
@@ -102,23 +105,10 @@ impl<S: Schematic> Categorical<S> {
 
         grid.add(row);
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
-        let mut current_locus = None;
 
-        for k in sort_chains.iter() {
-            let chain = k.chain();
+        for sort_dims in sort_chains.iter() {
+            let chain = sort_dims.chain();
             let locus = get_locus(&chain);
-
-            match &mut current_locus {
-                Some(l) => {
-                    if l != &locus {
-                        current_locus.replace(locus.clone());
-                    }
-                }
-                None => {
-                    current_locus = Some(locus.clone());
-                }
-            }
-
             let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
             let mut descendant_position = None;
 
@@ -227,6 +217,11 @@ impl<S: Schematic> Categorical<S> {
         assert!(self.schema.breakdown_header().is_some());
         let get_locus = |chain: &Vec<String>| chain[0].clone();
         let get_count_key = |chain: Vec<String>| self.schema.aggregate_key(chain);
+        let get_path = |chain: &Vec<String>, dag_index: usize| {
+            chain[0..dag_index + 1]
+                .iter()
+                .fold(String::default(), |acc, part| acc + part + ";")
+        };
         let get_sub_path = |chain: Vec<String>, dag_index: usize| {
             self.schema
                 .path(chain, dag_index)
@@ -241,7 +236,7 @@ impl<S: Schematic> Categorical<S> {
         };
         let mut counts: HashMap<(String, Option<String>), u64> = HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
-        let mut sort_chains: Vec<&S::Dims> = Vec::default();
+        let mut sort_chains: Vec<S::SortDims> = Vec::default();
         let mut sort_breakdown_keys: Vec<String> = Vec::default();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
         let mut chain_length = 0;
@@ -251,7 +246,6 @@ impl<S: Schematic> Categorical<S> {
             let chain = k.chain();
             let count_key = get_count_key(chain.clone());
             let full_path = get_full_path(chain.clone());
-            println!("full_path: {full_path}");
 
             // Only count the occurrences once per 'full path'.
             // This is because we might have multiple entries, for example:
@@ -280,7 +274,6 @@ impl<S: Schematic> Categorical<S> {
                         }
                     }
 
-                    println!("{path}");
                     path_occurrences
                         .entry(path)
                         .and_modify(|c| *c += 1)
@@ -295,8 +288,10 @@ impl<S: Schematic> Categorical<S> {
                 maximum_count = *count;
             }
 
-            if !sort_chains.contains(&k) {
-                sort_chains.push(k);
+            let sort_dims = self.schema.sort_dims(k);
+
+            if !sort_chains.contains(&sort_dims) {
+                sort_chains.push(sort_dims);
             }
 
             let breakdown_key = count_key.1.unwrap();
@@ -325,7 +320,6 @@ impl<S: Schematic> Categorical<S> {
         }
 
         columns.push(Column::string(columns.len(), Alignment::Center));
-        println!("{columns:?}");
         let mut grid = Grid::new(columns);
 
         // TODO
@@ -358,151 +352,125 @@ impl<S: Schematic> Categorical<S> {
         grid.add(row);
         // let mut rendered: HashSet<String> = HashSet::default();
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
-        let mut current_locus = None;
+        // let mut current_locus = None;
 
-        for k in sort_chains.iter() {
-            let chain = k.chain();
-            let full_path = get_full_path(chain.clone());
+        for sort_dims in sort_chains.iter() {
+            let chain = sort_dims.chain();
             let locus = get_locus(&chain);
+            let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
+            let mut descendant_position = None;
 
-            if full_paths.remove(&full_path) {
-                // rendered.insert(locus.clone());
-
-                match &mut current_locus {
-                    Some(l) => {
-                        if l != &locus {
-                            current_locus.replace(locus.clone());
-                        }
-                    }
-                    None => {
-                        current_locus = Some(locus.clone());
-                    }
+            #[allow(unused_doc_comments)]
+            /// Run through the chain in dag index ascending order, which
+            /// is the "rendering" reverse order.
+            ///
+            /// For this example dag, we'll iterate as follows:
+            /// a - b ┐
+            /// c ┐   - d
+            /// e - f ┘
+            /// h ┘
+            ///
+            /// chain: ["d", "b", "a"]
+            /// dag_index | j | part | path
+            /// ------------------------------
+            /// 0        | 2 | "d"   | "d"
+            /// 1        | 1 | "b"   | "d|b"
+            /// 2        | 0 | "a"   | "d|b|a"
+            ///
+            /// chain: ["d", "f", "c"]
+            /// dag_index | j | part | path
+            /// ------------------------------
+            /// 0        | 2 | "d"   | "d"
+            /// 1        | 1 | "f"   | "d|f"
+            /// 2        | 0 | "c"   | "d|f|c"
+            ///
+            /// chain: ["d", "f", "e"]
+            /// dag_index | j | part | path
+            /// ------------------------------
+            /// 0        | 2 | "d"   | "d"
+            /// 1        | 1 | "f"   | "d|f"
+            /// 2        | 0 | "e"   | "d|f|e"
+            ///
+            /// etc..
+            ///
+            for (dag_index, part) in chain.clone().iter().enumerate() {
+                //linz
+                let j = chain.len() - dag_index - 1;
+                let path = get_path(&chain, dag_index);
+                let group = column_groups.entry(j).or_default();
+                if group.matches(&path) {
+                    group.increment();
+                } else {
+                    group.swap(path.clone());
                 }
 
-                let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
-                let mut descendant_position = None;
+                let occurrences = path_occurrences[&path];
+                let position = (occurrences as f64 / 2.0).ceil() as usize - 1;
+                let mut column_chunks = Vec::default();
 
-                #[allow(unused_doc_comments)]
-                /// Run through the chain in dag index ascending order, which
-                /// is the "rendering" reverse order.
-                ///
-                /// For this example dag, we'll iterate as follows:
-                /// a - b ┐
-                /// c ┐   - d
-                /// e - f ┘
-                /// h ┘
-                ///
-                /// chain: ["d", "b", "a"]
-                /// dag_index | j | part | path
-                /// ------------------------------
-                /// 0        | 2 | "d"   | "d"
-                /// 1        | 1 | "b"   | "d|b"
-                /// 2        | 0 | "a"   | "d|b|a"
-                ///
-                /// chain: ["d", "f", "c"]
-                /// dag_index | j | part | path
-                /// ------------------------------
-                /// 0        | 2 | "d"   | "d"
-                /// 1        | 1 | "f"   | "d|f"
-                /// 2        | 0 | "c"   | "d|f|c"
-                ///
-                /// chain: ["d", "f", "e"]
-                /// dag_index | j | part | path
-                /// ------------------------------
-                /// 0        | 2 | "d"   | "d"
-                /// 1        | 1 | "f"   | "d|f"
-                /// 2        | 0 | "e"   | "d|f|e"
-                ///
-                /// etc..
-                ///
-                for (dag_index, part) in get_full_chain(chain.clone()).iter() {
-                    let j = chain.len() - dag_index - 1;
-                    let path = get_sub_path(chain.clone(), *dag_index);
-                    println!("");
-                    println!("{path}");
-                    let group = column_groups.entry(j).or_default();
-                    println!("{group:?}");
+                let position = match position {
+                    position if position > group.index => Position::Above,
+                    position if position == group.index => Position::At,
+                    _ => Position::Below,
+                };
 
-                    if group.matches(&path) {
-                        group.increment();
+                if position == Position::At {
+                    column_chunks.push(Value::String(format!("{part} ")));
+
+                    if dag_index == 0 {
+                        column_chunks.push(Value::String(format!("  ")));
+                        column_chunks.push(Value::String("|".to_string()));
+
+                        for (k, breakdown_key) in sort_breakdown_keys.iter().enumerate() {
+                            let count_key = (locus.clone(), Some(breakdown_key.clone()));
+
+                            match counts.get(&count_key) {
+                                Some(count) => {
+                                    column_chunks.push(Value::Count(*count));
+                                }
+                                None => {
+                                    column_chunks.push(Value::Count(0));
+                                }
+                            };
+
+                            if k + 1 != sort_breakdown_keys.len() {
+                                column_chunks.push(Value::Empty);
+                            }
+                        }
+
+                        column_chunks.push(Value::String("|".to_string()));
                     } else {
-                        group.swap(path.clone());
-                    }
-                    println!("{group:?}");
+                        assert!(descendant_position.is_some());
 
-                    let occurrences = path_occurrences[&path];
-                    let position = (occurrences as f64 / 2.0).ceil() as usize - 1;
-                    let mut column_chunks = Vec::default();
-
-                    let position = match position {
-                        position if position > group.index => Position::Above,
-                        position if position == group.index => Position::At,
-                        _ => Position::Below,
-                    };
-                    println!("{position:?}");
-
-                    if position == Position::At {
-                        column_chunks.push(Value::String(format!("{part} ")));
-
-                        if *dag_index == 0 {
-                            column_chunks.push(Value::String(format!("  ")));
-                            column_chunks.push(Value::String("|".to_string()));
-
-                            for (k, breakdown_key) in sort_breakdown_keys.iter().enumerate() {
-                                let count_key = (locus.clone(), Some(breakdown_key.clone()));
-
-                                match counts.get(&count_key) {
-                                    Some(count) => {
-                                        column_chunks.push(Value::Count(*count));
-                                    }
-                                    None => {
-                                        column_chunks.push(Value::Count(0));
-                                    }
-                                };
-
-                                if k + 1 != sort_breakdown_keys.len() {
-                                    column_chunks.push(Value::Empty);
+                        if let Some(desc_pos) = &descendant_position {
+                            match desc_pos {
+                                Position::Above => {
+                                    column_chunks.push(Value::String(format!(" ┐")));
                                 }
-                            }
-
-                            column_chunks.push(Value::String("|".to_string()));
-                        } else {
-                            assert!(descendant_position.is_some());
-
-                            if let Some(desc_pos) = &descendant_position {
-                                match desc_pos {
-                                    Position::Above => {
-                                        column_chunks.push(Value::String(format!(" ┐")));
-                                    }
-                                    Position::At => {
-                                        column_chunks.push(Value::String(format!(" - ")));
-                                    }
-                                    Position::Below => {
-                                        column_chunks.push(Value::String(format!(" ┘")));
-                                    }
+                                Position::At => {
+                                    column_chunks.push(Value::String(format!(" - ")));
+                                }
+                                Position::Below => {
+                                    column_chunks.push(Value::String(format!(" ┘")));
                                 }
                             }
                         }
                     }
-
-                    descendant_position.replace(position);
-                    column_chunks_reversed.push(column_chunks);
                 }
 
-                println!("{column_chunks_reversed:?}");
-                let mut row = Row::default();
-
-                for column_chunks in column_chunks_reversed.into_iter().rev() {
-                    for value in column_chunks.into_iter() {
-                        println!("{value:?}");
-                        row.push(value);
-                    }
-
-                    println!();
-                }
-
-                grid.add(row);
+                descendant_position.replace(position);
+                column_chunks_reversed.push(column_chunks);
             }
+
+            let mut row = Row::default();
+
+            for column_chunks in column_chunks_reversed.into_iter().rev() {
+                for value in column_chunks.into_iter() {
+                    row.push(value);
+                }
+            }
+
+            grid.add(row);
         }
 
         Flat::new(maximum_count, config.render_width, grid)

@@ -48,8 +48,7 @@ length   animal
 
 #[test]
 fn categorical_2d_breakdown() {
-    let schema: Schema2<String, u32> =
-        Schema::two("animal", "length").breakdown(Breakdown2::Second);
+    let schema = Schema::two("animal", "length").breakdown_2nd();
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
@@ -94,8 +93,7 @@ true   - 4      - whale   "#
 
 #[test]
 fn categorical_3d_breakdown2() {
-    let schema: Schema3<String, u32, bool> =
-        Schema::three("animal", "length", "stable").breakdown(Breakdown3::Second);
+    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
@@ -108,8 +106,8 @@ fn categorical_3d_breakdown2() {
         format!("\n{}", flat.to_string()),
         r#"
 stable   animal  | 1   4   5 |
-true   - shark   |***  *     |
-false  ┘
+false  - shark   |***  *     |
+true   ┘
 false  - tiger   |***  *  ***|
 true   ┘
 true   - whale   |           |"#
@@ -118,8 +116,7 @@ true   - whale   |           |"#
 
 #[test]
 fn categorical_3d_breakdown3() {
-    let schema: Schema3<String, u32, bool> =
-        Schema::three("animal", "length", "stable").breakdown(Breakdown3::Third);
+    let schema = Schema::three("animal", "length", "stable").breakdown_3rd();
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
@@ -131,13 +128,13 @@ fn categorical_3d_breakdown3() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-stable   length   animal
-true   - 1      - shark   ****
-false  - 4      ┘
-false  - 1      ┐
-false  - 4      - tiger   *******
-true   - 5      ┘
-true   - 4      - whale   "#
+length   animal  | 1   4   5 |
+1      - shark   |***  *     |
+4      ┘
+1      ┐
+4      - tiger   |***  *  ***|
+5      ┘
+4      - whale   |           |"#
     );
 }
 
