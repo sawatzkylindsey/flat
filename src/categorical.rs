@@ -35,7 +35,7 @@ impl<S: Schematic> Categorical<S> {
     fn render_total(self, config: Render) -> Flat {
         assert!(self.schema.breakdown_header().is_none());
         let get_locus = |chain: &Vec<String>| chain[0].clone();
-        let get_path = |chain: &Vec<String>, dag_index: usize| chain[0..dag_index + 1].join("|");
+        let get_path = |chain: &Vec<String>, dag_index: usize| chain[0..dag_index + 1].join(";");
         let get_full_path = |chain: Vec<String>| get_path(&chain, self.schema.width() - 1);
         let mut counts: HashMap<String, u64> = self
             .data
@@ -231,13 +231,13 @@ impl<S: Schematic> Categorical<S> {
             self.schema
                 .path(chain, dag_index)
                 .iter()
-                .fold(String::default(), |acc, (_, part)| acc + part + "|")
+                .fold(String::default(), |acc, (_, part)| acc + part + ";")
         };
         let get_full_chain = |chain: Vec<String>| self.schema.path(chain, self.schema.width() - 1);
         let get_full_path = |chain: Vec<String>| {
             get_full_chain(chain)
                 .iter()
-                .fold(String::default(), |acc, (_, part)| acc + part + "|")
+                .fold(String::default(), |acc, (_, part)| acc + part + ";")
         };
         let mut counts: HashMap<(String, Option<String>), u64> = HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
@@ -251,6 +251,7 @@ impl<S: Schematic> Categorical<S> {
             let chain = k.chain();
             let count_key = get_count_key(chain.clone());
             let full_path = get_full_path(chain.clone());
+            println!("full_path: {full_path}");
 
             // Only count the occurrences once per 'full path'.
             // This is because we might have multiple entries, for example:
@@ -266,8 +267,20 @@ impl<S: Schematic> Categorical<S> {
                     chain_length = chain.len();
                 }
 
+                let mut previous = None;
+
                 for dag_index in 0..chain.len() {
                     let path = get_sub_path(chain.clone(), dag_index);
+
+                    if previous.is_none() {
+                        previous.replace(path.clone());
+                    } else if let Some(p) = &previous {
+                        if p == &path {
+                            continue;
+                        }
+                    }
+
+                    println!("{path}");
                     path_occurrences
                         .entry(path)
                         .and_modify(|c| *c += 1)
@@ -343,16 +356,17 @@ impl<S: Schematic> Categorical<S> {
 
         row.push(Value::String("|".to_string()));
         grid.add(row);
-        let mut rendered: HashSet<String> = HashSet::default();
+        // let mut rendered: HashSet<String> = HashSet::default();
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
         let mut current_locus = None;
 
         for k in sort_chains.iter() {
             let chain = k.chain();
+            let full_path = get_full_path(chain.clone());
             let locus = get_locus(&chain);
 
-            if !rendered.contains(&locus) {
-                rendered.insert(locus.clone());
+            if full_paths.remove(&full_path) {
+                // rendered.insert(locus.clone());
 
                 match &mut current_locus {
                     Some(l) => {
@@ -404,13 +418,17 @@ impl<S: Schematic> Categorical<S> {
                 for (dag_index, part) in get_full_chain(chain.clone()).iter() {
                     let j = chain.len() - dag_index - 1;
                     let path = get_sub_path(chain.clone(), *dag_index);
+                    println!("");
+                    println!("{path}");
                     let group = column_groups.entry(j).or_default();
+                    println!("{group:?}");
 
                     if group.matches(&path) {
                         group.increment();
                     } else {
                         group.swap(path.clone());
                     }
+                    println!("{group:?}");
 
                     let occurrences = path_occurrences[&path];
                     let position = (occurrences as f64 / 2.0).ceil() as usize - 1;
@@ -421,6 +439,7 @@ impl<S: Schematic> Categorical<S> {
                         position if position == group.index => Position::At,
                         _ => Position::Below,
                     };
+                    println!("{position:?}");
 
                     if position == Position::At {
                         column_chunks.push(Value::String(format!("{part} ")));

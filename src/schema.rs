@@ -236,13 +236,6 @@ where
     fn breakdown_header(&self) -> Option<String> {
         self.breakdown.as_ref().map(|(_, h)| h.clone())
     }
-    // fn headers(&self) -> Vec<String> {
-    //     vec![
-    //         self.column_1.clone(),
-    //         self.column_2.clone(),
-    //         self.column_3.clone(),
-    //     ]
-    // }
 
     fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
         assert_eq!(chain.len(), 3);
@@ -265,8 +258,8 @@ where
     fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
         assert_eq!(chain.len(), 3);
         match &self.breakdown {
-            Some((Breakdown3::Second, _)) => (chain[0].clone(), Some(chain[2].clone())),
-            Some((Breakdown3::Third, _)) => (chain[0].clone(), Some(chain[1].clone())),
+            Some((Breakdown3::Second, _)) => (chain[0].clone(), Some(chain[1].clone())),
+            Some((Breakdown3::Third, _)) => (chain[0].clone(), Some(chain[2].clone())),
             None => (chain[0].clone(), None),
         }
     }

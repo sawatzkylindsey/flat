@@ -58,7 +58,6 @@ fn categorical_2d_breakdown() {
         .add(("tiger".to_string(), 5u32), 2)
         .add(("tiger".to_string(), 1u32), 3);
     let flat = builder.render(Render::default());
-    // center
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -67,20 +66,60 @@ shark   |***  *     |
 tiger   |*** *** ** |
 whale   |           |"#
     );
-    //     // left
-    //     assert_eq!(
-    //         format!("\n{}", flat.to_string()),
-    //         r#"
-    // animal  |1   4   5  |
-    // shark   |*** *      |
-    // tiger   |*** *** ** |
-    // whale   |           |"#
-    //     );
 }
 
 #[test]
 fn categorical_3d() {
     let schema: Schema3<String, u32, bool> = Schema::three("animal", "length", "stable");
+    let builder = Categorical::builder(schema)
+        .add(("whale".to_string(), 4u32, true), 0)
+        .add(("shark".to_string(), 4u32, false), 1)
+        .add(("shark".to_string(), 1u32, true), 3)
+        .add(("tiger".to_string(), 4u32, false), 1)
+        .add(("tiger".to_string(), 5u32, true), 3)
+        .add(("tiger".to_string(), 1u32, false), 3);
+    let flat = builder.render(Render::default());
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+stable   length   animal
+true   - 1      - shark   ****
+false  - 4      ┘
+false  - 1      ┐
+false  - 4      - tiger   *******
+true   - 5      ┘
+true   - 4      - whale   "#
+    );
+}
+
+#[test]
+fn categorical_3d_breakdown2() {
+    let schema: Schema3<String, u32, bool> =
+        Schema::three("animal", "length", "stable").breakdown(Breakdown3::Second);
+    let builder = Categorical::builder(schema)
+        .add(("whale".to_string(), 4u32, true), 0)
+        .add(("shark".to_string(), 4u32, false), 1)
+        .add(("shark".to_string(), 1u32, true), 3)
+        .add(("tiger".to_string(), 4u32, false), 1)
+        .add(("tiger".to_string(), 5u32, true), 3)
+        .add(("tiger".to_string(), 1u32, false), 3);
+    let flat = builder.render(Render::default());
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+stable   animal  | 1   4   5 |
+true   - shark   |***  *     |
+false  ┘
+false  - tiger   |***  *  ***|
+true   ┘
+true   - whale   |           |"#
+    );
+}
+
+#[test]
+fn categorical_3d_breakdown3() {
+    let schema: Schema3<String, u32, bool> =
+        Schema::three("animal", "length", "stable").breakdown(Breakdown3::Third);
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
