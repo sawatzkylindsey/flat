@@ -1,18 +1,24 @@
 use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
 use crate::schema::{Dimensions, Schematic};
 use std::collections::{HashMap, HashSet};
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
 
 pub struct Categorical<S>
 where
     S: Schematic,
-    <S as Schematic>::Dims: Dimensions,
-    <S as Schematic>::SortDims: Ord,
 {
     schema: S,
-    data: Vec<(S::Dims, u64)>,
+    data: Vec<(S::Dimensions, u64)>,
 }
 
-impl<S: Schematic> Categorical<S> {
+impl<S: Schematic> Categorical<S>
+where
+    S: Schematic,
+    <S as Schematic>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
+    <S as Schematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
+    <S as Schematic>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
+{
     pub fn builder(schema: S) -> Categorical<S> {
         Self {
             schema,
@@ -20,232 +26,31 @@ impl<S: Schematic> Categorical<S> {
         }
     }
 
-    pub fn add(mut self, key: S::Dims, value: u64) -> Categorical<S> {
+    pub fn add(mut self, key: S::Dimensions, value: u64) -> Categorical<S> {
         self.data.push((key, value));
         self
     }
 
     pub fn render(self, config: Render) -> Flat {
-        if self.schema.breakdown_header().is_none() {
-            self.render_total(config)
-        } else {
-            self.render_breakdown(config)
-        }
-    }
-
-    fn render_total(self, config: Render) -> Flat {
-        assert!(self.schema.breakdown_header().is_none());
-        let get_locus = |chain: &Vec<String>| chain[0].clone();
-        let get_path = |chain: &Vec<String>, dag_index: usize| chain[0..dag_index + 1].join(";");
-        let get_full_path = |chain: Vec<String>| get_path(&chain, self.schema.width() - 1);
-        let mut counts: HashMap<String, u64> = self
-            .data
-            .iter()
-            .map(|(k, _)| (get_locus(&k.chain()), 0))
-            .collect();
+        let mut counts: HashMap<(S::PrimaryDimension, S::BreakdownDimension), u64> =
+            HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
-        let mut sort_chains: Vec<S::SortDims> = Vec::default();
+        let mut sort_dimensions: Vec<S::SortDimensions> = Vec::default();
+        let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
+        let mut lookup: HashMap<S::SortDimensions, (S::PrimaryDimension, S::BreakdownDimension)> =
+            HashMap::default();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
-        let mut chain_length = 0;
         let mut maximum_count: u64 = 0;
 
-        for (k, v) in self.data.iter() {
-            let chain = k.chain();
-            let locus = get_locus(&chain);
-            let full_path = get_full_path(chain.clone());
-
-            if !full_paths.contains(&full_path) {
-                full_paths.insert(full_path);
-
-                if chain.len() > chain_length {
-                    chain_length = chain.len();
-                }
-
-                for dag_index in 0..chain.len() {
-                    let path = get_path(&chain, dag_index);
-                    path_occurrences
-                        .entry(path)
-                        .and_modify(|c| *c += 1)
-                        .or_insert(1);
-                }
-            }
-
-            let count = counts.get_mut(&locus).expect(
-                format!("locus '{locus}' must map to one of the aggregating rows").as_str(),
-            );
-            *count += v;
-
-            if *count > maximum_count {
-                maximum_count = *count;
-            }
-
-            let sort_dims = self.schema.sort_dims(k);
-
-            if !sort_chains.contains(&sort_dims) {
-                sort_chains.push(sort_dims);
-            }
-        }
-
-        sort_chains.sort();
-        let mut columns = Vec::default();
-
-        for _ in 0..self.schema.headers().len() {
-            columns.push(Column::string(columns.len(), Alignment::Left));
-            columns.push(Column::string(columns.len(), Alignment::Left));
-        }
-
-        let mut row = Row::default();
-        columns.push(Column::count(columns.len(), Alignment::Left));
-        let mut grid = Grid::new(columns);
-
-        for name in self.schema.headers().iter().rev() {
-            row.push(Value::String(name.clone()));
-            row.push(Value::Empty);
-        }
-
-        grid.add(row);
-        let mut column_groups: HashMap<usize, Group> = HashMap::default();
-
-        for sort_dims in sort_chains.iter() {
-            let chain = sort_dims.chain();
-            let locus = get_locus(&chain);
-            let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
-            let mut descendant_position = None;
-
-            #[allow(unused_doc_comments)]
-            /// Run through the chain in dag index ascending order, which
-            /// is the "rendering" reverse order.
-            ///
-            /// For this example dag, we'll iterate as follows:
-            /// a - b ┐
-            /// c ┐   - d
-            /// e - f ┘
-            /// h ┘
-            ///
-            /// chain: ["d", "b", "a"]
-            /// dag_index | j | part | path
-            /// ------------------------------
-            /// 0        | 2 | "d"   | "d"
-            /// 1        | 1 | "b"   | "d|b"
-            /// 2        | 0 | "a"   | "d|b|a"
-            ///
-            /// chain: ["d", "f", "c"]
-            /// dag_index | j | part | path
-            /// ------------------------------
-            /// 0        | 2 | "d"   | "d"
-            /// 1        | 1 | "f"   | "d|f"
-            /// 2        | 0 | "c"   | "d|f|c"
-            ///
-            /// chain: ["d", "f", "e"]
-            /// dag_index | j | part | path
-            /// ------------------------------
-            /// 0        | 2 | "d"   | "d"
-            /// 1        | 1 | "f"   | "d|f"
-            /// 2        | 0 | "e"   | "d|f|e"
-            ///
-            /// etc..
-            ///
-            for (dag_index, part) in chain.clone().iter().enumerate() {
-                let j = chain.len() - dag_index - 1;
-                let path = get_path(&chain, dag_index);
-                let group = column_groups.entry(j).or_default();
-
-                if group.matches(&path) {
-                    group.increment();
-                } else {
-                    group.swap(path.clone());
-                }
-
-                let occurrences = path_occurrences[&path];
-                let position = (occurrences as f64 / 2.0).ceil() as usize - 1;
-                let mut column_chunks = Vec::default();
-
-                let position = match position {
-                    position if position > group.index => Position::Above,
-                    position if position == group.index => Position::At,
-                    _ => Position::Below,
-                };
-
-                if position == Position::At {
-                    column_chunks.push(Value::String(format!("{part} ")));
-
-                    if dag_index == 0 {
-                        column_chunks.push(Value::String(format!("  ")));
-                        column_chunks.push(Value::Count(
-                            *counts
-                                .get(&locus)
-                                .expect(format!("locus '{locus}' must map to the value").as_str()),
-                        ));
-                    } else {
-                        assert!(descendant_position.is_some());
-
-                        if let Some(desc_pos) = &descendant_position {
-                            match desc_pos {
-                                Position::Above => {
-                                    column_chunks.push(Value::String(format!(" ┐")));
-                                }
-                                Position::At => {
-                                    column_chunks.push(Value::String(format!(" - ")));
-                                }
-                                Position::Below => {
-                                    column_chunks.push(Value::String(format!(" ┘")));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                descendant_position.replace(position);
-                column_chunks_reversed.push(column_chunks);
-            }
-
-            let mut row = Row::default();
-
-            for column_chunks in column_chunks_reversed.into_iter().rev() {
-                for value in column_chunks.into_iter() {
-                    row.push(value);
-                }
-            }
-
-            grid.add(row);
-        }
-
-        Flat::new(maximum_count, config.render_width, grid)
-    }
-
-    fn render_breakdown(self, config: Render) -> Flat {
-        assert!(self.schema.breakdown_header().is_some());
-        let get_locus = |chain: &Vec<String>| chain[0].clone();
-        let get_count_key = |chain: Vec<String>| self.schema.aggregate_key(chain);
-        let get_path = |chain: &Vec<String>, dag_index: usize| {
-            chain[0..dag_index + 1]
+        for (dims, v) in self.data.iter() {
+            let primary_dim = self.schema.primary_dim(dims);
+            let breakdown_dims = self.schema.breakdown_dim(dims);
+            let aggregate_dims = (primary_dim.clone(), breakdown_dims.clone());
+            let sort_dims = self.schema.sort_dims(dims);
+            let full_path = sort_dims
+                .as_strings()
                 .iter()
-                .fold(String::default(), |acc, part| acc + part + ";")
-        };
-        let get_sub_path = |chain: Vec<String>, dag_index: usize| {
-            self.schema
-                .path(chain, dag_index)
-                .iter()
-                .fold(String::default(), |acc, (_, part)| acc + part + ";")
-        };
-        let get_full_chain = |chain: Vec<String>| self.schema.path(chain, self.schema.width() - 1);
-        let get_full_path = |chain: Vec<String>| {
-            get_full_chain(chain)
-                .iter()
-                .fold(String::default(), |acc, (_, part)| acc + part + ";")
-        };
-        let mut counts: HashMap<(String, Option<String>), u64> = HashMap::default();
-        let mut full_paths: HashSet<String> = HashSet::default();
-        let mut sort_chains: Vec<S::SortDims> = Vec::default();
-        let mut sort_breakdown_keys: Vec<String> = Vec::default();
-        let mut path_occurrences: HashMap<String, usize> = HashMap::default();
-        let mut chain_length = 0;
-        let mut maximum_count: u64 = 0;
-
-        for (k, v) in self.data.iter() {
-            let chain = k.chain();
-            let count_key = get_count_key(chain.clone());
-            let full_path = get_full_path(chain.clone());
+                .fold(String::default(), |acc, part| acc + part + ";");
 
             // Only count the occurrences once per 'full path'.
             // This is because we might have multiple entries, for example:
@@ -257,23 +62,10 @@ impl<S: Schematic> Categorical<S> {
             if !full_paths.contains(&full_path) {
                 full_paths.insert(full_path);
 
-                if chain.len() > chain_length {
-                    chain_length = chain.len();
-                }
-
-                let mut previous = None;
-
-                for dag_index in 0..chain.len() {
-                    let path = get_sub_path(chain.clone(), dag_index);
-
-                    if previous.is_none() {
-                        previous.replace(path.clone());
-                    } else if let Some(p) = &previous {
-                        if p == &path {
-                            continue;
-                        }
-                    }
-
+                for dag_index in 0..sort_dims.len() {
+                    let path = sort_dims.as_strings()[0..dag_index + 1]
+                        .iter()
+                        .fold(String::default(), |acc, part| acc + part + ";");
                     path_occurrences
                         .entry(path)
                         .and_modify(|c| *c += 1)
@@ -281,82 +73,81 @@ impl<S: Schematic> Categorical<S> {
                 }
             }
 
-            let count = counts.entry(count_key.clone()).or_default();
+            let count = counts.entry(aggregate_dims.clone()).or_default();
             *count += v;
 
             if *count > maximum_count {
                 maximum_count = *count;
             }
 
-            let sort_dims = self.schema.sort_dims(k);
-
-            if !sort_chains.contains(&sort_dims) {
-                sort_chains.push(sort_dims);
+            if !lookup.contains_key(&sort_dims) {
+                // Notice, the breakdown_dim will be different in the case of an `is_breakdown` schema.
+                // But in that case, we don't actually use the breakdown from `lookup`.
+                // We really only need this so we can get the `Nothing` breakdown for non-`is_breakdown` schemas.
+                lookup.insert(
+                    sort_dims.clone(),
+                    (primary_dim.clone(), breakdown_dims.clone()),
+                );
+                sort_dimensions.push(sort_dims);
             }
 
-            let breakdown_key = count_key.1.unwrap();
-            if !sort_breakdown_keys.contains(&breakdown_key) {
-                sort_breakdown_keys.push(breakdown_key);
+            if !sort_breakdowns.contains(&breakdown_dims) {
+                sort_breakdowns.push(breakdown_dims);
             }
         }
 
-        sort_chains.sort();
-        sort_breakdown_keys.sort();
+        sort_dimensions.sort();
+        sort_breakdowns.sort();
         let mut columns = Vec::default();
 
-        for _ in 0..self.schema.headers().len() {
+        for _ in 0..self.schema.sort_headers().len() {
             columns.push(Column::string(columns.len(), Alignment::Left));
             columns.push(Column::string(columns.len(), Alignment::Left));
         }
 
-        columns.push(Column::string(columns.len(), Alignment::Center));
+        if self.schema.is_breakdown() {
+            columns.push(Column::string(columns.len(), Alignment::Center));
 
-        for i in 0..sort_breakdown_keys.len() {
-            columns.push(Column::breakdown(columns.len(), Alignment::Center));
+            for i in 0..sort_breakdowns.len() {
+                columns.push(Column::breakdown(columns.len(), Alignment::Center));
 
-            if i + 1 < sort_breakdown_keys.len() {
-                columns.push(Column::string(columns.len(), Alignment::Left));
+                if i + 1 < sort_breakdowns.len() {
+                    columns.push(Column::string(columns.len(), Alignment::Left));
+                }
             }
+
+            columns.push(Column::string(columns.len(), Alignment::Center));
+        } else {
+            columns.push(Column::count(columns.len(), Alignment::Left));
         }
 
-        columns.push(Column::string(columns.len(), Alignment::Center));
         let mut grid = Grid::new(columns);
-
-        // TODO
-        // let breakdown = self.schema.breakdown_header().unwrap();
-        // for _ in self.schema.headers().iter() {
-        //     row.push(Value::Empty);
-        //     row.push(Value::Empty);
-        // }
-        //
-        // row.push(Value::String(breakdown));
-        // grid.add(row);
         let mut row = Row::default();
 
-        for name in self.schema.headers().iter().rev() {
+        for name in self.schema.sort_headers().iter().rev() {
             row.push(Value::String(name.clone()));
             row.push(Value::Empty);
         }
 
-        row.push(Value::String("|".to_string()));
+        if self.schema.is_breakdown() {
+            row.push(Value::String("|".to_string()));
 
-        for (k, key) in sort_breakdown_keys.iter().enumerate() {
-            row.push(Value::String(key.clone()));
+            for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
+                row.push(Value::String(breakdown_dim.to_string()));
 
-            if k + 1 < sort_breakdown_keys.len() {
-                row.push(Value::String(" ".to_string()));
+                if k + 1 < sort_breakdowns.len() {
+                    row.push(Value::String(" ".to_string()));
+                }
             }
+
+            row.push(Value::String("|".to_string()));
         }
 
-        row.push(Value::String("|".to_string()));
         grid.add(row);
-        // let mut rendered: HashSet<String> = HashSet::default();
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
-        // let mut current_locus = None;
 
-        for sort_dims in sort_chains.iter() {
-            let chain = sort_dims.chain();
-            let locus = get_locus(&chain);
+        for sort_dims in sort_dimensions.iter() {
+            let chain = sort_dims.as_strings();
             let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
             let mut descendant_position = None;
 
@@ -394,10 +185,12 @@ impl<S: Schematic> Categorical<S> {
             /// etc..
             ///
             for (dag_index, part) in chain.clone().iter().enumerate() {
-                //linz
                 let j = chain.len() - dag_index - 1;
-                let path = get_path(&chain, dag_index);
+                let path = chain[0..dag_index + 1]
+                    .iter()
+                    .fold(String::default(), |acc, part| acc + part + ";");
                 let group = column_groups.entry(j).or_default();
+
                 if group.matches(&path) {
                     group.increment();
                 } else {
@@ -418,27 +211,39 @@ impl<S: Schematic> Categorical<S> {
                     column_chunks.push(Value::String(format!("{part} ")));
 
                     if dag_index == 0 {
+                        let (primary_dim, breakdown_dim) = lookup
+                            .get(sort_dims)
+                            .expect("sort dimensions must be mapped to dimensions");
                         column_chunks.push(Value::String(format!("  ")));
-                        column_chunks.push(Value::String("|".to_string()));
 
-                        for (k, breakdown_key) in sort_breakdown_keys.iter().enumerate() {
-                            let count_key = (locus.clone(), Some(breakdown_key.clone()));
+                        if self.schema.is_breakdown() {
+                            column_chunks.push(Value::String("|".to_string()));
 
-                            match counts.get(&count_key) {
-                                Some(count) => {
-                                    column_chunks.push(Value::Count(*count));
+                            for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
+                                let aggregate_dims = (primary_dim.clone(), breakdown_dim.clone());
+
+                                match counts.get(&aggregate_dims) {
+                                    Some(count) => {
+                                        column_chunks.push(Value::Count(*count));
+                                    }
+                                    None => {
+                                        column_chunks.push(Value::Count(0));
+                                    }
+                                };
+
+                                if k + 1 != sort_breakdowns.len() {
+                                    column_chunks.push(Value::String(" ".to_string()));
                                 }
-                                None => {
-                                    column_chunks.push(Value::Count(0));
-                                }
-                            };
-
-                            if k + 1 != sort_breakdown_keys.len() {
-                                column_chunks.push(Value::Empty);
                             }
-                        }
 
-                        column_chunks.push(Value::String("|".to_string()));
+                            column_chunks.push(Value::String("|".to_string()));
+                        } else {
+                            column_chunks.push(Value::Count(
+                                *counts
+                                    .get(&(primary_dim.clone(), breakdown_dim.clone()))
+                                    .unwrap_or(&0),
+                            ));
+                        }
                     } else {
                         assert!(descendant_position.is_some());
 

@@ -71,7 +71,14 @@ impl Column {
 
         let width = match &self.column_type {
             ColumnType::String(width) => *width,
-            ColumnType::Count | ColumnType::Breakdown => view.width,
+            ColumnType::Count => view.width,
+            ColumnType::Breakdown => {
+                if view.breakdown_width > view.width {
+                    view.breakdown_width
+                } else {
+                    view.width
+                }
+            }
         };
 
         match &self.alignment {
@@ -156,6 +163,7 @@ impl Row {
 pub(crate) struct Grid {
     columns: Vec<Column>,
     rows: Vec<HashMap<usize, Cell>>,
+    maximum_breakdown_width: usize,
 }
 
 impl Grid {
@@ -164,6 +172,7 @@ impl Grid {
         Self {
             columns,
             rows: Vec::default(),
+            maximum_breakdown_width: 0,
         }
     }
 
@@ -176,11 +185,23 @@ impl Grid {
                 .expect(format!("All columns must be accounted for, missing: {j}.").as_str());
             assert_eq!(column.index, j);
 
-            if let ColumnType::String(width) = &mut column.column_type {
-                if let Some(cell_width) = cell.value.render_width() {
-                    if &cell_width > width {
-                        *width = cell_width;
+            match &mut column.column_type {
+                ColumnType::String(width) => {
+                    if let Some(cell_width) = cell.value.render_width() {
+                        if &cell_width > width {
+                            *width = cell_width;
+                        }
                     }
+                }
+                ColumnType::Breakdown => {
+                    if let Some(cell_width) = cell.value.render_width() {
+                        if &cell_width > &self.maximum_breakdown_width {
+                            self.maximum_breakdown_width = cell_width;
+                        }
+                    }
+                }
+                ColumnType::Count => {
+                    // do nothing
                 }
             }
         }
@@ -228,26 +249,25 @@ impl Display for Flat {
                 ColumnType::Count | ColumnType::Breakdown => 1,
             })
             .sum();
-        println!("view_width {view_width}");
         view_width = view_width.saturating_div(view_columns);
 
         if view_width < 2 {
             view_width = 2;
         }
 
-        println!("max count {}", self.maximum_count);
-        println!("view_width {view_width}");
         let scale: u64 = self.maximum_count.div_ceil(view_width as u64);
         let width: usize = if scale == 1 {
             self.maximum_count as usize
         } else {
             view_width
         };
-        let view = View { width, scale };
-        println!("{view:?}");
+        let view = View {
+            width,
+            breakdown_width: self.grid.maximum_breakdown_width,
+            scale,
+        };
 
         for (i, row) in self.grid.rows.iter().enumerate() {
-            println!("{:?}", filled(row));
             for (j, optional_cell) in filled(row) {
                 match optional_cell {
                     Some(cell) => {
@@ -275,6 +295,7 @@ impl Display for Flat {
 #[derive(Debug)]
 struct View {
     width: usize,
+    breakdown_width: usize,
     scale: u64,
 }
 

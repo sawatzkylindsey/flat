@@ -1,26 +1,41 @@
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
+use std::hash::Hash;
 use std::marker::PhantomData;
 
-pub trait Dimensions: Clone {
-    fn chain(&self) -> Vec<String>;
+pub trait Dimensions {
+    fn as_strings(&self) -> Vec<String>;
+
+    fn len(&self) -> usize;
 }
 
 pub trait Schematic {
-    type Dims: Dimensions;
-    type SortDims: Dimensions + Ord;
-    type BreakdownDim;
+    type Dimensions;
+    type PrimaryDimension;
+    type BreakdownDimension;
+    type SortDimensions;
 
-    fn width(&self) -> usize;
+    fn total_width(&self) -> usize;
 
-    fn headers(&self) -> Vec<String>;
+    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension;
 
-    fn sort_dims(&self, dims: &Self::Dims) -> Self::SortDims;
+    fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension;
+
+    fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions;
+
+    fn sort_headers(&self) -> Vec<String>;
 
     fn breakdown_header(&self) -> Option<String>;
 
-    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)>;
+    fn is_breakdown(&self) -> bool;
+}
 
-    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>);
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Nothing;
+
+impl Display for Nothing {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "")
+    }
 }
 
 pub struct Schema;
@@ -111,123 +126,117 @@ impl Schema {
 
 impl<T> Schematic for Schema1<T>
 where
-    T: Clone + Display + Ord,
+    T: Clone,
 {
-    type Dims = (T,);
-    type SortDims = (T,);
-    type BreakdownDim = ();
+    type Dimensions = (T,);
+    type PrimaryDimension = T;
+    type BreakdownDimension = Nothing;
+    type SortDimensions = (T,);
 
-    fn width(&self) -> usize {
+    fn total_width(&self) -> usize {
         1
     }
 
-    fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone()]
+    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
+        dims.0.clone()
     }
 
-    fn sort_dims(&self, dims: &Self::Dims) -> Self::SortDims {
+    fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
         dims.clone()
+    }
+
+    fn sort_headers(&self) -> Vec<String> {
+        vec![self.column_1.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
         None
     }
 
-    fn path(&self, chain: Vec<String>, _dag_index: usize) -> Vec<(usize, String)> {
-        assert_eq!(chain.len(), 1);
-        vec![(0, chain[0].clone())]
-    }
-
-    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
-        assert_eq!(chain.len(), 1);
-        (chain[0].clone(), None)
+    fn is_breakdown(&self) -> bool {
+        false
     }
 }
 
 impl<T, U> Schematic for Schema2<T, U>
 where
-    T: Clone + Display + Ord,
-    U: Clone + Display + Ord,
+    T: Clone,
+    U: Clone,
 {
-    type Dims = (T, U);
-    type SortDims = (T, U);
-    type BreakdownDim = ();
+    type Dimensions = (T, U);
+    type PrimaryDimension = T;
+    type BreakdownDimension = Nothing;
+    type SortDimensions = (T, U);
 
-    fn width(&self) -> usize {
+    fn total_width(&self) -> usize {
         2
     }
 
-    fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone(), self.column_2.clone()]
+    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
+        dims.0.clone()
     }
 
-    fn sort_dims(&self, dims: &Self::Dims) -> Self::SortDims {
+    fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
         dims.clone()
+    }
+
+    fn sort_headers(&self) -> Vec<String> {
+        vec![self.column_1.clone(), self.column_2.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
         None
     }
 
-    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
-        assert_eq!(chain.len(), 2);
-        let mut out = Vec::default();
-
-        for i in 0..dag_index + 1 {
-            out.push((i, chain[i].clone()));
-        }
-
-        out
-    }
-
-    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
-        assert_eq!(chain.len(), 2);
-        (chain[0].clone(), None)
+    fn is_breakdown(&self) -> bool {
+        false
     }
 }
 
 impl<T, U> Schematic for Schema2Breakdown2<T, U>
 where
-    T: Clone + Display + Ord,
-    U: Clone + Display + Ord,
+    T: Clone,
+    U: Clone,
 {
-    type Dims = (T, U);
-    type SortDims = (T,);
-    type BreakdownDim = U;
+    type Dimensions = (T, U);
+    type PrimaryDimension = T;
+    type BreakdownDimension = U;
+    type SortDimensions = (T,);
 
-    fn width(&self) -> usize {
+    fn total_width(&self) -> usize {
         2
     }
 
-    fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone()]
+    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
+        dims.0.clone()
     }
 
-    fn sort_dims(&self, dims: &Self::Dims) -> Self::SortDims {
+    fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension {
+        dims.1.clone()
+    }
+
+    fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
         (dims.0.clone(),)
+    }
+
+    fn sort_headers(&self) -> Vec<String> {
+        vec![self.column_1.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
         Some(self.column_2.clone())
     }
 
-    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
-        assert_eq!(chain.len(), 2);
-        let mut out = Vec::default();
-
-        for i in 0..dag_index + 1 {
-            // We want to skip the breakdown column
-            if i != 1 {
-                out.push((i, chain[i].clone()));
-            }
-        }
-
-        out
-    }
-
-    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
-        assert_eq!(chain.len(), 2);
-        (chain[0].clone(), Some(chain[1].clone()))
+    fn is_breakdown(&self) -> bool {
+        true
     }
 }
 
@@ -250,19 +259,32 @@ impl<T, U> Schema2<T, U> {
 
 impl<T, U, V> Schematic for Schema3<T, U, V>
 where
-    T: Clone + Display + Ord,
-    U: Clone + Display + Ord,
-    V: Clone + Display + Ord,
+    T: Clone,
+    U: Clone,
+    V: Clone,
 {
-    type Dims = (T, U, V);
-    type SortDims = (T, U, V);
-    type BreakdownDim = ();
+    type Dimensions = (T, U, V);
+    type PrimaryDimension = T;
+    type BreakdownDimension = Nothing;
+    type SortDimensions = (T, U, V);
 
-    fn width(&self) -> usize {
+    fn total_width(&self) -> usize {
         3
     }
 
-    fn headers(&self) -> Vec<String> {
+    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
+        dims.clone()
+    }
+
+    fn sort_headers(&self) -> Vec<String> {
         vec![
             self.column_1.clone(),
             self.column_2.clone(),
@@ -270,120 +292,92 @@ where
         ]
     }
 
-    fn sort_dims(&self, dims: &Self::Dims) -> Self::SortDims {
-        dims.clone()
-    }
-
     fn breakdown_header(&self) -> Option<String> {
         None
     }
 
-    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
-        assert_eq!(chain.len(), 3);
-        let mut out = Vec::default();
-
-        for i in 0..dag_index + 1 {
-            out.push((i, chain[i].clone()));
-        }
-
-        out
-    }
-
-    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
-        assert_eq!(chain.len(), 3);
-        (chain[0].clone(), None)
+    fn is_breakdown(&self) -> bool {
+        false
     }
 }
 
 impl<T, U, V> Schematic for Schema3Breakdown2<T, U, V>
 where
-    T: Clone + Display + Ord,
-    U: Clone + Display + Ord,
-    V: Clone + Display + Ord,
+    T: Clone,
+    U: Clone,
+    V: Clone,
 {
-    type Dims = (T, U, V);
-    type SortDims = (T, V);
-    type BreakdownDim = U;
+    type Dimensions = (T, U, V);
+    type PrimaryDimension = T;
+    type BreakdownDimension = U;
+    type SortDimensions = (T, V);
 
-    fn width(&self) -> usize {
+    fn total_width(&self) -> usize {
         3
     }
 
-    fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone(), self.column_3.clone()]
+    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
+        dims.0.clone()
     }
 
-    fn sort_dims(&self, dims: &Self::Dims) -> Self::SortDims {
+    fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension {
+        dims.1.clone()
+    }
+
+    fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
         (dims.0.clone(), dims.2.clone())
+    }
+
+    fn sort_headers(&self) -> Vec<String> {
+        vec![self.column_1.clone(), self.column_3.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
         Some(self.column_2.clone())
     }
 
-    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
-        assert_eq!(chain.len(), 3);
-        let mut out = Vec::default();
-
-        for i in 0..dag_index + 1 {
-            // We want to skip the breakdown column
-            if i != 1 {
-                out.push((i, chain[i].clone()));
-            }
-        }
-
-        out
-    }
-
-    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
-        assert_eq!(chain.len(), 3);
-        (chain[0].clone(), Some(chain[1].clone()))
+    fn is_breakdown(&self) -> bool {
+        true
     }
 }
 
 impl<T, U, V> Schematic for Schema3Breakdown3<T, U, V>
 where
-    T: Clone + Display + Ord,
-    U: Clone + Display + Ord,
-    V: Clone + Display + Ord,
+    T: Clone,
+    U: Clone,
+    V: Clone,
 {
-    type Dims = (T, U, V);
-    type SortDims = (T, U);
-    type BreakdownDim = V;
+    type Dimensions = (T, U, V);
+    type PrimaryDimension = T;
+    type BreakdownDimension = V;
+    type SortDimensions = (T, U);
 
-    fn width(&self) -> usize {
+    fn total_width(&self) -> usize {
         3
     }
 
-    fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone(), self.column_2.clone()]
+    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
+        dims.0.clone()
     }
 
-    fn sort_dims(&self, dims: &Self::Dims) -> Self::SortDims {
+    fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension {
+        dims.2.clone()
+    }
+
+    fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
         (dims.0.clone(), dims.1.clone())
+    }
+
+    fn sort_headers(&self) -> Vec<String> {
+        vec![self.column_1.clone(), self.column_2.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
         Some(self.column_3.clone())
     }
 
-    fn path(&self, chain: Vec<String>, dag_index: usize) -> Vec<(usize, String)> {
-        assert_eq!(chain.len(), 3);
-        let mut out = Vec::default();
-
-        for i in 0..dag_index + 1 {
-            // We want to skip the breakdown column
-            if i != 2 {
-                out.push((i, chain[i].clone()));
-            }
-        }
-
-        out
-    }
-
-    fn aggregate_key(&self, chain: Vec<String>) -> (String, Option<String>) {
-        assert_eq!(chain.len(), 3);
-        (chain[0].clone(), Some(chain[1].clone()))
+    fn is_breakdown(&self) -> bool {
+        true
     }
 }
 
@@ -427,32 +421,44 @@ impl<T, U, V> Schema3<T, U, V> {
     }
 }
 
-impl<T: Clone> Dimensions for (T,)
+impl<T> Dimensions for (T,)
 where
-    T: Display + Ord,
+    T: Display,
 {
-    fn chain(&self) -> Vec<String> {
+    fn as_strings(&self) -> Vec<String> {
         vec![self.0.to_string()]
+    }
+
+    fn len(&self) -> usize {
+        1
     }
 }
 
 impl<T, U> Dimensions for (T, U)
 where
-    T: Clone + Display + Ord,
-    U: Clone + Display + Ord,
+    T: Display,
+    U: Display,
 {
-    fn chain(&self) -> Vec<String> {
+    fn as_strings(&self) -> Vec<String> {
         vec![self.0.to_string(), self.1.to_string()]
+    }
+
+    fn len(&self) -> usize {
+        2
     }
 }
 
 impl<T, U, V> Dimensions for (T, U, V)
 where
-    T: Clone + Display + Ord,
-    U: Clone + Display + Ord,
-    V: Clone + Display + Ord,
+    T: Display,
+    U: Display,
+    V: Display,
 {
-    fn chain(&self) -> Vec<String> {
+    fn as_strings(&self) -> Vec<String> {
         vec![self.0.to_string(), self.1.to_string(), self.2.to_string()]
+    }
+
+    fn len(&self) -> usize {
+        3
     }
 }

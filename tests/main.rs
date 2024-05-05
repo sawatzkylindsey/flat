@@ -3,7 +3,7 @@ use rstest::rstest;
 
 #[test]
 fn categorical_1d() {
-    let schema: Schema1<String> = Schema::one("animal");
+    let schema = Schema::one("animal");
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(),), 0)
         .add(("shark".to_string(),), 1)
@@ -24,7 +24,7 @@ whale   "#
 
 #[test]
 fn categorical_2d() {
-    let schema: Schema2<String, u32> = Schema::two("animal", "length");
+    let schema = Schema::two("animal", "length");
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
@@ -69,7 +69,7 @@ whale   |           |"#
 
 #[test]
 fn categorical_3d() {
-    let schema: Schema3<String, u32, bool> = Schema::three("animal", "length", "stable");
+    let schema = Schema::three("animal", "length", "stable");
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
@@ -128,11 +128,11 @@ fn categorical_3d_breakdown3() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal  | 1   4   5 |
-1      - shark   |***  *     |
+length   animal  |false true |
+1      - shark   |  *    *** |
 4      ┘
 1      ┐
-4      - tiger   |***  *  ***|
+4      - tiger   |****   *** |
 5      ┘
 4      - whale   |           |"#
     );
