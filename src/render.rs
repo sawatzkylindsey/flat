@@ -26,14 +26,14 @@ pub(crate) struct Column {
 }
 
 #[derive(Debug)]
-enum ColumnType {
+pub(crate) enum ColumnType {
     String(usize),
     Count,
     Breakdown,
 }
 
 impl Column {
-    pub(crate) fn string(index: usize, alignment: Alignment) -> Self {
+    pub fn string(index: usize, alignment: Alignment) -> Self {
         Self {
             index,
             alignment,
@@ -41,7 +41,7 @@ impl Column {
         }
     }
 
-    pub(crate) fn count(index: usize, alignment: Alignment) -> Self {
+    pub fn count(index: usize, alignment: Alignment) -> Self {
         Self {
             index,
             alignment,
@@ -49,7 +49,7 @@ impl Column {
         }
     }
 
-    pub(crate) fn breakdown(index: usize, alignment: Alignment) -> Self {
+    pub fn breakdown(index: usize, alignment: Alignment) -> Self {
         Self {
             index,
             alignment,
@@ -151,7 +151,7 @@ pub(crate) struct Row {
 }
 
 impl Row {
-    pub(crate) fn push(&mut self, value: Value) {
+    pub fn push(&mut self, value: Value) {
         self.cells.push(Cell {
             column: self.cells.len(),
             value,
@@ -167,7 +167,7 @@ pub(crate) struct Grid {
 }
 
 impl Grid {
-    pub(crate) fn new(mut columns: Vec<Column>) -> Self {
+    pub fn new(mut columns: Vec<Column>) -> Self {
         columns.sort_by(|a, b| a.index.cmp(&b.index));
         Self {
             columns,
@@ -176,7 +176,7 @@ impl Grid {
         }
     }
 
-    pub(crate) fn add(&mut self, row: Row) {
+    pub fn add(&mut self, row: Row) {
         assert!(!row.cells.is_empty());
         for (j, cell) in row.cells.iter().enumerate() {
             let column = self
