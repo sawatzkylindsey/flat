@@ -101,23 +101,39 @@ where
         let mut columns = Vec::default();
 
         for _ in 0..self.schema.sort_headers().len() {
+            // dimension value
             columns.push(Column::string(columns.len(), Alignment::Left));
+            // spacer "  "
             columns.push(Column::string(columns.len(), Alignment::Left));
         }
 
+        if config.show_total {
+            // total left [
+            columns.push(Column::string(columns.len(), Alignment::Center));
+            // total value
+            columns.push(Column::string(columns.len(), Alignment::Right));
+            // total right ]
+            columns.push(Column::string(columns.len(), Alignment::Center));
+        }
+
         if self.schema.is_breakdown() {
+            // breakdown left |
             columns.push(Column::string(columns.len(), Alignment::Center));
 
             for i in 0..sort_breakdowns.len() {
+                // aggregate count
                 columns.push(Column::breakdown(columns.len(), Alignment::Center));
 
                 if i + 1 < sort_breakdowns.len() {
+                    // spacer " "
                     columns.push(Column::string(columns.len(), Alignment::Left));
                 }
             }
 
+            // breakdown right |
             columns.push(Column::string(columns.len(), Alignment::Center));
         } else {
+            // aggregate count
             columns.push(Column::count(columns.len(), Alignment::Left));
         }
 
@@ -126,6 +142,12 @@ where
 
         for name in self.schema.sort_headers().iter().rev() {
             row.push(Value::String(name.clone()));
+            row.push(Value::Empty);
+        }
+
+        if config.show_total {
+            row.push(Value::Empty);
+            row.push(Value::Empty);
             row.push(Value::Empty);
         }
 
@@ -217,32 +239,46 @@ where
                         column_chunks.push(Value::String(format!("  ")));
 
                         if self.schema.is_breakdown() {
+                            let breakdown_counts: Vec<u64> = sort_breakdowns
+                                .iter()
+                                .map(|breakdown_dim| {
+                                    let aggregate_dims =
+                                        (primary_dim.clone(), breakdown_dim.clone());
+                                    *counts.get(&aggregate_dims).unwrap_or(&0)
+                                })
+                                .collect();
+
+                            if config.show_total {
+                                column_chunks.push(Value::String("[".to_string()));
+                                column_chunks.push(Value::String(format!(
+                                    "{}",
+                                    breakdown_counts.iter().sum::<u64>()
+                                )));
+                                column_chunks.push(Value::String("] ".to_string()));
+                            }
+
                             column_chunks.push(Value::String("|".to_string()));
 
-                            for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
-                                let aggregate_dims = (primary_dim.clone(), breakdown_dim.clone());
+                            for (k, breakdown_count) in breakdown_counts.iter().enumerate() {
+                                column_chunks.push(Value::Count(*breakdown_count));
 
-                                match counts.get(&aggregate_dims) {
-                                    Some(count) => {
-                                        column_chunks.push(Value::Count(*count));
-                                    }
-                                    None => {
-                                        column_chunks.push(Value::Count(0));
-                                    }
-                                };
-
-                                if k + 1 != sort_breakdowns.len() {
+                                if k + 1 != breakdown_counts.len() {
                                     column_chunks.push(Value::String(" ".to_string()));
                                 }
                             }
 
                             column_chunks.push(Value::String("|".to_string()));
                         } else {
-                            column_chunks.push(Value::Count(
-                                *counts
-                                    .get(&(primary_dim.clone(), breakdown_dim.clone()))
-                                    .unwrap_or(&0),
-                            ));
+                            let aggregate_dims = (primary_dim.clone(), breakdown_dim.clone());
+                            let count = *counts.get(&aggregate_dims).unwrap_or(&0);
+
+                            if config.show_total {
+                                column_chunks.push(Value::String("[".to_string()));
+                                column_chunks.push(Value::String(format!("{count}")));
+                                column_chunks.push(Value::String("] ".to_string()));
+                            }
+
+                            column_chunks.push(Value::Count(count));
                         }
                     } else {
                         assert!(descendant_position.is_some());

@@ -75,17 +75,26 @@ impl Histogram {
 
         let columns = if config.show_total {
             vec![
+                // histogram range
                 Column::string(0, Alignment::Left),
+                // spacer "  "
                 Column::string(1, Alignment::Center),
+                // total left [
                 Column::string(2, Alignment::Center),
+                // total value
                 Column::string(3, Alignment::Right),
+                // total right ]
                 Column::string(4, Alignment::Center),
+                // histogram count
                 Column::count(5, Alignment::Left),
             ]
         } else {
             vec![
+                // histogram range
                 Column::string(0, Alignment::Left),
+                // spacer "  "
                 Column::string(1, Alignment::Center),
+                // histogram count
                 Column::count(2, Alignment::Left),
             ]
         };
@@ -98,7 +107,7 @@ impl Histogram {
 
             if config.show_total {
                 row.push(Value::String("[".to_string()));
-                row.push(Value::String(format!("{:>}", count)));
+                row.push(Value::String(format!("{count}")));
                 row.push(Value::String("] ".to_string()));
             }
 
