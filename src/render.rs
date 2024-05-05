@@ -12,7 +12,7 @@ pub struct Render {
 impl Default for Render {
     fn default() -> Self {
         Self {
-            render_width: 120,
+            render_width: 180,
             show_total: false,
         }
     }

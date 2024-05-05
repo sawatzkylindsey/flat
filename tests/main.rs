@@ -88,8 +88,8 @@ fn categorical_2d_show_total() {
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
     let flat = builder.render(Render {
-        render_width: 120,
         show_total: true,
+        ..Render::default()
     });
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -222,8 +222,8 @@ fn categorical_3d_breakdown2_show_total() {
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
     let flat = builder.render(Render {
-        render_width: 120,
         show_total: true,
+        ..Render::default()
     });
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -320,8 +320,8 @@ fn histogram_show_total() {
     }
 
     let flat = builder.render(Render {
-        render_width: 120,
         show_total: true,
+        ..Render::default()
     });
     assert_eq!(
         format!("\n{}", flat.to_string()),
