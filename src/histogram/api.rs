@@ -1,6 +1,11 @@
 use crate::{Nothing, Schema1, Schema2Breakdown2};
 use std::ops::{Add, Sub};
 
+#[derive(Debug, Default)]
+pub struct HistogramConfig {}
+
+/// The internal trait which allows rendering [`Histogram`]s across different [`Schema']s.
+/// Consumers should not implement this trait.
 pub trait HistogramSchematic {
     type Dimensions;
     type PrimaryDimension: Binnable;
@@ -17,16 +22,18 @@ pub trait HistogramSchematic {
     fn is_breakdown(&self) -> bool;
 }
 
+/// Allows a type `T` to be used as the *primary* dimension of a [`Histogram`].
+/// Consumers may choose to implement this to bin non-standard types in a histogram.
 pub trait Binnable: PartialEq + PartialOrd + Add + Sub + Sized {
     /// Multiply this value (`self: T`) by the `rhs: usize`, resulting in another `T`.
     ///
-    /// **Notice**: For *whole* types `T` (types that belong to ℤ) the resulting value must be rounded up.
+    /// **Notice**: For *whole* types `T` (types that belong to ℤ) the resulting value **must** be rounded up.
     /// In other words, implement `multiply` using `ceil` for integer types.
     fn multiply(&self, rhs: usize) -> Self;
 
     /// Divide this value (`self: T`) by the `rhs: usize`, resulting in another `T`.
     ///
-    /// **Notice**: For *whole* types `T` (types that belong to ℤ) the resulting value must be rounded up.
+    /// **Notice**: For *whole* types `T` (types that belong to ℤ) the resulting value **must** be rounded up.
     /// In other words, implement `divide` using `ceil` for integer types.
     fn divide(&self, rhs: usize) -> Self;
 }
@@ -107,5 +114,48 @@ where
 
     fn is_breakdown(&self) -> bool {
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn binnable_f64() {
+        assert_eq!(0.0f64.multiply(0), 0.0);
+        assert_eq!(1.0f64.multiply(0), 0.0);
+        assert_eq!(1.5f64.multiply(0), 0.0);
+
+        assert_eq!(0.0f64.multiply(1), 0.0);
+        assert_eq!(1.0f64.multiply(1), 1.0);
+        assert_eq!(1.5f64.multiply(1), 1.5);
+
+        assert_eq!(0.0f64.divide(1), 0.0);
+        assert_eq!(1.0f64.divide(1), 1.0);
+        assert_eq!(1.5f64.divide(1), 1.5);
+
+        assert_eq!(0.0f64.divide(2), 0.0);
+        assert_eq!(1.0f64.divide(2), 0.5);
+        assert_eq!(1.5f64.divide(2), 0.75);
+    }
+
+    #[test]
+    fn binnable_u64() {
+        assert_eq!(0u64.multiply(0), 0);
+        assert_eq!(1u64.multiply(0), 0);
+        assert_eq!(2u64.multiply(0), 0);
+
+        assert_eq!(0u64.multiply(1), 0);
+        assert_eq!(1u64.multiply(1), 1);
+        assert_eq!(2u64.multiply(1), 2);
+
+        assert_eq!(0u64.divide(1), 0);
+        assert_eq!(1u64.divide(1), 1);
+        assert_eq!(2u64.divide(1), 2);
+
+        assert_eq!(0u64.divide(2), 0);
+        assert_eq!(1u64.divide(2), 1);
+        assert_eq!(2u64.divide(2), 1);
     }
 }

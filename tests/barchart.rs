@@ -2,9 +2,9 @@ use flat::*;
 use rstest::rstest;
 
 #[test]
-fn categorical_1d() {
+fn barchart_1d() {
     let schema = Schema::one("anml");
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(),), 0)
         .add(("shark".to_string(),), 1)
         .add(("shark".to_string(),), 3)
@@ -23,9 +23,9 @@ whale   "#
 }
 
 #[test]
-fn categorical_2d() {
+fn barchart_2d() {
     let schema = Schema::two("animal", "length");
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
@@ -51,9 +51,9 @@ length   animal
 #[case(18)]
 #[case(19)]
 // #[case(20)]
-fn categorical_2d_squish(#[case] render_width: usize) {
+fn barchart_2d_squish(#[case] width_hint: usize) {
     let schema = Schema::two("animal", "length");
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
@@ -61,8 +61,9 @@ fn categorical_2d_squish(#[case] render_width: usize) {
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
     let flat = builder.render(Render {
-        render_width,
+        width_hint,
         show_total: false,
+        ..Render::default()
     });
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -78,9 +79,9 @@ length   animal
 }
 
 #[test]
-fn categorical_2d_show_total() {
+fn barchart_2d_show_total() {
     let schema = Schema::two("animal", "length");
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
@@ -105,9 +106,9 @@ length   animal
 }
 
 #[test]
-fn categorical_2d_breakdown() {
+fn barchart_2d_breakdown() {
     let schema = Schema::two("animal", "length").breakdown_2nd();
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
@@ -126,9 +127,9 @@ whale   |           |"#
 }
 
 #[test]
-fn categorical_3d() {
+fn barchart_3d() {
     let schema = Schema::three("animal", "length", "stable");
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, true), 3)
@@ -150,9 +151,9 @@ true   - 4      - whale   "#
 }
 
 #[test]
-fn categorical_3d_breakdown2() {
+fn barchart_3d_breakdown2() {
     let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, true), 3)
@@ -186,9 +187,9 @@ true   - whale   |           |"#
 #[case(27)]
 #[case(28)]
 // #[case(30)]
-fn categorical_3d_breakdown2_squish(#[case] render_width: usize) {
+fn barchart_3d_breakdown2_squish(#[case] width_hint: usize) {
     let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, true), 3)
@@ -196,8 +197,9 @@ fn categorical_3d_breakdown2_squish(#[case] render_width: usize) {
         .add(("tiger".to_string(), 5u32, true), 3)
         .add(("tiger".to_string(), 1u32, false), 3);
     let flat = builder.render(Render {
-        render_width,
+        width_hint,
         show_total: false,
+        ..Render::default()
     });
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -212,9 +214,9 @@ true   - whale   |        |"#
 }
 
 #[test]
-fn categorical_3d_breakdown2_show_total() {
+fn barchart_3d_breakdown2_show_total() {
     let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, true), 3)
@@ -238,9 +240,9 @@ true   - whale   [ 0] |                    |"#
 }
 
 #[test]
-fn categorical_3d_breakdown3() {
+fn barchart_3d_breakdown3() {
     let schema = Schema::three("animal", "length", "stable").breakdown_3rd();
-    let builder = Categorical::builder(schema)
+    let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, true), 3)

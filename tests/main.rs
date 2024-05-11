@@ -1,2 +1,2 @@
-mod categorical;
+mod barchart;
 mod histogram;

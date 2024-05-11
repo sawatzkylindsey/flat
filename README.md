@@ -1,2 +1,3 @@
 # flat
-Textual rendering of data
+
+Project multi-dimensional data onto the **flat** textual plane.

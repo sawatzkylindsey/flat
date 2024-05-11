@@ -1,5 +1,12 @@
 use std::marker::PhantomData;
 
+/// Starting point for specifying the dimensions of a dataset.
+///
+/// ```ignore
+/// use flat::Schema;
+///
+/// let my_dimensions = Schema::two("column_1", "column_2");
+/// ```
 pub struct Schema;
 
 pub struct Schema1<T> {
@@ -48,6 +55,7 @@ pub struct Schema3Breakdown3<T, U, V> {
     pub(crate) column_3: String,
 }
 
+// TODO
 // pub struct Schema4<T, U, V, W>;
 // pub struct Schema5<T, U, V, W, X>;
 // pub struct Schema6<T, U, V, W, X, Y>;

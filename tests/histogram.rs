@@ -50,7 +50,7 @@ length
 #[case(13)]
 #[case(14)]
 // #[case(15)]
-fn histogram_squish(#[case] render_width: usize) {
+fn histogram_squish(#[case] width_hint: usize) {
     let schema = Schema::one("length");
     let mut builder = Histogram::builder(schema, 5);
 
@@ -62,8 +62,9 @@ fn histogram_squish(#[case] render_width: usize) {
     builder = builder.add((9.0,), 0);
 
     let flat = builder.render(Render {
-        render_width,
+        width_hint,
         show_total: false,
+        ..Render::default()
     });
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -107,7 +108,7 @@ length
 #[case(18)]
 #[case(19)]
 // #[case(20)]
-fn histogram_show_total_squish(#[case] render_width: usize) {
+fn histogram_show_total_squish(#[case] width_hint: usize) {
     let schema = Schema::one("length");
     let mut builder = Histogram::builder(schema, 5);
 
@@ -119,8 +120,9 @@ fn histogram_show_total_squish(#[case] render_width: usize) {
     builder = builder.add((9.0,), 0);
 
     let flat = builder.render(Render {
-        render_width,
+        width_hint,
         show_total: true,
+        ..Render::default()
     });
     assert_eq!(
         format!("\n{}", flat.to_string()),

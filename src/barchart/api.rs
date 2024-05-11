@@ -2,7 +2,12 @@ use crate::{
     Nothing, Schema1, Schema2, Schema2Breakdown2, Schema3, Schema3Breakdown2, Schema3Breakdown3,
 };
 
-pub trait CategoricalSchematic {
+#[derive(Debug, Default)]
+pub struct BarChartConfig {}
+
+/// The internal trait which allows rendering [`BarChar`]s across different [`Schema']s.
+/// Consumers should not implement this trait.
+pub trait BarChartSchematic {
     type Dimensions;
     type PrimaryDimension;
     type BreakdownDimension;
@@ -23,7 +28,7 @@ pub trait CategoricalSchematic {
     fn is_breakdown(&self) -> bool;
 }
 
-impl<T> CategoricalSchematic for Schema1<T>
+impl<T> BarChartSchematic for Schema1<T>
 where
     T: Clone,
 {
@@ -61,7 +66,7 @@ where
     }
 }
 
-impl<T, U> CategoricalSchematic for Schema2<T, U>
+impl<T, U> BarChartSchematic for Schema2<T, U>
 where
     T: Clone,
     U: Clone,
@@ -100,7 +105,7 @@ where
     }
 }
 
-impl<T, U> CategoricalSchematic for Schema2Breakdown2<T, U>
+impl<T, U> BarChartSchematic for Schema2Breakdown2<T, U>
 where
     T: Clone,
     U: Clone,
@@ -139,7 +144,7 @@ where
     }
 }
 
-impl<T, U, V> CategoricalSchematic for Schema3<T, U, V>
+impl<T, U, V> BarChartSchematic for Schema3<T, U, V>
 where
     T: Clone,
     U: Clone,
@@ -183,7 +188,7 @@ where
     }
 }
 
-impl<T, U, V> CategoricalSchematic for Schema3Breakdown2<T, U, V>
+impl<T, U, V> BarChartSchematic for Schema3Breakdown2<T, U, V>
 where
     T: Clone,
     U: Clone,
@@ -223,7 +228,7 @@ where
     }
 }
 
-impl<T, U, V> CategoricalSchematic for Schema3Breakdown3<T, U, V>
+impl<T, U, V> BarChartSchematic for Schema3Breakdown3<T, U, V>
 where
     T: Clone,
     U: Clone,

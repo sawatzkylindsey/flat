@@ -1,5 +1,5 @@
 use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
-use crate::{Binnable, HistogramSchematic};
+use crate::{Binnable, HistogramConfig, HistogramSchematic};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
@@ -64,7 +64,7 @@ where
         self
     }
 
-    pub fn render(self, config: Render) -> Flat {
+    pub fn render(self, config: Render<HistogramConfig>) -> Flat {
         let Self {
             bins,
             data,
@@ -217,7 +217,7 @@ where
             grid.add(row);
         }
 
-        Flat::new(maximum_count, config.render_width, grid)
+        Flat::new(maximum_count, config.width_hint, grid)
     }
 }
 

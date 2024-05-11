@@ -1,36 +1,36 @@
-use crate::categorical::api::CategoricalSchematic;
+use crate::barchart::api::BarChartSchematic;
 use crate::render::{Alignment, Column, Grid, Row, Value};
-use crate::Dimensions;
+use crate::{BarChartConfig, Dimensions};
 use crate::{Flat, Render};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
-pub struct Categorical<S: CategoricalSchematic> {
+pub struct BarChart<S: BarChartSchematic> {
     schema: S,
     data: Vec<(S::Dimensions, u64)>,
 }
 
-impl<S: CategoricalSchematic> Categorical<S>
+impl<S: BarChartSchematic> BarChart<S>
 where
-    S: CategoricalSchematic,
-    <S as CategoricalSchematic>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
-    <S as CategoricalSchematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
-    <S as CategoricalSchematic>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
+    S: BarChartSchematic,
+    <S as BarChartSchematic>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
+    <S as BarChartSchematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
+    <S as BarChartSchematic>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
 {
-    pub fn builder(schema: S) -> Categorical<S> {
+    pub fn builder(schema: S) -> BarChart<S> {
         Self {
             schema,
             data: Vec::default(),
         }
     }
 
-    pub fn add(mut self, key: S::Dimensions, value: u64) -> Categorical<S> {
+    pub fn add(mut self, key: S::Dimensions, value: u64) -> BarChart<S> {
         self.data.push((key, value));
         self
     }
 
-    pub fn render(self, config: Render) -> Flat {
+    pub fn render(self, config: Render<BarChartConfig>) -> Flat {
         let mut counts: HashMap<(S::PrimaryDimension, S::BreakdownDimension), u64> =
             HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
@@ -54,7 +54,7 @@ where
             // Only count the occurrences once per 'full path'.
             // This is because we might have multiple entries, for example:
             // ```
-            // Categorical::builder(schema)
+            // BarChart::builder(schema)
             //     .add(("whale".to_string(), 4u32), 2)
             //     .add(("whale".to_string(), 4u32), 3)
             // ```
@@ -313,7 +313,7 @@ where
             grid.add(row);
         }
 
-        Flat::new(maximum_count, config.render_width, grid)
+        Flat::new(maximum_count, config.width_hint, grid)
     }
 }
 

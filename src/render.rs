@@ -3,17 +3,27 @@ use std::fmt::{Display, Formatter, Write};
 use std::iter;
 use unicode_width::UnicodeWidthStr;
 
+/// The general configuration for rendering a `flat` chart.
 #[derive(Debug)]
-pub struct Render {
-    pub render_width: usize,
+pub struct Render<C> {
+    /// The hint to use to determine the width of the rendering.
+    /// [`Flat`] will try to make the rendering at most `width_hint` wide, with some exceptions:
+    /// * If the rendering can reasonably fit in a smaller width, the `width_hint` is ignored.
+    /// * If the rendering cannot reasonably fit the `width_hint`, then it is minimally extended (such that a reasonable rendering may be produced).
+    pub width_hint: usize,
+    /// Whether to show the absolute total for the *primary* dimension of the dataset.
+    /// While the *rendered* data in `flat` may use a relative representation, this option extends the rendering to show the absolute values of the data.
     pub show_total: bool,
+    /// The widget specific rendering configuration.
+    pub widget_config: C,
 }
 
-impl Default for Render {
+impl<C: Default> Default for Render<C> {
     fn default() -> Self {
         Self {
-            render_width: 180,
+            width_hint: 180,
             show_total: false,
+            widget_config: C::default(),
         }
     }
 }
@@ -211,6 +221,27 @@ impl Grid {
     }
 }
 
+/// The textual representation of data.
+/// This is always produced by calling `.render(config)` on a widget.
+/// Use [`std::fmt::Display`] to materialize the flat rendering.
+///
+/// ```
+/// use flat::*;
+///
+/// let schema = Schema::one("Animal");
+/// let builder = BarChart::builder(schema)
+///     .add(("whale".to_string(),), 0)
+///     .add(("shark".to_string(),), 1)
+///     .add(("tiger".to_string(),), 4);
+/// let flat = builder.render(Render::default());
+/// println!("{flat}");
+///
+/// // Output (modified for alignment)
+/// r#"Animal
+///    shark   *
+///    tiger   ****
+///    whale   "#;
+/// ```
 #[derive(Debug)]
 pub struct Flat {
     maximum_count: u64,
