@@ -1,12 +1,14 @@
 use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
 use crate::{Binnable, HistogramSchematic};
+use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::Hash;
 use std::ops::{Add, Sub};
 
 pub struct Histogram<S: HistogramSchematic> {
     schema: S,
     bins: usize,
-    data: Vec<(S::PrimaryDimension, u64)>,
+    data: Vec<(S::Dimensions, u64)>,
     min: Option<S::PrimaryDimension>,
     max: Option<S::PrimaryDimension>,
 }
@@ -25,6 +27,7 @@ where
             <S as HistogramSchematic>::PrimaryDimension,
             Output = <S as HistogramSchematic>::PrimaryDimension,
         > + Binnable,
+    <S as HistogramSchematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
     pub fn builder(schema: S, bins: usize) -> Histogram<S> {
         Self {
@@ -36,26 +39,28 @@ where
         }
     }
 
-    pub fn add(mut self, key: S::PrimaryDimension, value: u64) -> Histogram<S> {
+    pub fn add(mut self, dims: S::Dimensions, value: u64) -> Histogram<S> {
+        let primary_dim = self.schema.primary_dim(&dims);
+
         let update_min = match &self.min {
-            Some(min) => key < *min,
+            Some(min) => primary_dim < *min,
             None => true,
         };
 
         if update_min {
-            self.min.replace(key.clone());
+            self.min.replace(primary_dim.clone());
         }
 
         let update_max = match &self.max {
-            Some(max) => key > *max,
+            Some(max) => primary_dim > *max,
             None => true,
         };
 
         if update_max {
-            self.max.replace(key.clone());
+            self.max.replace(primary_dim.clone());
         }
 
-        self.data.push((key, value));
+        self.data.push((dims, value));
         self
     }
 
@@ -71,65 +76,114 @@ where
         let min = min.expect("histogram must have some data");
         let max = max.expect("histogram must have some data");
         let delta = max - min.clone();
-        let size = delta.ceiling_divide(bins);
+        let size = delta.divide(bins);
         let bin_ranges: Vec<Bounds<S::PrimaryDimension>> = (0..bins)
             .map(|i| {
                 if i + 1 == bins {
                     Bounds {
-                        lower: Bound::Inclusive(min.clone() + (size.ceiling_multiply(i))),
-                        upper: Bound::Inclusive(min.clone() + (size.ceiling_multiply(i + 1))),
+                        lower: Bound::Inclusive(min.clone() + (size.multiply(i))),
+                        upper: Bound::Inclusive(min.clone() + (size.multiply(i + 1))),
                     }
                 } else {
                     Bounds {
-                        lower: Bound::Inclusive(min.clone() + (size.ceiling_multiply(i))),
-                        upper: Bound::Exclusive(min.clone() + (size.ceiling_multiply(i + 1))),
+                        lower: Bound::Inclusive(min.clone() + (size.multiply(i))),
+                        upper: Bound::Exclusive(min.clone() + (size.multiply(i + 1))),
                     }
                 }
             })
             .collect();
-        let mut counts: Vec<u64> = (0..bins).map(|_| 0).collect();
+        let mut counts: Vec<HashMap<S::BreakdownDimension, u64>> =
+            (0..bins).map(|_| HashMap::default()).collect();
+        let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
         let mut maximum_count: u64 = 0;
 
-        for (k, v) in data {
+        for (dims, v) in data {
+            let primary_dim = self.schema.primary_dim(&dims);
+            let breakdown_dim = self.schema.breakdown_dim(&dims);
             // TODO: Fix for performance
             let (index, _) = bin_ranges
                 .iter()
                 .enumerate()
-                .find(|(_, r)| r.contains(&k))
+                .find(|(_, r)| r.contains(&primary_dim))
                 .expect(format!("key must map to one of the aggregating bins").as_str());
-            counts[index] += v;
+            let count = counts[index].entry(breakdown_dim.clone()).or_default();
+            *count += v;
 
-            if counts[index] > maximum_count {
-                maximum_count = counts[index];
+            if *count > maximum_count {
+                maximum_count = *count;
+            }
+
+            if !sort_breakdowns.contains(&breakdown_dim) {
+                sort_breakdowns.push(breakdown_dim);
             }
         }
 
-        let columns = if config.show_total {
-            vec![
-                // histogram range
-                Column::string(0, Alignment::Left),
-                // spacer "  "
-                Column::string(1, Alignment::Center),
-                // total left [
-                Column::string(2, Alignment::Center),
-                // total value
-                Column::string(3, Alignment::Right),
-                // total right ]
-                Column::string(4, Alignment::Center),
-                // histogram count
-                Column::count(5, Alignment::Left),
-            ]
+        sort_breakdowns.sort();
+
+        let mut columns = vec![
+            // histogram range
+            Column::string(0, Alignment::Left),
+            // spacer "  "
+            Column::string(1, Alignment::Center),
+        ];
+
+        if config.show_total {
+            // total left [
+            columns.push(Column::string(columns.len(), Alignment::Center));
+            // total value
+            columns.push(Column::string(columns.len(), Alignment::Right));
+            // total right ]
+            columns.push(Column::string(columns.len(), Alignment::Center));
+        }
+
+        if self.schema.is_breakdown() {
+            // breakdown left |
+            columns.push(Column::string(columns.len(), Alignment::Center));
+
+            for i in 0..sort_breakdowns.len() {
+                // aggregate count
+                columns.push(Column::breakdown(columns.len(), Alignment::Center));
+
+                if i + 1 < sort_breakdowns.len() {
+                    // spacer " "
+                    columns.push(Column::string(columns.len(), Alignment::Left));
+                }
+            }
+
+            // breakdown right |
+            columns.push(Column::string(columns.len(), Alignment::Center));
         } else {
-            vec![
-                // histogram range
-                Column::string(0, Alignment::Left),
-                // spacer "  "
-                Column::string(1, Alignment::Center),
-                // histogram count
-                Column::count(2, Alignment::Left),
-            ]
-        };
+            // aggregate count
+            columns.push(Column::count(columns.len(), Alignment::Left));
+        }
+
         let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+
+        row.push(Value::String(self.schema.primary_header()));
+        row.push(Value::Empty);
+
+        if config.show_total {
+            row.push(Value::Empty);
+            row.push(Value::Empty);
+            row.push(Value::Empty);
+        }
+
+        if self.schema.is_breakdown() {
+            row.push(Value::String("|".to_string()));
+
+            for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
+                row.push(Value::String(breakdown_dim.to_string()));
+
+                if k + 1 < sort_breakdowns.len() {
+                    row.push(Value::String(" ".to_string()));
+                }
+            }
+
+            row.push(Value::String("|".to_string()));
+        }
+
+        grid.add(row);
 
         for (bounds, count) in bin_ranges.into_iter().zip(counts) {
             let mut row = Row::default();
@@ -138,11 +192,28 @@ where
 
             if config.show_total {
                 row.push(Value::String("[".to_string()));
-                row.push(Value::String(format!("{count}")));
+                row.push(Value::String(format!("{}", count.values().sum::<u64>())));
                 row.push(Value::String("] ".to_string()));
             }
 
-            row.push(Value::Count(count));
+            if self.schema.is_breakdown() {
+                row.push(Value::String("|".to_string()));
+
+                for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
+                    let count = *count.get(breakdown_dim).unwrap_or(&0);
+                    row.push(Value::Count(count));
+
+                    if k + 1 != sort_breakdowns.len() {
+                        row.push(Value::String(" ".to_string()));
+                    }
+                }
+
+                row.push(Value::String("|".to_string()));
+            } else {
+                let count = count.get(&sort_breakdowns[0]).unwrap_or(&0);
+                row.push(Value::Count(*count));
+            }
+
             grid.add(row);
         }
 

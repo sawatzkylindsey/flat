@@ -3,7 +3,7 @@ use rstest::rstest;
 
 #[test]
 fn categorical_1d() {
-    let schema = Schema::one("animal");
+    let schema = Schema::one("anml");
     let builder = Categorical::builder(schema)
         .add(("whale".to_string(),), 0)
         .add(("shark".to_string(),), 1)
@@ -15,7 +15,7 @@ fn categorical_1d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-animal
+anml
 shark   ****
 tiger   *******
 whale   "#
@@ -94,7 +94,7 @@ fn categorical_2d_show_total() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal    
+length   animal
 1      - shark   [4] ****
 4      ┘
 1      ┐

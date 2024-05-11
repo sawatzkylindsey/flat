@@ -16,7 +16,7 @@ pub trait CategoricalSchematic {
 
     fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions;
 
-    fn sort_headers(&self) -> Vec<String>;
+    fn headers(&self) -> Vec<String>;
 
     fn breakdown_header(&self) -> Option<String>;
 
@@ -48,7 +48,7 @@ where
         dims.clone()
     }
 
-    fn sort_headers(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone()]
     }
 
@@ -87,7 +87,7 @@ where
         dims.clone()
     }
 
-    fn sort_headers(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone(), self.column_2.clone()]
     }
 
@@ -126,7 +126,7 @@ where
         (dims.0.clone(),)
     }
 
-    fn sort_headers(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone()]
     }
 
@@ -166,7 +166,7 @@ where
         dims.clone()
     }
 
-    fn sort_headers(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![
             self.column_1.clone(),
             self.column_2.clone(),
@@ -210,7 +210,7 @@ where
         (dims.0.clone(), dims.2.clone())
     }
 
-    fn sort_headers(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone(), self.column_3.clone()]
     }
 
@@ -250,7 +250,7 @@ where
         (dims.0.clone(), dims.1.clone())
     }
 
-    fn sort_headers(&self) -> Vec<String> {
+    fn headers(&self) -> Vec<String> {
         vec![self.column_1.clone(), self.column_2.clone()]
     }
 

@@ -99,7 +99,7 @@ where
         sort_breakdowns.sort();
         let mut columns = Vec::default();
 
-        for _ in 0..self.schema.sort_headers().len() {
+        for _ in 0..self.schema.headers().len() {
             // dimension value
             columns.push(Column::string(columns.len(), Alignment::Left));
             // spacer "  "
@@ -139,7 +139,7 @@ where
         let mut grid = Grid::new(columns);
         let mut row = Row::default();
 
-        for name in self.schema.sort_headers().iter().rev() {
+        for name in self.schema.headers().iter().rev() {
             row.push(Value::String(name.clone()));
             row.push(Value::Empty);
         }

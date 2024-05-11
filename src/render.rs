@@ -268,10 +268,12 @@ impl Display for Flat {
         };
 
         for (i, row) in self.grid.rows.iter().enumerate() {
-            for (j, optional_cell) in filled(row) {
+            let filled_row = filled(row);
+            let filled_row_length = filled_row.len();
+            for (j, optional_cell) in filled_row.into_iter() {
                 match optional_cell {
                     Some(cell) => {
-                        if j + 1 == row.len() {
+                        if j + 1 == filled_row_length {
                             self.grid.columns[j].write_final(f, cell, &view)?;
                         } else {
                             self.grid.columns[j].write(f, cell, &view)?;
@@ -301,5 +303,25 @@ struct View {
 
 fn filled<'a>(rows: &'a HashMap<usize, Cell>) -> Vec<(usize, Option<&'a Cell>)> {
     let maximum_j: usize = *rows.keys().max().expect("Row must not be empty");
-    (0..=maximum_j).map(|j| (j, rows.get(&j))).collect()
+    let mut out = Vec::default();
+    let mut candidates = Vec::default();
+
+    for j in 0..=maximum_j {
+        let cell = rows.get(&&j);
+
+        if let Some(Cell {
+            value: Value::Empty,
+            ..
+        }) = &cell
+        {
+            candidates.push((j, cell));
+        } else if cell.is_some() {
+            candidates.drain(..).for_each(|item| out.push(item));
+            out.push((j, cell));
+        } else {
+            candidates.push((j, cell));
+        }
+    }
+
+    out
 }
