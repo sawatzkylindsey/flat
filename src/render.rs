@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use crate::abbreviate::find_abbreviations;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter, Write};
 use std::iter;
-use unicode_width::UnicodeWidthStr;
 
 /// The general configuration for rendering a `flat` chart.
 #[derive(Debug)]
@@ -14,6 +14,10 @@ pub struct Render<C> {
     /// Whether to show the absolute total for the *primary* dimension of the dataset.
     /// While the *rendered* data in `flat` may use a relative representation, this option extends the rendering to show the absolute values of the data.
     pub show_total: bool,
+    /// Whether to abbreviate the column headings (which come from dimensional values) in the breakdown or not.
+    /// Use this option when the breakdown dimensions have long `std::fmt::Display` forms.
+    /// Abbreviation is attempted irrespective of the `width_hint`.
+    pub abbreviate_breakdown: bool,
     /// The widget specific rendering configuration.
     pub widget_config: C,
 }
@@ -23,6 +27,7 @@ impl<C: Default> Default for Render<C> {
         Self {
             width_hint: 180,
             show_total: false,
+            abbreviate_breakdown: false,
             widget_config: C::default(),
         }
     }
@@ -81,32 +86,25 @@ impl Column {
 
         let width = match &self.column_type {
             ColumnType::String(width) => *width,
-            ColumnType::Count => view.width,
-            ColumnType::Breakdown => {
-                if view.breakdown_width > view.width {
-                    view.breakdown_width
-                } else {
-                    view.width
-                }
-            }
+            ColumnType::Count | ColumnType::Breakdown => view.width,
         };
 
         match &self.alignment {
             Alignment::Left => {
-                write!(f, "{:<width$}", cell.value.render(view.scale))
+                write!(f, "{:<width$}", cell.value.render(&view))
             }
             Alignment::Center => {
-                write!(f, "{:^width$}", cell.value.render(view.scale))
+                write!(f, "{:^width$}", cell.value.render(&view))
             }
             Alignment::Right => {
-                write!(f, "{:>width$}", cell.value.render(view.scale))
+                write!(f, "{:>width$}", cell.value.render(&view))
             }
         }
     }
 
     fn write_final(&self, f: &mut Formatter<'_>, cell: &Cell, view: &View) -> std::fmt::Result {
         assert_eq!(self.index, cell.column);
-        write!(f, "{}", cell.value.render(view.scale))
+        write!(f, "{}", cell.value.render(view))
     }
 
     fn fill(&self, f: &mut Formatter<'_>, _view: &View) -> std::fmt::Result {
@@ -139,17 +137,20 @@ impl Value {
     fn render_width(&self) -> Option<usize> {
         match &self {
             Value::Empty => Some(0),
-            Value::String(string) => Some(UnicodeWidthStr::width(string.as_str())),
+            Value::String(string) => Some(string.chars().count()),
             Value::Count(_) => None,
         }
     }
 
-    fn render(&self, scale: u64) -> String {
+    fn render(&self, view: &View) -> String {
         match &self {
             Value::Empty => "".to_string(),
-            Value::String(string) => string.clone(),
+            Value::String(string) => match view.breakdown_abbreviations.get(string) {
+                Some(abbr) => abbr.clone(),
+                None => string.clone(),
+            },
             Value::Count(count) => iter::repeat('*')
-                .take(count.div_ceil(scale) as usize)
+                .take(count.div_ceil(view.scale) as usize)
                 .collect::<String>(),
         }
     }
@@ -173,6 +174,10 @@ impl Row {
 pub(crate) struct Grid {
     columns: Vec<Column>,
     rows: Vec<HashMap<usize, Cell>>,
+    breakdown_values: HashSet<String>,
+    /// The minimum width of all the columns (before abbreviation).
+    minimum_breakdown_width: usize,
+    /// The maximum width of all the columns (before abbreviation).
     maximum_breakdown_width: usize,
 }
 
@@ -182,6 +187,8 @@ impl Grid {
         Self {
             columns,
             rows: Vec::default(),
+            breakdown_values: HashSet::default(),
+            minimum_breakdown_width: usize::MAX,
             maximum_breakdown_width: 0,
         }
     }
@@ -204,7 +211,15 @@ impl Grid {
                     }
                 }
                 ColumnType::Breakdown => {
+                    if let Value::String(value) = &cell.value {
+                        self.breakdown_values.insert(value.clone());
+                    }
+
                     if let Some(cell_width) = cell.value.render_width() {
+                        if &cell_width < &self.minimum_breakdown_width {
+                            self.minimum_breakdown_width = cell_width;
+                        }
+
                         if &cell_width > &self.maximum_breakdown_width {
                             self.maximum_breakdown_width = cell_width;
                         }
@@ -245,15 +260,22 @@ impl Grid {
 #[derive(Debug)]
 pub struct Flat {
     maximum_count: u64,
-    render_width: usize,
+    width_hint: usize,
+    abbreviate_breakdown: bool,
     grid: Grid,
 }
 
 impl Flat {
-    pub(crate) fn new(maximum_count: u64, render_width: usize, grid: Grid) -> Self {
+    pub(crate) fn new(
+        maximum_count: u64,
+        width_hint: usize,
+        abbreviate_breakdown: bool,
+        grid: Grid,
+    ) -> Self {
         Self {
             maximum_count,
-            render_width,
+            width_hint,
+            abbreviate_breakdown,
             grid,
         }
     }
@@ -261,7 +283,7 @@ impl Flat {
 
 impl Display for Flat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut view_width = self.render_width.saturating_sub(
+        let mut view_width = self.width_hint.saturating_sub(
             self.grid
                 .columns
                 .iter()
@@ -292,15 +314,37 @@ impl Display for Flat {
         } else {
             view_width
         };
+
+        let (abbreviation_width, breakdown_abbreviations) = match (
+            self.abbreviate_breakdown,
+            view_width > self.grid.maximum_breakdown_width,
+        ) {
+            // We're supposed to abbreviate, but we don't need to.
+            (true, true) => find_abbreviations(
+                self.grid.minimum_breakdown_width,
+                self.grid.maximum_breakdown_width,
+                &self.grid.breakdown_values,
+            ),
+            // We're supposed to abbreviate and we need to.
+            (true, false) => find_abbreviations(
+                view_width,
+                self.grid.maximum_breakdown_width,
+                &self.grid.breakdown_values,
+            ),
+            // We're not supposed to abbreviate.
+            (false, _) => (self.grid.maximum_breakdown_width, HashMap::default()),
+        };
+
         let view = View {
-            width,
-            breakdown_width: self.grid.maximum_breakdown_width,
+            width: std::cmp::max(width, abbreviation_width),
+            breakdown_abbreviations,
             scale,
         };
 
         for (i, row) in self.grid.rows.iter().enumerate() {
             let filled_row = filled(row);
             let filled_row_length = filled_row.len();
+
             for (j, optional_cell) in filled_row.into_iter() {
                 match optional_cell {
                     Some(cell) => {
@@ -328,7 +372,7 @@ impl Display for Flat {
 #[derive(Debug)]
 struct View {
     width: usize,
-    breakdown_width: usize,
+    breakdown_abbreviations: HashMap<String, String>,
     scale: u64,
 }
 

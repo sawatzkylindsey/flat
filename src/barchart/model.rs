@@ -1,3 +1,4 @@
+use crate::abbreviate::find_abbreviations;
 use crate::barchart::api::BarChartSchematic;
 use crate::render::{Alignment, Column, Grid, Row, Value};
 use crate::{BarChartConfig, Dimensions};
@@ -38,6 +39,9 @@ where
         let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
         let mut lookup: HashMap<S::SortDimensions, (S::PrimaryDimension, S::BreakdownDimension)> =
             HashMap::default();
+        let mut dimension_values: Vec<HashSet<String>> = (0..self.schema.headers().len())
+            .map(|_| HashSet::default())
+            .collect();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
         let mut maximum_count: u64 = 0;
 
@@ -51,6 +55,10 @@ where
                 .iter()
                 .fold(String::default(), |acc, part| acc + part + ";");
 
+            for (j, value) in sort_dims.as_strings().into_iter().enumerate() {
+                dimension_values[j].insert(value);
+            }
+
             // Only count the occurrences once per 'full path'.
             // This is because we might have multiple entries, for example:
             // ```
@@ -62,11 +70,11 @@ where
                 full_paths.insert(full_path);
 
                 for dag_index in 0..sort_dims.len() {
-                    let path = sort_dims.as_strings()[0..dag_index + 1]
+                    let partial_path = sort_dims.as_strings()[0..dag_index + 1]
                         .iter()
                         .fold(String::default(), |acc, part| acc + part + ";");
                     path_occurrences
-                        .entry(path)
+                        .entry(partial_path)
                         .and_modify(|c| *c += 1)
                         .or_insert(1);
                 }
@@ -97,6 +105,24 @@ where
 
         sort_dimensions.sort();
         sort_breakdowns.sort();
+
+        let mut dimension_abbreviations: Vec<HashMap<String, String>> =
+            (0..self.schema.headers().len())
+                .map(|_| HashMap::default())
+                .collect();
+
+        if config.widget_config.abbreviate {
+            let headers = self.schema.headers();
+            let max_header_length = headers.iter().map(|h| h.chars().count()).max().unwrap();
+
+            for (dag_index, values) in dimension_values.iter().enumerate() {
+                let min_header_length = headers[dag_index].to_string().chars().count();
+                let (_, abbreviations) =
+                    find_abbreviations(min_header_length, max_header_length, values);
+                dimension_abbreviations[dag_index] = abbreviations;
+            }
+        }
+
         let mut columns = Vec::default();
 
         for _ in 0..self.schema.headers().len() {
@@ -168,12 +194,12 @@ where
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
 
         for sort_dims in sort_dimensions.iter() {
-            let chain = sort_dims.as_strings();
+            let path = sort_dims.as_strings();
             let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
             let mut descendant_position = None;
 
             #[allow(unused_doc_comments)]
-            /// Run through the chain in dag index ascending order, which
+            /// Run through the path in dag index ascending order, which
             /// is the "rendering" reverse order.
             ///
             /// For this example dag, we'll iterate as follows:
@@ -182,43 +208,43 @@ where
             /// e - f ┘
             /// h ┘
             ///
-            /// chain: ["d", "b", "a"]
-            /// dag_index | j | part | path
+            /// path: ["d", "b", "a"]
+            /// dag_index | j | part | partial_path
             /// ------------------------------
             /// 0        | 2 | "d"   | "d"
-            /// 1        | 1 | "b"   | "d|b"
-            /// 2        | 0 | "a"   | "d|b|a"
+            /// 1        | 1 | "b"   | "d;b"
+            /// 2        | 0 | "a"   | "d;b;a"
             ///
-            /// chain: ["d", "f", "c"]
-            /// dag_index | j | part | path
+            /// path: ["d", "f", "c"]
+            /// dag_index | j | part | partial_path
             /// ------------------------------
             /// 0        | 2 | "d"   | "d"
-            /// 1        | 1 | "f"   | "d|f"
-            /// 2        | 0 | "c"   | "d|f|c"
+            /// 1        | 1 | "f"   | "d;f"
+            /// 2        | 0 | "c"   | "d;f;c"
             ///
-            /// chain: ["d", "f", "e"]
-            /// dag_index | j | part | path
+            /// path: ["d", "f", "e"]
+            /// dag_index | j | part | partial_path
             /// ------------------------------
             /// 0        | 2 | "d"   | "d"
-            /// 1        | 1 | "f"   | "d|f"
-            /// 2        | 0 | "e"   | "d|f|e"
+            /// 1        | 1 | "f"   | "d;f"
+            /// 2        | 0 | "e"   | "d;f;e"
             ///
             /// etc..
             ///
-            for (dag_index, part) in chain.clone().iter().enumerate() {
-                let j = chain.len() - dag_index - 1;
-                let path = chain[0..dag_index + 1]
+            for (dag_index, part) in path.clone().iter().enumerate() {
+                let j = path.len() - dag_index - 1;
+                let partial_path = path[0..dag_index + 1]
                     .iter()
                     .fold(String::default(), |acc, part| acc + part + ";");
                 let group = column_groups.entry(j).or_default();
 
-                if group.matches(&path) {
+                if group.matches(&partial_path) {
                     group.increment();
                 } else {
-                    group.swap(path.clone());
+                    group.swap(partial_path.clone());
                 }
 
-                let occurrences = path_occurrences[&path];
+                let occurrences = path_occurrences[&partial_path];
                 let position = (occurrences as f64 / 2.0).ceil() as usize - 1;
                 let mut column_chunks = Vec::default();
 
@@ -229,7 +255,14 @@ where
                 };
 
                 if position == Position::At {
-                    column_chunks.push(Value::String(format!("{part} ")));
+                    if config.widget_config.abbreviate {
+                        column_chunks.push(Value::String(format!(
+                            "{} ",
+                            dimension_abbreviations[dag_index][part]
+                        )));
+                    } else {
+                        column_chunks.push(Value::String(format!("{part} ")));
+                    }
 
                     if dag_index == 0 {
                         let (primary_dim, breakdown_dim) = lookup
@@ -313,7 +346,12 @@ where
             grid.add(row);
         }
 
-        Flat::new(maximum_count, config.width_hint, grid)
+        Flat::new(
+            maximum_count,
+            config.width_hint,
+            config.abbreviate_breakdown,
+            grid,
+        )
     }
 }
 

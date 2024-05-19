@@ -217,7 +217,12 @@ where
             grid.add(row);
         }
 
-        Flat::new(maximum_count, config.width_hint, grid)
+        Flat::new(
+            maximum_count,
+            config.width_hint,
+            config.abbreviate_breakdown,
+            grid,
+        )
     }
 }
 

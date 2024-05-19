@@ -262,3 +262,65 @@ length   animal  |false true |
 4      - whale   |           |"#
     );
 }
+
+#[test]
+fn abbreviate_barchart_1d() {
+    let schema = Schema::one("animal");
+    let builder = BarChart::builder(schema)
+        .add(("whalewhalewhalewhale".to_string(),), 1)
+        .add(("sharksharksharkshark".to_string(),), 2)
+        .add(("tigertigertigertiger".to_string(),), 3);
+    let flat = builder.render(Render {
+        width_hint: 1,
+        widget_config: BarChartConfig { abbreviate: true },
+        ..Render::default()
+    });
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+animal
+shar..   *
+tige..   **
+whal..   *"#
+    );
+}
+
+#[test]
+fn abbreviate_barchart_2d() {
+    let schema = Schema::two("animal", "laminaanimal");
+    let builder = BarChart::builder(schema)
+        .add(
+            (
+                "whalewhalewhalewhale".to_string(),
+                "whalewhalewhalewhale".to_string(),
+            ),
+            1,
+        )
+        .add(
+            (
+                "sharksharksharkshark".to_string(),
+                "whalewhalewhalewhale".to_string(),
+            ),
+            2,
+        )
+        .add(
+            (
+                "tigertigertigertiger".to_string(),
+                "whalewhalewhalewhale".to_string(),
+            ),
+            3,
+        );
+    let flat = builder.render(Render {
+        width_hint: 1,
+        widget_config: BarChartConfig { abbreviate: true },
+        ..Render::default()
+    });
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+laminaanimal    animal
+whalewhale..  - shar..   *
+whalewhale..  - tige..   **
+whalewhale..  - whal..   *"#
+    );
+}

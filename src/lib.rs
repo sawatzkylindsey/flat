@@ -25,6 +25,7 @@
 // in the debug logs of a standalone tool, we can easily include some multi-line
 // Although it is possible to render graphical charts, saved as files either locally or remotely, this option is not always attractive or practical.
 // `flat` is designed to fill this gap.
+mod abbreviate;
 mod barchart;
 mod histogram;
 mod render;

@@ -3,7 +3,16 @@ use crate::{
 };
 
 #[derive(Debug, Default)]
-pub struct BarChartConfig {}
+pub struct BarChartConfig {
+    /// Whether to abbreviate the dimensional values in the rendering or not.
+    /// Use this option when the dimensions have long `std::fmt::Display` forms.
+    /// Abbreviation is attempted irrespective of the `width_hint`.
+    ///
+    /// **Notice**, abbreviation is performed on values only, and not on the column headers.
+    /// Moreover, the abbreviation is bounded by the column header width.
+    /// If you want shorter abbreviations, be sure to shorten the headers as well!
+    pub abbreviate: bool,
+}
 
 /// The internal trait which allows rendering [`BarChar`]s across different [`Schema']s.
 /// Consumers should not implement this trait.
