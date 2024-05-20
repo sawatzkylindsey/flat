@@ -1,4 +1,5 @@
 use crate::abbreviate::find_abbreviations;
+use crate::aggregate::{aggregate_apply, simple_f64};
 use crate::barchart::api::BarChartSchematic;
 use crate::render::{Alignment, Column, Grid, Row, Value};
 use crate::{BarChartConfig, Dimensions};
@@ -9,7 +10,7 @@ use std::hash::Hash;
 
 pub struct BarChart<S: BarChartSchematic> {
     schema: S,
-    data: Vec<(S::Dimensions, u64)>,
+    data: Vec<(S::Dimensions, f64)>,
 }
 
 impl<S: BarChartSchematic> BarChart<S>
@@ -26,13 +27,13 @@ where
         }
     }
 
-    pub fn add(mut self, key: S::Dimensions, value: u64) -> BarChart<S> {
-        self.data.push((key, value));
+    pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> BarChart<S> {
+        self.data.push((key, value.into()));
         self
     }
 
     pub fn render(self, config: Render<BarChartConfig>) -> Flat {
-        let mut counts: HashMap<(S::PrimaryDimension, S::BreakdownDimension), u64> =
+        let mut aggregate_values: HashMap<(S::PrimaryDimension, S::BreakdownDimension), Vec<f64>> =
             HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
         let mut sort_dimensions: Vec<S::SortDimensions> = Vec::default();
@@ -43,7 +44,6 @@ where
             .map(|_| HashSet::default())
             .collect();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
-        let mut maximum_count: u64 = 0;
 
         for (dims, v) in self.data.iter() {
             let primary_dim = self.schema.primary_dim(dims);
@@ -80,12 +80,13 @@ where
                 }
             }
 
-            let count = counts.entry(aggregate_dims.clone()).or_default();
-            *count += v;
+            let values = aggregate_values.entry(aggregate_dims.clone()).or_default();
+            values.push(*v);
+            // *count += v;
 
-            if *count > maximum_count {
-                maximum_count = *count;
-            }
+            // if *count > maximum_count {
+            //     maximum_count = *count;
+            // }
 
             if !lookup.contains_key(&sort_dims) {
                 // Notice, the breakdown_dim will be different in the case of an `is_breakdown` schema.
@@ -132,7 +133,7 @@ where
             columns.push(Column::string(columns.len(), Alignment::Left));
         }
 
-        if config.show_total {
+        if config.show_aggregate {
             // total left [
             columns.push(Column::string(columns.len(), Alignment::Center));
             // total value
@@ -170,7 +171,7 @@ where
             row.push(Value::Empty);
         }
 
-        if config.show_total {
+        if config.show_aggregate {
             row.push(Value::Empty);
             row.push(Value::Empty);
             row.push(Value::Empty);
@@ -192,6 +193,8 @@ where
 
         grid.add(row);
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
+        let mut minimum_value = f64::MAX;
+        let mut maximum_value = f64::MIN;
 
         for sort_dims in sort_dimensions.iter() {
             let path = sort_dims.as_strings();
@@ -271,30 +274,40 @@ where
                         column_chunks.push(Value::String(format!("  ")));
 
                         if self.schema.is_breakdown() {
-                            let breakdown_counts: Vec<u64> = sort_breakdowns
+                            let breakdown_values: Vec<f64> = sort_breakdowns
                                 .iter()
                                 .map(|breakdown_dim| {
                                     let aggregate_dims =
                                         (primary_dim.clone(), breakdown_dim.clone());
-                                    *counts.get(&aggregate_dims).unwrap_or(&0)
+                                    aggregate_apply(
+                                        &config.aggregate,
+                                        &aggregate_values,
+                                        &aggregate_dims,
+                                        &mut minimum_value,
+                                        &mut maximum_value,
+                                    )
+                                    // let value = config.aggregate.apply(
+                                    //     aggregate_values.get(&aggregate_dims).unwrap_or_default(),
+                                    // );
+                                    // value
+                                    // *aggregate_values.get(&aggregate_dims).unwrap_or(&0)
                                 })
                                 .collect();
 
-                            if config.show_total {
+                            if config.show_aggregate {
                                 column_chunks.push(Value::String("[".to_string()));
-                                column_chunks.push(Value::String(format!(
-                                    "{}",
-                                    breakdown_counts.iter().sum::<u64>()
+                                column_chunks.push(Value::String(simple_f64(
+                                    config.aggregate.apply(breakdown_values.as_slice()),
                                 )));
                                 column_chunks.push(Value::String("] ".to_string()));
                             }
 
                             column_chunks.push(Value::String("|".to_string()));
 
-                            for (k, breakdown_count) in breakdown_counts.iter().enumerate() {
-                                column_chunks.push(Value::Count(*breakdown_count));
+                            for (k, breakdown_value) in breakdown_values.iter().enumerate() {
+                                column_chunks.push(Value::Value(*breakdown_value));
 
-                                if k + 1 != breakdown_counts.len() {
+                                if k + 1 != breakdown_values.len() {
                                     column_chunks.push(Value::String(" ".to_string()));
                                 }
                             }
@@ -302,15 +315,32 @@ where
                             column_chunks.push(Value::String("|".to_string()));
                         } else {
                             let aggregate_dims = (primary_dim.clone(), breakdown_dim.clone());
-                            let count = *counts.get(&aggregate_dims).unwrap_or(&0);
+                            let value = aggregate_apply(
+                                &config.aggregate,
+                                &aggregate_values,
+                                &aggregate_dims,
+                                &mut minimum_value,
+                                &mut maximum_value,
+                            );
+                            // let value = config
+                            //     .aggregate
+                            //     .apply(aggregate_values.get(&aggregate_dims).unwrap_or_default());
 
-                            if config.show_total {
+                            if config.show_aggregate {
                                 column_chunks.push(Value::String("[".to_string()));
-                                column_chunks.push(Value::String(format!("{count}")));
+                                column_chunks.push(Value::String(simple_f64(value)));
                                 column_chunks.push(Value::String("] ".to_string()));
                             }
 
-                            column_chunks.push(Value::Count(count));
+                            column_chunks.push(Value::Value(value));
+
+                            if value < minimum_value {
+                                minimum_value = value;
+                            }
+
+                            if value > maximum_value {
+                                maximum_value = value;
+                            }
                         }
                     } else {
                         assert!(descendant_position.is_some());
@@ -347,13 +377,36 @@ where
         }
 
         Flat::new(
-            maximum_count,
+            minimum_value..maximum_value,
             config.width_hint,
             config.abbreviate_breakdown,
             grid,
         )
     }
 }
+//
+// fn apply<T: Eq + Hash>(
+//     aggregate: &Aggregate,
+//     aggregate_values: &HashMap<T, Vec<f64>>,
+//     aggregate_dims: &T,
+//     minimum_value: &mut f64,
+//     maximum_value: &mut f64,
+// ) -> f64 {
+//     let value = match aggregate_values.get(aggregate_dims) {
+//         Some(values) => aggregate.apply(values.as_slice()),
+//         None => aggregate.apply(&[]),
+//     };
+//
+//     if value < *minimum_value {
+//         *minimum_value = value;
+//     }
+//
+//     if value > *maximum_value {
+//         *maximum_value = value;
+//     }
+//
+//     value
+// }
 
 #[derive(Debug, PartialEq, Eq)]
 enum Position {

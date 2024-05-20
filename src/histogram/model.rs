@@ -1,3 +1,4 @@
+use crate::aggregate::{aggregate_apply, simple_f64};
 use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
 use crate::{Binnable, HistogramConfig, HistogramSchematic};
 use std::collections::HashMap;
@@ -8,7 +9,7 @@ use std::ops::{Add, Sub};
 pub struct Histogram<S: HistogramSchematic> {
     schema: S,
     bins: usize,
-    data: Vec<(S::Dimensions, u64)>,
+    data: Vec<(S::Dimensions, f64)>,
     min: Option<S::PrimaryDimension>,
     max: Option<S::PrimaryDimension>,
 }
@@ -39,7 +40,7 @@ where
         }
     }
 
-    pub fn add(mut self, dims: S::Dimensions, value: u64) -> Histogram<S> {
+    pub fn add(mut self, dims: S::Dimensions, value: impl Into<f64>) -> Histogram<S> {
         let primary_dim = self.schema.primary_dim(&dims);
 
         let update_min = match &self.min {
@@ -60,7 +61,7 @@ where
             self.max.replace(primary_dim.clone());
         }
 
-        self.data.push((dims, value));
+        self.data.push((dims, value.into()));
         self
     }
 
@@ -92,10 +93,9 @@ where
                 }
             })
             .collect();
-        let mut counts: Vec<HashMap<S::BreakdownDimension, u64>> =
+        let mut bin_aggregates: Vec<HashMap<S::BreakdownDimension, Vec<f64>>> =
             (0..bins).map(|_| HashMap::default()).collect();
         let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
-        let mut maximum_count: u64 = 0;
 
         for (dims, v) in data {
             let primary_dim = self.schema.primary_dim(&dims);
@@ -106,12 +106,14 @@ where
                 .enumerate()
                 .find(|(_, r)| r.contains(&primary_dim))
                 .expect(format!("key must map to one of the aggregating bins").as_str());
-            let count = counts[index].entry(breakdown_dim.clone()).or_default();
-            *count += v;
+            let values = bin_aggregates[index]
+                .entry(breakdown_dim.clone())
+                .or_default();
+            values.push(v);
 
-            if *count > maximum_count {
-                maximum_count = *count;
-            }
+            // if *count > maximum_count {
+            //     maximum_count = *count;
+            // }
 
             if !sort_breakdowns.contains(&breakdown_dim) {
                 sort_breakdowns.push(breakdown_dim);
@@ -127,7 +129,7 @@ where
             Column::string(1, Alignment::Center),
         ];
 
-        if config.show_total {
+        if config.show_aggregate {
             // total left [
             columns.push(Column::string(columns.len(), Alignment::Center));
             // total value
@@ -163,7 +165,7 @@ where
         row.push(Value::String(self.schema.primary_header()));
         row.push(Value::Empty);
 
-        if config.show_total {
+        if config.show_aggregate {
             row.push(Value::Empty);
             row.push(Value::Empty);
             row.push(Value::Empty);
@@ -184,24 +186,50 @@ where
         }
 
         grid.add(row);
+        let mut minimum_value = f64::MAX;
+        let mut maximum_value = f64::MIN;
 
-        for (bounds, count) in bin_ranges.into_iter().zip(counts) {
+        for (bounds, aggregates) in bin_ranges.into_iter().zip(bin_aggregates) {
             let mut row = Row::default();
             row.push(Value::String(bounds.to_string()));
             row.push(Value::String("  ".to_string()));
 
-            if config.show_total {
-                row.push(Value::String("[".to_string()));
-                row.push(Value::String(format!("{}", count.values().sum::<u64>())));
-                row.push(Value::String("] ".to_string()));
-            }
-
             if self.schema.is_breakdown() {
+                let breakdown_values: Vec<f64> = sort_breakdowns
+                    .iter()
+                    .map(|breakdown_dim| {
+                        // bin_aggregates.get()
+                        // let aggregate_dims =
+                        //     (primary_dim.clone(), breakdown_dim.clone());
+                        aggregate_apply(
+                            &config.aggregate,
+                            &aggregates,
+                            &breakdown_dim,
+                            &mut minimum_value,
+                            &mut maximum_value,
+                        )
+                        // let value = config.aggregate.apply(
+                        //     aggregate_values.get(&aggregate_dims).unwrap_or_default(),
+                        // );
+                        // value
+                        // *aggregate_values.get(&aggregate_dims).unwrap_or(&0)
+                    })
+                    .collect();
+
+                if config.show_aggregate {
+                    row.push(Value::String("[".to_string()));
+                    row.push(Value::String(simple_f64(
+                        config.aggregate.apply(breakdown_values.as_slice()),
+                    )));
+                    row.push(Value::String("] ".to_string()));
+                }
+
                 row.push(Value::String("|".to_string()));
 
-                for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
-                    let count = *count.get(breakdown_dim).unwrap_or(&0);
-                    row.push(Value::Count(count));
+                // for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
+                for (k, breakdown_value) in breakdown_values.iter().enumerate() {
+                    // let count = *count.get(breakdown_dim).unwrap_or(&0);
+                    row.push(Value::Value(*breakdown_value));
 
                     if k + 1 != sort_breakdowns.len() {
                         row.push(Value::String(" ".to_string()));
@@ -210,15 +238,29 @@ where
 
                 row.push(Value::String("|".to_string()));
             } else {
-                let count = count.get(&sort_breakdowns[0]).unwrap_or(&0);
-                row.push(Value::Count(*count));
+                let value = aggregate_apply(
+                    &config.aggregate,
+                    &aggregates,
+                    &sort_breakdowns[0],
+                    &mut minimum_value,
+                    &mut maximum_value,
+                );
+
+                if config.show_aggregate {
+                    row.push(Value::String("[".to_string()));
+                    row.push(Value::String(simple_f64(value)));
+                    row.push(Value::String("] ".to_string()));
+                }
+
+                // let count = count.get(&sort_breakdowns[0]).unwrap_or(&0);
+                row.push(Value::Value(value));
             }
 
             grid.add(row);
         }
 
         Flat::new(
-            maximum_count,
+            minimum_value..maximum_value,
             config.width_hint,
             config.abbreviate_breakdown,
             grid,

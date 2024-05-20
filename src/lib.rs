@@ -26,11 +26,13 @@
 // Although it is possible to render graphical charts, saved as files either locally or remotely, this option is not always attractive or practical.
 // `flat` is designed to fill this gap.
 mod abbreviate;
+mod aggregate;
 mod barchart;
 mod histogram;
 mod render;
 mod schema;
 
+pub use aggregate::Aggregate;
 pub use barchart::*;
 pub use histogram::*;
 pub use render::{Flat, Render};

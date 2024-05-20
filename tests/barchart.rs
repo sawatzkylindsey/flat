@@ -62,7 +62,6 @@ fn barchart_2d_squish(#[case] width_hint: usize) {
         .add(("tiger".to_string(), 1u32), 3);
     let flat = builder.render(Render {
         width_hint,
-        show_total: false,
         ..Render::default()
     });
     assert_eq!(
@@ -79,7 +78,7 @@ length   animal
 }
 
 #[test]
-fn barchart_2d_show_total() {
+fn barchart_2d_show_sum() {
     let schema = Schema::two("animal", "length");
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
@@ -89,7 +88,7 @@ fn barchart_2d_show_total() {
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
     let flat = builder.render(Render {
-        show_total: true,
+        show_aggregate: true,
         ..Render::default()
     });
     assert_eq!(
@@ -102,6 +101,34 @@ length   animal
 4      - tiger   [7] *******
 5      ┘
 4      - whale   [0] "#
+    );
+}
+
+#[test]
+fn barchart_2d_show_average() {
+    let schema = Schema::two("animal", "length");
+    let builder = BarChart::builder(schema)
+        .add(("whale".to_string(), 4u32), 0)
+        .add(("shark".to_string(), 4u32), 1)
+        .add(("shark".to_string(), 1u32), 3)
+        .add(("tiger".to_string(), 4u32), 1)
+        .add(("tiger".to_string(), 5u32), 3)
+        .add(("tiger".to_string(), 1u32), 3);
+    let flat = builder.render(Render {
+        aggregate: Aggregate::Average,
+        show_aggregate: true,
+        ..Render::default()
+    });
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+length   animal
+1      - shark   [  2] **
+4      ┘
+1      ┐
+4      - tiger   [2.3] **
+5      ┘
+4      - whale   [  0] "#
     );
 }
 
@@ -198,7 +225,6 @@ fn barchart_3d_breakdown2_squish(#[case] width_hint: usize) {
         .add(("tiger".to_string(), 1u32, false), 3);
     let flat = builder.render(Render {
         width_hint,
-        show_total: false,
         ..Render::default()
     });
     assert_eq!(
@@ -214,7 +240,7 @@ true   - whale   |        |"#
 }
 
 #[test]
-fn barchart_3d_breakdown2_show_total() {
+fn barchart_3d_breakdown2_show_sum() {
     let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
@@ -224,7 +250,7 @@ fn barchart_3d_breakdown2_show_total() {
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
     let flat = builder.render(Render {
-        show_total: true,
+        show_aggregate: true,
         ..Render::default()
     });
     assert_eq!(
@@ -236,6 +262,33 @@ true   ┘
 false  - tiger   [10] | ***     *    ******|
 true   ┘
 true   - whale   [ 0] |                    |"#
+    );
+}
+
+#[test]
+fn barchart_3d_breakdown2_show_average() {
+    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
+    let builder = BarChart::builder(schema)
+        .add(("whale".to_string(), 4u32, true), 0)
+        .add(("shark".to_string(), 4u32, false), 1)
+        .add(("shark".to_string(), 1u32, true), 3)
+        .add(("tiger".to_string(), 4u32, false), 1)
+        .add(("tiger".to_string(), 5u32, true), 6)
+        .add(("tiger".to_string(), 1u32, false), 3);
+    let flat = builder.render(Render {
+        aggregate: Aggregate::Average,
+        show_aggregate: true,
+        ..Render::default()
+    });
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+stable   animal        |  1      4      5   |
+false  - shark   [1.3] | ***     *          |
+true   ┘
+false  - tiger   [3.3] | ***     *    ******|
+true   ┘
+true   - whale   [  0] |                    |"#
     );
 }
 
@@ -279,8 +332,8 @@ fn abbreviate_barchart_1d() {
         format!("\n{}", flat.to_string()),
         r#"
 animal
-shar..   *
-tige..   **
+shar..   **
+tige..   ***
 whal..   *"#
     );
 }
@@ -319,8 +372,8 @@ fn abbreviate_barchart_2d() {
         format!("\n{}", flat.to_string()),
         r#"
 laminaanimal    animal
-whalewhale..  - shar..   *
-whalewhale..  - tige..   **
+whalewhale..  - shar..   **
+whalewhale..  - tige..   ***
 whalewhale..  - whal..   *"#
     );
 }

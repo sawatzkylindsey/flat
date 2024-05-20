@@ -1,19 +1,34 @@
 use crate::abbreviate::find_abbreviations;
+use crate::Aggregate;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter, Write};
 use std::iter;
+use std::ops::Range;
 
 /// The general configuration for rendering a `flat` chart.
 #[derive(Debug)]
 pub struct Render<C> {
+    /// The function to apply when aggregating values in the widget.
+    pub aggregate: Aggregate,
     /// The hint to use to determine the width of the rendering.
     /// [`Flat`] will try to make the rendering at most `width_hint` wide, with some exceptions:
     /// * If the rendering can reasonably fit in a smaller width, the `width_hint` is ignored.
     /// * If the rendering cannot reasonably fit the `width_hint`, then it is minimally extended (such that a reasonable rendering may be produced).
     pub width_hint: usize,
-    /// Whether to show the absolute total for the *primary* dimension of the dataset.
+    /// Whether to show the aggregated result for the *primary* dimension of the dataset.
     /// While the *rendered* data in `flat` may use a relative representation, this option extends the rendering to show the absolute values of the data.
-    pub show_total: bool,
+    ///
+    /// | Show Aggregate | Rendering of Aggregate |
+    /// |-|-|
+    /// | aggregate([1, 2, 3, 4]) | aggregate([1, 2, 3, 4]) |
+    ///
+    /// In the case of a breakdown, this represents the aggregate applied to the breakdown aggregates.
+    ///
+    /// | Show Aggregate | Rendering of Aggregate of A | Rendering of Aggregate of B |
+    /// |-|-|-|
+    /// | aggregate([aggregate([1, 2, 3]), aggregate(\[4\])]) | aggregate([1, 2, 3]) | aggregate(\[4\]) |
+    ///
+    pub show_aggregate: bool,
     /// Whether to abbreviate the column headings (which come from dimensional values) in the breakdown or not.
     /// Use this option when the breakdown dimensions have long `std::fmt::Display` forms.
     /// Abbreviation is attempted irrespective of the `width_hint`.
@@ -25,8 +40,9 @@ pub struct Render<C> {
 impl<C: Default> Default for Render<C> {
     fn default() -> Self {
         Self {
+            aggregate: Aggregate::Sum,
             width_hint: 180,
-            show_total: false,
+            show_aggregate: false,
             abbreviate_breakdown: false,
             widget_config: C::default(),
         }
@@ -130,7 +146,7 @@ pub(crate) struct Cell {
 pub(crate) enum Value {
     Empty,
     String(String),
-    Count(u64),
+    Value(f64),
 }
 
 impl Value {
@@ -138,7 +154,7 @@ impl Value {
         match &self {
             Value::Empty => Some(0),
             Value::String(string) => Some(string.chars().count()),
-            Value::Count(_) => None,
+            Value::Value(_) => None,
         }
     }
 
@@ -149,8 +165,8 @@ impl Value {
                 Some(abbr) => abbr.clone(),
                 None => string.clone(),
             },
-            Value::Count(count) => iter::repeat('*')
-                .take(count.div_ceil(view.scale) as usize)
+            Value::Value(value) => iter::repeat('*')
+                .take((value * view.scale).round() as usize)
                 .collect::<String>(),
         }
     }
@@ -259,7 +275,7 @@ impl Grid {
 /// ```
 #[derive(Debug)]
 pub struct Flat {
-    maximum_count: u64,
+    value_range: Range<f64>,
     width_hint: usize,
     abbreviate_breakdown: bool,
     grid: Grid,
@@ -267,13 +283,13 @@ pub struct Flat {
 
 impl Flat {
     pub(crate) fn new(
-        maximum_count: u64,
+        value_range: Range<f64>,
         width_hint: usize,
         abbreviate_breakdown: bool,
         grid: Grid,
     ) -> Self {
         Self {
-            maximum_count,
+            value_range,
             width_hint,
             abbreviate_breakdown,
             grid,
@@ -308,9 +324,16 @@ impl Display for Flat {
             view_width = 2;
         }
 
-        let scale: u64 = self.maximum_count.div_ceil(view_width as u64);
-        let width: usize = if scale == 1 {
-            self.maximum_count as usize
+        let mut value_width = self.value_range.end - self.value_range.start;
+
+        if value_width == 0.0 {
+            value_width = 1.0;
+        }
+
+        let mut scale = view_width as f64 / value_width;
+        let width: usize = if scale >= 1.0 {
+            scale = 1.0;
+            value_width as usize
         } else {
             view_width
         };
@@ -373,7 +396,7 @@ impl Display for Flat {
 struct View {
     width: usize,
     breakdown_abbreviations: HashMap<String, String>,
-    scale: u64,
+    scale: f64,
 }
 
 fn filled<'a>(rows: &'a HashMap<usize, Cell>) -> Vec<(usize, Option<&'a Cell>)> {

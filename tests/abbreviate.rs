@@ -170,7 +170,7 @@ fn histogram_breakdown_abbreviate() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as u64);
+        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
@@ -196,7 +196,7 @@ fn histogram_breakdown_abbreviate_hint1() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as u64);
+        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
@@ -208,10 +208,10 @@ fn histogram_breakdown_abbreviate_hint1() {
         format!("\n{}", flat.to_string()),
         r#"
 length      |k.. o.. r..|
-[0, 1.8)    | *         |
-[1.8, 3.6)  |     *   * |
+[0, 1.8)    |           |
+[1.8, 3.6)  |         * |
 [3.6, 5.4)  | *   *     |
-[5.4, 7.2)  |**      ** |
+[5.4, 7.2)  |**       * |
 [7.2, 9]    |    **  ** |"#
     );
 }
@@ -223,7 +223,7 @@ fn histogram_breakdown_abbreviate_hint15() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as u64);
+        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
@@ -235,10 +235,10 @@ fn histogram_breakdown_abbreviate_hint15() {
         format!("\n{}", flat.to_string()),
         r#"
 length      |k.. o.. r..|
-[0, 1.8)    | *         |
-[1.8, 3.6)  |     *   * |
+[0, 1.8)    |           |
+[1.8, 3.6)  |         * |
 [3.6, 5.4)  | *   *     |
-[5.4, 7.2)  |**      ** |
+[5.4, 7.2)  |**       * |
 [7.2, 9]    |    **  ** |"#
     );
 }
@@ -250,7 +250,7 @@ fn histogram_breakdown_abbreviate_hint30() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as u64);
+        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
@@ -262,10 +262,10 @@ fn histogram_breakdown_abbreviate_hint30() {
         format!("\n{}", flat.to_string()),
         r#"
 length      | kipp  orvi..  ralf |
-[0, 1.8)    |  *                 |
+[0, 1.8)    |                    |
 [1.8, 3.6)  |         *      *   |
 [3.6, 5.4)  |  **     **         |
-[5.4, 7.2)  | ***            **  |
-[7.2, 9]    |        ***    ***  |"#
+[5.4, 7.2)  | ***           ***  |
+[7.2, 9]    |        ****   **** |"#
     );
 }
