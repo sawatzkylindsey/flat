@@ -111,21 +111,30 @@ impl Column {
             }
         }
 
+        let is_breakdown = match &self.column_type {
+            ColumnType::Breakdown => true,
+            _ => false,
+        };
+
         match &self.alignment {
             Alignment::Left => {
-                write!(f, "{:<width$}", cell.value.render(&view))
+                write!(f, "{:<width$}", cell.value.render(&view, is_breakdown))
             }
             Alignment::Center => {
-                write!(f, "{:^width$}", cell.value.render(&view))
+                write!(f, "{:^width$}", cell.value.render(&view, is_breakdown))
             }
             Alignment::Right => {
-                write!(f, "{:>width$}", cell.value.render(&view))
+                write!(f, "{:>width$}", cell.value.render(&view, is_breakdown))
             }
         }
     }
 
     fn write_final(&self, f: &mut Formatter<'_>, cell: &Cell, view: &View) -> std::fmt::Result {
-        write!(f, "{}", cell.value.render(view))
+        let is_breakdown = match &self.column_type {
+            ColumnType::Breakdown => true,
+            _ => false,
+        };
+        write!(f, "{}", cell.value.render(view, is_breakdown))
     }
 
     fn fill(&self, f: &mut Formatter<'_>, _view: &View) -> std::fmt::Result {
@@ -165,14 +174,20 @@ impl Value {
         }
     }
 
-    fn render(&self, view: &View) -> String {
+    fn render(&self, view: &View, is_breakdown: bool) -> String {
         match &self {
             Value::Empty => "".to_string(),
             Value::Skip => unreachable!("must never call render for a Skip"),
-            Value::String(string) => match view.breakdown_abbreviations.get(string) {
-                Some(abbr) => abbr.clone(),
-                None => string.clone(),
-            },
+            Value::String(string) => {
+                if is_breakdown {
+                    match view.breakdown_abbreviations.get(string) {
+                        Some(abbr) => abbr.clone(),
+                        None => string.clone(),
+                    }
+                } else {
+                    string.clone()
+                }
+            }
             Value::Overflow(string) => string.clone(),
             Value::Value(value) => iter::repeat('*')
                 .take((value * view.scale).round() as usize)

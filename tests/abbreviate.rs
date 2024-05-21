@@ -269,3 +269,25 @@ length      | kipp  orvi..  ralf |
 [7.2, 9]    |        ****   **** |"#
     );
 }
+
+#[test]
+fn abbreviate_barchart_breakdown_separation() {
+    let schema = Schema::two("pterodactyl", "dinosaur").breakdown_2nd();
+    let builder = BarChart::builder(schema)
+        .add(("triceratops".to_string(), "tyrannosaurs".to_string()), 1)
+        .add(("shark".to_string(), "triceratops".to_string()), 2)
+        .add(("tiger".to_string(), "pterodactyl".to_string()), 3);
+    let flat = builder.render(Render {
+        width_hint: 1,
+        abbreviate_breakdown: true,
+        ..Render::default()
+    });
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+pterodactyl   |pt.. tr.. ty..|
+shark         |      *       |
+tiger         | **           |
+triceratops   |           *  |"#
+    );
+}
