@@ -1,5 +1,5 @@
-use crate::aggregate::{aggregate_apply, simple_f64};
-use crate::render::{Alignment, Column, Flat, Grid, Render, Row, Value};
+use crate::aggregate::{aggregate_apply, minimal_precision_string};
+use crate::render::{Alignment, Column, Columns, Flat, Grid, Render, Row, Value};
 use crate::{Binnable, HistogramConfig, HistogramSchematic};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
@@ -111,10 +111,6 @@ where
                 .or_default();
             values.push(v);
 
-            // if *count > maximum_count {
-            //     maximum_count = *count;
-            // }
-
             if !sort_breakdowns.contains(&breakdown_dim) {
                 sort_breakdowns.push(breakdown_dim);
             }
@@ -122,41 +118,42 @@ where
 
         sort_breakdowns.sort();
 
-        let mut columns = vec![
-            // histogram range
-            Column::string(0, Alignment::Left),
-            // spacer "  "
-            Column::string(1, Alignment::Center),
-        ];
+        let mut columns = Columns::default();
+        // histogram range
+        columns.push(Column::string(Alignment::Left));
+        // spacer "  "
+        columns.push(Column::string(Alignment::Center));
 
         if config.show_aggregate {
             // total left [
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Left));
             // total value
-            columns.push(Column::string(columns.len(), Alignment::Right));
+            columns.push(Column::string(Alignment::Right));
             // total right ]
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Left));
+            // spacer "  "
+            columns.push(Column::string(Alignment::Center));
         }
 
         if self.schema.is_breakdown() {
             // breakdown left |
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Center));
 
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
-                columns.push(Column::breakdown(columns.len(), Alignment::Center));
+                columns.push(Column::breakdown(Alignment::Center));
 
                 if i + 1 < sort_breakdowns.len() {
                     // spacer " "
-                    columns.push(Column::string(columns.len(), Alignment::Left));
+                    columns.push(Column::string(Alignment::Left));
                 }
             }
 
             // breakdown right |
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Center));
         } else {
             // aggregate count
-            columns.push(Column::count(columns.len(), Alignment::Left));
+            columns.push(Column::count(Alignment::Left));
         }
 
         let mut grid = Grid::new(columns);
@@ -166,8 +163,9 @@ where
         row.push(Value::Empty);
 
         if config.show_aggregate {
-            row.push(Value::Empty);
-            row.push(Value::Empty);
+            row.push(Value::Overflow(config.aggregate.to_string()));
+            row.push(Value::Skip);
+            row.push(Value::Skip);
             row.push(Value::Empty);
         }
 
@@ -198,9 +196,6 @@ where
                 let breakdown_values: Vec<f64> = sort_breakdowns
                     .iter()
                     .map(|breakdown_dim| {
-                        // bin_aggregates.get()
-                        // let aggregate_dims =
-                        //     (primary_dim.clone(), breakdown_dim.clone());
                         aggregate_apply(
                             &config.aggregate,
                             &aggregates,
@@ -208,27 +203,21 @@ where
                             &mut minimum_value,
                             &mut maximum_value,
                         )
-                        // let value = config.aggregate.apply(
-                        //     aggregate_values.get(&aggregate_dims).unwrap_or_default(),
-                        // );
-                        // value
-                        // *aggregate_values.get(&aggregate_dims).unwrap_or(&0)
                     })
                     .collect();
 
                 if config.show_aggregate {
                     row.push(Value::String("[".to_string()));
-                    row.push(Value::String(simple_f64(
+                    row.push(Value::String(minimal_precision_string(
                         config.aggregate.apply(breakdown_values.as_slice()),
                     )));
-                    row.push(Value::String("] ".to_string()));
+                    row.push(Value::String("]".to_string()));
+                    row.push(Value::String("  ".to_string()));
                 }
 
                 row.push(Value::String("|".to_string()));
 
-                // for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
                 for (k, breakdown_value) in breakdown_values.iter().enumerate() {
-                    // let count = *count.get(breakdown_dim).unwrap_or(&0);
                     row.push(Value::Value(*breakdown_value));
 
                     if k + 1 != sort_breakdowns.len() {
@@ -248,11 +237,11 @@ where
 
                 if config.show_aggregate {
                     row.push(Value::String("[".to_string()));
-                    row.push(Value::String(simple_f64(value)));
-                    row.push(Value::String("] ".to_string()));
+                    row.push(Value::String(minimal_precision_string(value)));
+                    row.push(Value::String("]".to_string()));
+                    row.push(Value::String("  ".to_string()));
                 }
 
-                // let count = count.get(&sort_breakdowns[0]).unwrap_or(&0);
                 row.push(Value::Value(value));
             }
 

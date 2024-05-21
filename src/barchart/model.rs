@@ -1,7 +1,7 @@
 use crate::abbreviate::find_abbreviations;
-use crate::aggregate::{aggregate_apply, simple_f64};
+use crate::aggregate::{aggregate_apply, minimal_precision_string};
 use crate::barchart::api::BarChartSchematic;
-use crate::render::{Alignment, Column, Grid, Row, Value};
+use crate::render::{Alignment, Column, Columns, Grid, Row, Value};
 use crate::{BarChartConfig, Dimensions};
 use crate::{Flat, Render};
 use std::collections::{HashMap, HashSet};
@@ -82,11 +82,6 @@ where
 
             let values = aggregate_values.entry(aggregate_dims.clone()).or_default();
             values.push(*v);
-            // *count += v;
-
-            // if *count > maximum_count {
-            //     maximum_count = *count;
-            // }
 
             if !lookup.contains_key(&sort_dims) {
                 // Notice, the breakdown_dim will be different in the case of an `is_breakdown` schema.
@@ -124,43 +119,45 @@ where
             }
         }
 
-        let mut columns = Vec::default();
+        let mut columns = Columns::default();
 
         for _ in 0..self.schema.headers().len() {
             // dimension value
-            columns.push(Column::string(columns.len(), Alignment::Left));
+            columns.push(Column::string(Alignment::Left));
             // spacer "  "
-            columns.push(Column::string(columns.len(), Alignment::Left));
+            columns.push(Column::string(Alignment::Left));
         }
 
         if config.show_aggregate {
             // total left [
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Left));
             // total value
-            columns.push(Column::string(columns.len(), Alignment::Right));
+            columns.push(Column::string(Alignment::Right));
             // total right ]
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Left));
+            // spacer "  "
+            columns.push(Column::string(Alignment::Center));
         }
 
         if self.schema.is_breakdown() {
             // breakdown left |
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Center));
 
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
-                columns.push(Column::breakdown(columns.len(), Alignment::Center));
+                columns.push(Column::breakdown(Alignment::Center));
 
                 if i + 1 < sort_breakdowns.len() {
                     // spacer " "
-                    columns.push(Column::string(columns.len(), Alignment::Left));
+                    columns.push(Column::string(Alignment::Left));
                 }
             }
 
             // breakdown right |
-            columns.push(Column::string(columns.len(), Alignment::Center));
+            columns.push(Column::string(Alignment::Center));
         } else {
             // aggregate count
-            columns.push(Column::count(columns.len(), Alignment::Left));
+            columns.push(Column::count(Alignment::Left));
         }
 
         let mut grid = Grid::new(columns);
@@ -172,8 +169,9 @@ where
         }
 
         if config.show_aggregate {
-            row.push(Value::Empty);
-            row.push(Value::Empty);
+            row.push(Value::Overflow(config.aggregate.to_string()));
+            row.push(Value::Skip);
+            row.push(Value::Skip);
             row.push(Value::Empty);
         }
 
@@ -286,20 +284,16 @@ where
                                         &mut minimum_value,
                                         &mut maximum_value,
                                     )
-                                    // let value = config.aggregate.apply(
-                                    //     aggregate_values.get(&aggregate_dims).unwrap_or_default(),
-                                    // );
-                                    // value
-                                    // *aggregate_values.get(&aggregate_dims).unwrap_or(&0)
                                 })
                                 .collect();
 
                             if config.show_aggregate {
                                 column_chunks.push(Value::String("[".to_string()));
-                                column_chunks.push(Value::String(simple_f64(
+                                column_chunks.push(Value::String(minimal_precision_string(
                                     config.aggregate.apply(breakdown_values.as_slice()),
                                 )));
-                                column_chunks.push(Value::String("] ".to_string()));
+                                column_chunks.push(Value::String("]".to_string()));
+                                column_chunks.push(Value::String("  ".to_string()));
                             }
 
                             column_chunks.push(Value::String("|".to_string()));
@@ -322,14 +316,12 @@ where
                                 &mut minimum_value,
                                 &mut maximum_value,
                             );
-                            // let value = config
-                            //     .aggregate
-                            //     .apply(aggregate_values.get(&aggregate_dims).unwrap_or_default());
 
                             if config.show_aggregate {
                                 column_chunks.push(Value::String("[".to_string()));
-                                column_chunks.push(Value::String(simple_f64(value)));
-                                column_chunks.push(Value::String("] ".to_string()));
+                                column_chunks.push(Value::String(minimal_precision_string(value)));
+                                column_chunks.push(Value::String("]".to_string()));
+                                column_chunks.push(Value::String("  ".to_string()));
                             }
 
                             column_chunks.push(Value::Value(value));
@@ -384,29 +376,6 @@ where
         )
     }
 }
-//
-// fn apply<T: Eq + Hash>(
-//     aggregate: &Aggregate,
-//     aggregate_values: &HashMap<T, Vec<f64>>,
-//     aggregate_dims: &T,
-//     minimum_value: &mut f64,
-//     maximum_value: &mut f64,
-// ) -> f64 {
-//     let value = match aggregate_values.get(aggregate_dims) {
-//         Some(values) => aggregate.apply(values.as_slice()),
-//         None => aggregate.apply(&[]),
-//     };
-//
-//     if value < *minimum_value {
-//         *minimum_value = value;
-//     }
-//
-//     if value > *maximum_value {
-//         *maximum_value = value;
-//     }
-//
-//     value
-// }
 
 #[derive(Debug, PartialEq, Eq)]
 enum Position {

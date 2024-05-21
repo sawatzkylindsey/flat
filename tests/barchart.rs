@@ -94,13 +94,13 @@ fn barchart_2d_show_sum() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal
-1      - shark   [4] ****
+length   animal  Sum
+1      - shark   [4]  ****
 4      ┘
 1      ┐
-4      - tiger   [7] *******
+4      - tiger   [7]  *******
 5      ┘
-4      - whale   [0] "#
+4      - whale   [0]  "#
     );
 }
 
@@ -122,13 +122,13 @@ fn barchart_2d_show_average() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal
-1      - shark   [  2] **
+length   animal  Average
+1      - shark   [  2]    **
 4      ┘
 1      ┐
-4      - tiger   [2.3] **
+4      - tiger   [2.3]    **
 5      ┘
-4      - whale   [  0] "#
+4      - whale   [  0]    "#
     );
 }
 
@@ -256,12 +256,12 @@ fn barchart_3d_breakdown2_show_sum() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-stable   animal       |  1      4      5   |
-false  - shark   [ 4] | ***     *          |
+stable   animal  Sum   |  1      4      5   |
+false  - shark   [ 4]  | ***     *          |
 true   ┘
-false  - tiger   [10] | ***     *    ******|
+false  - tiger   [10]  | ***     *    ******|
 true   ┘
-true   - whale   [ 0] |                    |"#
+true   - whale   [ 0]  |                    |"#
     );
 }
 
@@ -283,12 +283,12 @@ fn barchart_3d_breakdown2_show_average() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-stable   animal        |  1      4      5   |
-false  - shark   [1.3] | ***     *          |
+stable   animal  Average  |  1      4      5   |
+false  - shark   [1.3]    | ***     *          |
 true   ┘
-false  - tiger   [3.3] | ***     *    ******|
+false  - tiger   [3.3]    | ***     *    ******|
 true   ┘
-true   - whale   [  0] |                    |"#
+true   - whale   [  0]    |                    |"#
     );
 }
 

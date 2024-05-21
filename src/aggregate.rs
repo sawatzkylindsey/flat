@@ -59,7 +59,7 @@ pub(crate) fn aggregate_apply<T: Eq + Hash>(
     value
 }
 
-/// Generate a 'simple' form f64.
+/// Generate a "minimal precision" string for the f64 value.
 ///
 /// The intuition behind this format is to use as few decimal values as possible, without loss of visual accuracy.
 /// We want to be able to distinguish distinct values.
@@ -68,7 +68,7 @@ pub(crate) fn aggregate_apply<T: Eq + Hash>(
 ///     1.011 vs 1.2 -> 1.01 vs 1.2
 ///
 /// See unit tests for more examples.
-pub(crate) fn simple_f64(value: f64) -> String {
+pub(crate) fn minimal_precision_string(value: f64) -> String {
     let value_string = value.to_string();
 
     let decimal_truncated = match value_string.split_once('.') {
@@ -178,52 +178,52 @@ mod tests {
 
     #[test]
     fn f64_string() {
-        assert_eq!(simple_f64(0.0), "0");
-        assert_eq!(simple_f64(1.0), "1");
-        assert_eq!(simple_f64(-1.0), "-1");
+        assert_eq!(minimal_precision_string(0.0), "0");
+        assert_eq!(minimal_precision_string(1.0), "1");
+        assert_eq!(minimal_precision_string(-1.0), "-1");
 
-        assert_eq!(simple_f64(0.1), "0.1");
-        assert_eq!(simple_f64(1.1), "1.1");
-        assert_eq!(simple_f64(-1.1), "-1.1");
+        assert_eq!(minimal_precision_string(0.1), "0.1");
+        assert_eq!(minimal_precision_string(1.1), "1.1");
+        assert_eq!(minimal_precision_string(-1.1), "-1.1");
 
-        assert_eq!(simple_f64(0.1234), "0.1");
-        assert_eq!(simple_f64(1.1234), "1.1");
-        assert_eq!(simple_f64(-1.1234), "-1.1");
+        assert_eq!(minimal_precision_string(0.1234), "0.1");
+        assert_eq!(minimal_precision_string(1.1234), "1.1");
+        assert_eq!(minimal_precision_string(-1.1234), "-1.1");
 
-        assert_eq!(simple_f64(0.19), "0.2");
-        assert_eq!(simple_f64(1.19), "1.2");
-        assert_eq!(simple_f64(-1.19), "-1.2");
+        assert_eq!(minimal_precision_string(0.19), "0.2");
+        assert_eq!(minimal_precision_string(1.19), "1.2");
+        assert_eq!(minimal_precision_string(-1.19), "-1.2");
 
-        assert_eq!(simple_f64(0.001), "0.001");
-        assert_eq!(simple_f64(1.001), "1.001");
-        assert_eq!(simple_f64(-1.001), "-1.001");
+        assert_eq!(minimal_precision_string(0.001), "0.001");
+        assert_eq!(minimal_precision_string(1.001), "1.001");
+        assert_eq!(minimal_precision_string(-1.001), "-1.001");
 
-        assert_eq!(simple_f64(0.001234), "0.001");
-        assert_eq!(simple_f64(1.001234), "1.001");
-        assert_eq!(simple_f64(-1.001234), "-1.001");
+        assert_eq!(minimal_precision_string(0.001234), "0.001");
+        assert_eq!(minimal_precision_string(1.001234), "1.001");
+        assert_eq!(minimal_precision_string(-1.001234), "-1.001");
 
-        assert_eq!(simple_f64(0.0019), "0.002");
-        assert_eq!(simple_f64(1.0019), "1.002");
-        assert_eq!(simple_f64(-1.0019), "-1.002");
+        assert_eq!(minimal_precision_string(0.0019), "0.002");
+        assert_eq!(minimal_precision_string(1.0019), "1.002");
+        assert_eq!(minimal_precision_string(-1.0019), "-1.002");
 
-        assert_eq!(simple_f64(1.0 / 2.0), "0.5");
-        assert_eq!(simple_f64(1.0 / 3.0), "0.3");
-        assert_eq!(simple_f64(1.0 / 4.0), "0.3");
-        assert_eq!(simple_f64(1.0 / 5.0), "0.2");
-        assert_eq!(simple_f64(1.0 / 6.0), "0.2");
+        assert_eq!(minimal_precision_string(1.0 / 2.0), "0.5");
+        assert_eq!(minimal_precision_string(1.0 / 3.0), "0.3");
+        assert_eq!(minimal_precision_string(1.0 / 4.0), "0.3");
+        assert_eq!(minimal_precision_string(1.0 / 5.0), "0.2");
+        assert_eq!(minimal_precision_string(1.0 / 6.0), "0.2");
 
-        assert_eq!(simple_f64(2.0 / 2.0), "1");
-        assert_eq!(simple_f64(2.0 / 3.0), "0.7");
-        assert_eq!(simple_f64(2.0 / 4.0), "0.5");
-        assert_eq!(simple_f64(2.0 / 5.0), "0.4");
-        assert_eq!(simple_f64(2.0 / 6.0), "0.3");
+        assert_eq!(minimal_precision_string(2.0 / 2.0), "1");
+        assert_eq!(minimal_precision_string(2.0 / 3.0), "0.7");
+        assert_eq!(minimal_precision_string(2.0 / 4.0), "0.5");
+        assert_eq!(minimal_precision_string(2.0 / 5.0), "0.4");
+        assert_eq!(minimal_precision_string(2.0 / 6.0), "0.3");
 
-        assert_eq!(simple_f64(1.0 / 0.0), "inf");
-        assert_eq!(simple_f64(-1.0 / 0.0), "-inf");
+        assert_eq!(minimal_precision_string(1.0 / 0.0), "inf");
+        assert_eq!(minimal_precision_string(-1.0 / 0.0), "-inf");
 
-        assert_eq!(simple_f64(123456789.0), "123456789");
-        assert_eq!(simple_f64(1234567891.0), "1.2e9");
-        assert_eq!(simple_f64(12345678912.0), "1.2e10");
-        assert_eq!(simple_f64(123456789123.0), "1.2e11");
+        assert_eq!(minimal_precision_string(123456789.0), "123456789");
+        assert_eq!(minimal_precision_string(1234567891.0), "1.2e9");
+        assert_eq!(minimal_precision_string(12345678912.0), "1.2e10");
+        assert_eq!(minimal_precision_string(123456789123.0), "1.2e11");
     }
 }
