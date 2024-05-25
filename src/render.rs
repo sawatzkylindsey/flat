@@ -16,7 +16,7 @@ pub struct Render<C> {
     /// * If the rendering cannot reasonably fit the `width_hint`, then it is minimally extended (such that a reasonable rendering may be produced).
     pub width_hint: usize,
     /// Whether to show the aggregated result for the *primary* dimension of the dataset.
-    /// While the *rendered* data in `flat` may use a relative representation, this option extends the rendering to show the absolute values of the data.
+    /// While the *rendered* data in `flat` uses a relative representation, this option extends the widget to show the absolute values of the data.
     ///
     /// | Show Aggregate | Rendering of Aggregate |
     /// |-|-|
@@ -189,12 +189,26 @@ impl Value {
                 }
             }
             Value::Overflow(string) => string.clone(),
-            Value::Value(value) => iter::repeat('*')
-                .take((value * view.scale).round() as usize)
-                .collect::<String>(),
+            Value::Value(value) => {
+                let value = value.round();
+
+                let marker = if value.is_sign_positive() {
+                    POSITIVE_MARKER
+                } else {
+                    NEGATIVE_MARKER
+                };
+
+                iter::repeat(marker)
+                    .take((value.abs() * view.scale) as usize)
+                    .collect::<String>()
+            }
         }
     }
 }
+
+// TODO: Allow these to be configurable.
+const POSITIVE_MARKER: char = '*';
+const NEGATIVE_MARKER: char = '⊖';
 
 #[derive(Debug, Default)]
 pub(crate) struct Columns {
@@ -447,13 +461,16 @@ impl Display for Flat {
             view_width = 2;
         }
 
-        let mut value_width = self.value_range.end - self.value_range.start;
+        let mut value_width = std::cmp::max(
+            self.value_range.start.abs().round() as i128,
+            self.value_range.end.abs().round() as i128,
+        );
 
-        if value_width == 0.0 {
-            value_width = 1.0;
+        if value_width == 0 {
+            value_width = 1;
         }
 
-        let mut scale = view_width as f64 / value_width;
+        let mut scale = view_width as f64 / value_width as f64;
         let width: usize = if scale >= 1.0 {
             scale = 1.0;
             value_width as usize

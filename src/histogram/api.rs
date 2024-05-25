@@ -120,6 +120,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Schema;
 
     #[test]
     fn binnable_f64() {
@@ -157,5 +158,25 @@ mod tests {
         assert_eq!(0u64.divide(2), 0);
         assert_eq!(1u64.divide(2), 1);
         assert_eq!(2u64.divide(2), 1);
+    }
+
+    #[test]
+    fn schema1_impl_trait() {
+        let schema = Schema::one("abc");
+        assert_eq!(schema.primary_dim(&(1u64,)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing);
+        assert_eq!(schema.primary_header(), "abc".to_string());
+        assert_eq!(schema.breakdown_header(), None);
+        assert!(!schema.is_breakdown());
+    }
+
+    #[test]
+    fn schema2_breakdown2_impl_trait() {
+        let schema = Schema::two("abc", "def").breakdown_2nd();
+        assert_eq!(schema.primary_dim(&(1u64, true)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64, true)), true);
+        assert_eq!(schema.primary_header(), "abc".to_string());
+        assert_eq!(schema.breakdown_header(), Some("def".to_string()));
+        assert!(schema.is_breakdown());
     }
 }

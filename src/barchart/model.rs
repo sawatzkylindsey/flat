@@ -139,10 +139,10 @@ where
             columns.push(Column::string(Alignment::Center));
         }
 
-        if self.schema.is_breakdown() {
-            // breakdown left |
-            columns.push(Column::string(Alignment::Center));
+        // rendering delimiter |
+        columns.push(Column::string(Alignment::Center));
 
+        if self.schema.is_breakdown() {
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
                 columns.push(Column::breakdown(Alignment::Center));
@@ -175,9 +175,9 @@ where
             row.push(Value::Empty);
         }
 
-        if self.schema.is_breakdown() {
-            row.push(Value::String("|".to_string()));
+        row.push(Value::String("|".to_string()));
 
+        if self.schema.is_breakdown() {
             for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
                 row.push(Value::String(breakdown_dim.to_string()));
 
@@ -324,6 +324,7 @@ where
                                 column_chunks.push(Value::String("  ".to_string()));
                             }
 
+                            column_chunks.push(Value::String("|".to_string()));
                             column_chunks.push(Value::Value(value));
 
                             if value < minimum_value {
@@ -414,5 +415,81 @@ impl Group {
 
     fn increment(&mut self) {
         self.index += 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Schema, Schema1};
+
+    #[test]
+    fn empty() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let builder = BarChart::builder(schema);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc|"#
+        );
+    }
+
+    #[test]
+    fn add_zero() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = BarChart::builder(schema);
+        builder = builder.add((1,), 0);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc  |
+1    |"#
+        );
+    }
+
+    #[test]
+    fn add_zero_and_ones() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = BarChart::builder(schema);
+        builder = builder.add((1,), -1).add((2,), 0).add((3,), 1);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc  |
+1    |⊖
+2    |
+3    |*"#
+        );
+    }
+
+    #[test]
+    fn add_onethousand() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = BarChart::builder(schema);
+        builder = builder.add((1,), 1_000);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc  |
+1    |******************************************************************************************************************************************************************************"#
+        );
+    }
+
+    #[test]
+    fn add_negative_onethousand() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = BarChart::builder(schema);
+        builder = builder.add((1,), -1_000);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc  |
+1    |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
+        );
     }
 }

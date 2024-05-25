@@ -33,7 +33,9 @@ where
     pub fn builder(schema: S, bins: usize) -> Histogram<S> {
         Self {
             schema,
-            bins,
+            // Make sure there's always at least 1 bin.
+            // It is either this, or return a Result<Histogram<S>, _>.
+            bins: std::cmp::max(bins, 1),
             data: Vec::default(),
             min: None,
             max: None,
@@ -74,25 +76,38 @@ where
             ..
         } = self;
 
-        let min = min.expect("histogram must have some data");
-        let max = max.expect("histogram must have some data");
-        let delta = max - min.clone();
-        let size = delta.divide(bins);
-        let bin_ranges: Vec<Bounds<S::PrimaryDimension>> = (0..bins)
-            .map(|i| {
-                if i + 1 == bins {
-                    Bounds {
-                        lower: Bound::Inclusive(min.clone() + (size.multiply(i))),
-                        upper: Bound::Inclusive(min.clone() + (size.multiply(i + 1))),
-                    }
-                } else {
-                    Bounds {
-                        lower: Bound::Inclusive(min.clone() + (size.multiply(i))),
-                        upper: Bound::Exclusive(min.clone() + (size.multiply(i + 1))),
-                    }
-                }
-            })
-            .collect();
+        let bin_ranges: Vec<Bounds<S::PrimaryDimension>> = if min.is_none() {
+            Vec::default()
+        } else {
+            let min = min.expect("histogram must have some data");
+            let max = max.expect("histogram must have some data");
+
+            if min == max {
+                vec![Bounds {
+                    lower: Bound::Inclusive(min.clone()),
+                    upper: Bound::Inclusive(min.clone()),
+                }]
+            } else {
+                let delta = max - min.clone();
+                let size = delta.divide(bins);
+                (0..bins)
+                    .map(|i| {
+                        if i + 1 == bins {
+                            Bounds {
+                                lower: Bound::Inclusive(min.clone() + (size.multiply(i))),
+                                upper: Bound::Inclusive(min.clone() + (size.multiply(i + 1))),
+                            }
+                        } else {
+                            Bounds {
+                                lower: Bound::Inclusive(min.clone() + (size.multiply(i))),
+                                upper: Bound::Exclusive(min.clone() + (size.multiply(i + 1))),
+                            }
+                        }
+                    })
+                    .collect()
+            }
+        };
+
         let mut bin_aggregates: Vec<HashMap<S::BreakdownDimension, Vec<f64>>> =
             (0..bins).map(|_| HashMap::default()).collect();
         let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
@@ -135,10 +150,10 @@ where
             columns.push(Column::string(Alignment::Center));
         }
 
-        if self.schema.is_breakdown() {
-            // breakdown left |
-            columns.push(Column::string(Alignment::Center));
+        // rendering delimiter |
+        columns.push(Column::string(Alignment::Center));
 
+        if self.schema.is_breakdown() {
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
                 columns.push(Column::breakdown(Alignment::Center));
@@ -169,9 +184,9 @@ where
             row.push(Value::Empty);
         }
 
-        if self.schema.is_breakdown() {
-            row.push(Value::String("|".to_string()));
+        row.push(Value::String("|".to_string()));
 
+        if self.schema.is_breakdown() {
             for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
                 row.push(Value::String(breakdown_dim.to_string()));
 
@@ -242,6 +257,7 @@ where
                     row.push(Value::String("  ".to_string()));
                 }
 
+                row.push(Value::String("|".to_string()));
                 row.push(Value::Value(value));
             }
 
@@ -302,5 +318,123 @@ impl<T: PartialOrd> Bound<T> {
             Bound::Exclusive(b) => b > item,
             Bound::Inclusive(b) => b >= item,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Histogram, Schema, Schema1};
+
+    #[test]
+    fn empty() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let builder = Histogram::builder(schema, 0);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc|"#
+        );
+    }
+
+    #[test]
+    fn add_zero_buckets() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = Histogram::builder(schema, 0);
+        builder = builder.add((1,), -1).add((2,), 0).add((3,), 1);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |
+[1, 3]  |"#
+        );
+    }
+
+    #[test]
+    fn add_one_bucket() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = Histogram::builder(schema, 1);
+        builder = builder.add((1,), 1).add((2,), 1).add((3,), 1);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |
+[1, 3]  |***"#
+        );
+    }
+
+    #[test]
+    fn add_extra_buckets() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = Histogram::builder(schema, 2);
+        builder = builder.add((1,), 1);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |
+[1, 1]  |*"#
+        );
+    }
+
+    #[test]
+    fn add_zero() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = Histogram::builder(schema, 1);
+        builder = builder.add((1,), 0);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |
+[1, 1]  |"#
+        );
+    }
+
+    #[test]
+    fn add_zero_and_ones() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = Histogram::builder(schema, 3);
+        builder = builder.add((1,), -1).add((2,), 0).add((3,), 1);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |
+[1, 2)  |⊖
+[2, 3)  |
+[3, 4]  |*"#
+        );
+    }
+
+    #[test]
+    fn add_onethousand() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = Histogram::builder(schema, 1);
+        builder = builder.add((1,), 1_000);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |
+[1, 1]  |***************************************************************************************************************************************************************************"#
+        );
+    }
+
+    #[test]
+    fn add_negative_onethousand() {
+        let schema: Schema1<u64> = Schema::one("abc");
+        let mut builder = Histogram::builder(schema, 1);
+        builder = builder.add((1,), -1_000);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |
+[1, 1]  |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
+        );
     }
 }

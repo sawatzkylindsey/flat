@@ -17,6 +17,28 @@
 //!
 //! # Usage
 //!
+//!
+//! # Value Rendering Details
+//! `flat` follows a few simple rules when generating the "visual" rendering of data.
+//! The details follow, but in the general case the visual rendering should be assumed to be *relative*.
+//! That is, the literal count of characters (ex: `'*'`) does not necessarily represent the literal value of the data.
+//!
+//! The `flat` rendering process is subject to change, but can be summarized with the following procedure:
+//! 1. Calculate the visual rendering width by `width_hint - OTHER_COLUMNS`.
+//! 2. If this width is less than `2`, then set it to `2`.
+//! 3. Check if the greatest aggregate value to be rendered fits within the visual rendering.
+//! If it does, draw the values literally (in this case, a single character `'*'` does represent the absolute value).
+//! 4. Otherwise, find the linear scaling such that the greatest aggregate value fits within the visual rendering.
+//! Scale the aggregate values accordingly (ex: a single character `'*'` represents a relative value).
+//!
+//! Notice, by design this process will only *down-scale* the values to fit within the visual rendering.
+//! Values will never be *up-scaled* to fit the `width_hint`.
+//!
+//! The above process also applies for fractional and negative values.
+//! For fractions, `flat` always round the aggregate value before scaling.
+//! In the case of negatives, `flat` takes the absolute value to detect the appropriate bounds and to render the representation characters.
+//! Negative values are rendering using a different character marker (ex: `'⊖'`).
+//!
 
 // For example, it is simple to extend the debug lines of a standalone tool to include multi-line charts.
 // where adding graphical charts may add logistic complexity

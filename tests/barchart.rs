@@ -15,10 +15,10 @@ fn barchart_1d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-anml
-shark   ****
-tiger   *******
-whale   "#
+anml    |
+shark   |****
+tiger   |*******
+whale   |"#
     );
 }
 
@@ -36,13 +36,13 @@ fn barchart_2d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal
-1      - shark   ****
+length   animal  |
+1      - shark   |****
 4      ┘
 1      ┐
-4      - tiger   *******
+4      - tiger   |*******
 5      ┘
-4      - whale   "#
+4      - whale   |"#
     );
 }
 
@@ -50,7 +50,8 @@ length   animal
 #[case(17)]
 #[case(18)]
 #[case(19)]
-// #[case(20)]
+#[case(20)]
+// #[case(21)]
 fn barchart_2d_squish(#[case] width_hint: usize) {
     let schema = Schema::two("animal", "length");
     let builder = BarChart::builder(schema)
@@ -67,13 +68,13 @@ fn barchart_2d_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal
-1      - shark   *
+length   animal  |
+1      - shark   |*
 4      ┘
 1      ┐
-4      - tiger   **
+4      - tiger   |**
 5      ┘
-4      - whale   "#
+4      - whale   |"#
     );
 }
 
@@ -94,13 +95,13 @@ fn barchart_2d_show_sum() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal  Sum
-1      - shark   [4]  ****
+length   animal  Sum  |
+1      - shark   [4]  |****
 4      ┘
 1      ┐
-4      - tiger   [7]  *******
+4      - tiger   [7]  |*******
 5      ┘
-4      - whale   [0]  "#
+4      - whale   [0]  |"#
     );
 }
 
@@ -122,13 +123,13 @@ fn barchart_2d_show_average() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal  Average
-1      - shark   [  2]    **
+length   animal  Average  |
+1      - shark   [  2]    |**
 4      ┘
 1      ┐
-4      - tiger   [2.3]    **
+4      - tiger   [2.3]    |**
 5      ┘
-4      - whale   [  0]    "#
+4      - whale   [  0]    |"#
     );
 }
 
@@ -167,13 +168,13 @@ fn barchart_3d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-stable   length   animal
-true   - 1      - shark   ****
+stable   length   animal  |
+true   - 1      - shark   |****
 false  - 4      ┘
 false  - 1      ┐
-false  - 4      - tiger   *******
+false  - 4      - tiger   |*******
 true   - 5      ┘
-true   - 4      - whale   "#
+true   - 4      - whale   |"#
     );
 }
 
@@ -231,9 +232,9 @@ fn barchart_3d_breakdown2_squish(#[case] width_hint: usize) {
         format!("\n{}", flat.to_string()),
         r#"
 stable   animal  |1  4  5 |
-false  - shark   |** *    |
+false  - shark   |**      |
 true   ┘
-false  - tiger   |** *  **|
+false  - tiger   |**    **|
 true   ┘
 true   - whale   |        |"#
     );
@@ -331,10 +332,10 @@ fn abbreviate_barchart_1d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-animal
-shar..   **
-tige..   ***
-whal..   *"#
+animal   |
+shar..   |*
+tige..   |**
+whal..   |"#
     );
 }
 
@@ -371,9 +372,9 @@ fn abbreviate_barchart_2d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-laminaanimal    animal
-whalewhale..  - shar..   **
-whalewhale..  - tige..   ***
-whalewhale..  - whal..   *"#
+laminaanimal    animal   |
+whalewhale..  - shar..   |*
+whalewhale..  - tige..   |**
+whalewhale..  - whal..   |"#
     );
 }

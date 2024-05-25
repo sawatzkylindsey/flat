@@ -18,7 +18,7 @@ fn abbreviate_barchart_breakdown_hint1() {
 animal  |pt.. tr.. ty..|
 shark   |      *       |
 tiger   | **           |
-whale   |           *  |"#
+whale   |              |"#
     );
 }
 
@@ -40,31 +40,9 @@ fn abbreviate_barchart_breakdown_hint15() {
 animal  |pt.. tr.. ty..|
 shark   |      *       |
 tiger   | **           |
-whale   |           *  |"#
+whale   |              |"#
     );
 }
-
-// #[test]
-// fn abbreviate_barchart_breakdown_hint25() {
-//     let schema = Schema::two("animal", "dinosaur").breakdown_2nd();
-//     let builder = BarChart::builder(schema)
-//         .add(("whale".to_string(), "tyrannosaurs".to_string()), 1)
-//         .add(("shark".to_string(), "triceratops".to_string()), 2)
-//         .add(("tiger".to_string(), "pterodactyl".to_string()), 3);
-//     let flat = builder.render(Render {
-//         width_hint: 25,
-//         abbreviate_breakdown: true,
-//         ..Render::default()
-//     });
-//     assert_eq!(
-//         format!("\n{}", flat.to_string()),
-//         r#"
-// animal  |pter tric tyra|
-// shark   |      **      |
-// tiger   |***           |
-// whale   |           *  |"#
-//     );
-// }
 
 #[test]
 fn abbreviate_barchart_breakdown_hint30() {
@@ -209,10 +187,10 @@ fn histogram_breakdown_abbreviate_hint1() {
         r#"
 length      |k.. o.. r..|
 [0, 1.8)    |           |
-[1.8, 3.6)  |         * |
-[3.6, 5.4)  | *   *     |
-[5.4, 7.2)  |**       * |
-[7.2, 9]    |    **  ** |"#
+[1.8, 3.6)  |           |
+[3.6, 5.4)  |     *     |
+[5.4, 7.2)  | *       * |
+[7.2, 9]    |     *  ** |"#
     );
 }
 
@@ -236,10 +214,10 @@ fn histogram_breakdown_abbreviate_hint15() {
         r#"
 length      |k.. o.. r..|
 [0, 1.8)    |           |
-[1.8, 3.6)  |         * |
-[3.6, 5.4)  | *   *     |
-[5.4, 7.2)  |**       * |
-[7.2, 9]    |    **  ** |"#
+[1.8, 3.6)  |           |
+[3.6, 5.4)  |     *     |
+[5.4, 7.2)  | *       * |
+[7.2, 9]    |     *  ** |"#
     );
 }
 
@@ -263,10 +241,10 @@ fn histogram_breakdown_abbreviate_hint30() {
         r#"
 length      | kipp  orvi..  ralf |
 [0, 1.8)    |                    |
-[1.8, 3.6)  |         *      *   |
-[3.6, 5.4)  |  **     **         |
-[5.4, 7.2)  | ***           ***  |
-[7.2, 9]    |        ****   **** |"#
+[1.8, 3.6)  |                *   |
+[3.6, 5.4)  |  *      **         |
+[5.4, 7.2)  | ***            **  |
+[7.2, 9]    |        ***    **** |"#
     );
 }
 
@@ -288,6 +266,6 @@ fn abbreviate_barchart_breakdown_separation() {
 pterodactyl   |pt.. tr.. ty..|
 shark         |      *       |
 tiger         | **           |
-triceratops   |           *  |"#
+triceratops   |              |"#
     );
 }

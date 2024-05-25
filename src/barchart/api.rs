@@ -276,3 +276,78 @@ where
         true
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Schema;
+
+    #[test]
+    fn schema1_impl_trait() {
+        let schema = Schema::one("abc");
+        assert_eq!(schema.primary_dim(&(1u64,)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing);
+        assert_eq!(schema.sort_dims(&(1u64,)), (1u64,));
+        assert_eq!(schema.headers(), vec!["abc".to_string()]);
+        assert_eq!(schema.breakdown_header(), None);
+        assert!(!schema.is_breakdown());
+    }
+
+    #[test]
+    fn schema2_impl_trait() {
+        let schema = Schema::two("abc", "def");
+        assert_eq!(schema.primary_dim(&(1u64, true)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64, true)), Nothing);
+        assert_eq!(schema.sort_dims(&(1u64, true)), (1u64, true));
+        assert_eq!(schema.headers(), vec!["abc".to_string(), "def".to_string()]);
+        assert_eq!(schema.breakdown_header(), None);
+        assert!(!schema.is_breakdown());
+    }
+
+    #[test]
+    fn schema2_breakdown2_impl_trait() {
+        let schema = Schema::two("abc", "def").breakdown_2nd();
+        assert_eq!(schema.primary_dim(&(1u64, true)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64, true)), true);
+        assert_eq!(schema.sort_dims(&(1u64, true)), (1u64,));
+        assert_eq!(schema.headers(), vec!["abc".to_string()]);
+        assert_eq!(schema.breakdown_header(), Some("def".to_string()));
+        assert!(schema.is_breakdown());
+    }
+
+    #[test]
+    fn schema3_impl_trait() {
+        let schema = Schema::three("abc", "def", "ghi");
+        assert_eq!(schema.primary_dim(&(1u64, true, 2f32)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), Nothing);
+        assert_eq!(schema.sort_dims(&(1u64, true, 2f32)), (1u64, true, 2f32));
+        assert_eq!(
+            schema.headers(),
+            vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
+        );
+        assert_eq!(schema.breakdown_header(), None);
+        assert!(!schema.is_breakdown());
+    }
+
+    #[test]
+    fn schema3_breakdown2_impl_trait() {
+        let schema = Schema::three("abc", "def", "ghi").breakdown_2nd();
+        assert_eq!(schema.primary_dim(&(1u64, true, 2f32)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), true);
+        assert_eq!(schema.sort_dims(&(1u64, true, 2f32)), (1u64, 2f32));
+        assert_eq!(schema.headers(), vec!["abc".to_string(), "ghi".to_string()]);
+        assert_eq!(schema.breakdown_header(), Some("def".to_string()));
+        assert!(schema.is_breakdown());
+    }
+
+    #[test]
+    fn schema3_breakdown3_impl_trait() {
+        let schema = Schema::three("abc", "def", "ghi").breakdown_3rd();
+        assert_eq!(schema.primary_dim(&(1u64, true, 2f32)), 1u64);
+        assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), 2f32);
+        assert_eq!(schema.sort_dims(&(1u64, true, 2f32)), (1u64, true));
+        assert_eq!(schema.headers(), vec!["abc".to_string(), "def".to_string()]);
+        assert_eq!(schema.breakdown_header(), Some("ghi".to_string()));
+        assert!(schema.is_breakdown());
+    }
+}
