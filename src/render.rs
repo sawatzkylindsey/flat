@@ -33,6 +33,10 @@ pub struct Render<C> {
     /// Use this option when the breakdown dimensions have long `std::fmt::Display` forms.
     /// Abbreviation is attempted irrespective of the `width_hint`.
     pub abbreviate_breakdown: bool,
+    /// The marker character for positive values of the rendering.
+    pub positive_marker: char,
+    /// The marker character for negative values of the rendering.
+    pub negative_marker: char,
     /// The widget specific rendering configuration.
     pub widget_config: C,
 }
@@ -44,7 +48,28 @@ impl<C: Default> Default for Render<C> {
             width_hint: 180,
             show_aggregate: false,
             abbreviate_breakdown: false,
+            positive_marker: '*',
+            negative_marker: '⊖',
             widget_config: C::default(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Config {
+    width_hint: usize,
+    abbreviate_breakdown: bool,
+    positive_marker: char,
+    negative_marker: char,
+}
+
+impl<T> From<Render<T>> for Config {
+    fn from(value: Render<T>) -> Self {
+        Self {
+            width_hint: value.width_hint,
+            abbreviate_breakdown: value.abbreviate_breakdown,
+            positive_marker: value.positive_marker,
+            negative_marker: value.negative_marker,
         }
     }
 }
@@ -98,11 +123,12 @@ impl Column {
         f: &mut Formatter<'_>,
         cell: &Cell,
         view: &View,
+        width: usize,
         overflow_width_override: Option<&usize>,
     ) -> std::fmt::Result {
         let mut width = match &self.column_type {
             ColumnType::String(width) => *width,
-            ColumnType::Count | ColumnType::Breakdown => view.width,
+            ColumnType::Count | ColumnType::Breakdown => width,
         };
 
         if matches!(cell.value, Value::Overflow(_)) {
@@ -137,11 +163,10 @@ impl Column {
         write!(f, "{}", cell.value.render(view, is_breakdown))
     }
 
-    fn fill(&self, f: &mut Formatter<'_>, _view: &View) -> std::fmt::Result {
+    fn fill(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let width = match &self.column_type {
             ColumnType::String(width) => *width,
-            ColumnType::Count => 0,
-            ColumnType::Breakdown => {
+            ColumnType::Count | ColumnType::Breakdown => {
                 unreachable!("should never fill a breakdown");
             }
         };
@@ -150,13 +175,13 @@ impl Column {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) struct Cell {
     column: usize,
     value: Value,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum Value {
     Empty,
     String(String),
@@ -193,9 +218,9 @@ impl Value {
                 let value = value.round();
 
                 let marker = if value.is_sign_positive() {
-                    POSITIVE_MARKER
+                    view.positive_marker
                 } else {
-                    NEGATIVE_MARKER
+                    view.negative_marker
                 };
 
                 iter::repeat(marker)
@@ -205,10 +230,6 @@ impl Value {
         }
     }
 }
-
-// TODO: Allow these to be configurable.
-const POSITIVE_MARKER: char = '*';
-const NEGATIVE_MARKER: char = '⊖';
 
 #[derive(Debug, Default)]
 pub(crate) struct Columns {
@@ -243,7 +264,7 @@ impl Row {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct Overflow {
     width: usize,
     columns: Vec<usize>,
@@ -269,7 +290,7 @@ impl Grid {
             overflows: Vec::default(),
             breakdown_values: HashSet::default(),
             minimum_breakdown_width: usize::MAX,
-            maximum_breakdown_width: 0,
+            maximum_breakdown_width: usize::MIN,
         }
     }
 
@@ -339,6 +360,55 @@ impl Grid {
         self.rows
             .push(row.cells.into_iter().map(|c| (c.column, c)).collect());
     }
+
+    /// Build the overflow overrides, which is a map from column index to "override width".
+    fn build_overflow_overrides(&mut self) -> HashMap<usize, usize> {
+        let mut overflow_overrides = HashMap::default();
+
+        for overflow in &self.overflows {
+            let mut remainder = overflow.width;
+            let mut excess = 0;
+
+            for column in &overflow.columns {
+                if let ColumnType::String(width) = self.columns.get(*column).column_type {
+                    if remainder >= width {
+                        remainder -= width;
+                    } else if remainder == 0 {
+                        excess += width;
+                    } else {
+                        excess += width - remainder;
+                        remainder = 0;
+                    }
+                }
+            }
+
+            if remainder > 0 {
+                assert_eq!(excess, 0);
+                // The overflow is longer than the combination of the columns it spans.
+                // Our simple algorithm is to always just add the remainder to the last column.
+                let column = self
+                    .columns
+                    .get_mut(*overflow.columns.last().unwrap())
+                    .unwrap();
+
+                if let ColumnType::String(ref mut width) = column.column_type {
+                    *width += remainder;
+                }
+            } else if excess > 0 {
+                assert_eq!(remainder, 0);
+                // The overflow is shorter than the combination of the columns it spans.
+                // Remember the override to use it when printing the overflow itself.
+                overflow_overrides
+                    .insert(*overflow.columns.first().unwrap(), overflow.width + excess);
+            } else {
+                // They are dead even - do nothing!
+                assert_eq!(excess, 0);
+                assert_eq!(remainder, 0);
+            }
+        }
+
+        overflow_overrides
+    }
 }
 
 /// The textual representation of data.
@@ -364,68 +434,19 @@ impl Grid {
 /// ```
 #[derive(Debug)]
 pub struct Flat {
+    config: Config,
     value_range: Range<f64>,
-    width_hint: usize,
-    abbreviate_breakdown: bool,
     grid: Grid,
     overflow_overrides: HashMap<usize, usize>,
 }
 
 impl Flat {
-    pub(crate) fn new(
-        value_range: Range<f64>,
-        width_hint: usize,
-        abbreviate_breakdown: bool,
-        mut grid: Grid,
-    ) -> Self {
-        let mut overflow_overrides = HashMap::default();
-
-        for overflow in &grid.overflows {
-            let mut remainder = overflow.width;
-            let mut excess = 0;
-
-            for column in &overflow.columns {
-                if let ColumnType::String(width) = grid.columns.get(*column).column_type {
-                    if remainder >= width {
-                        remainder -= width;
-                    } else if remainder == 0 {
-                        excess += width;
-                    } else {
-                        excess += width - remainder;
-                        remainder = 0;
-                    }
-                }
-            }
-
-            if remainder > 0 {
-                assert_eq!(excess, 0);
-                // The overflow is longer than the combination of the columns it spans.
-                // Our simple algorithm is to always just add the remainder to the last column.
-                let column = grid
-                    .columns
-                    .get_mut(*overflow.columns.last().unwrap())
-                    .unwrap();
-
-                if let ColumnType::String(ref mut width) = column.column_type {
-                    *width += remainder;
-                }
-            } else if excess > 0 {
-                assert_eq!(remainder, 0);
-                // The overflow is shorter than the combination of the columns it spans.
-                // Remember the override to use it when printing the overflow itself.
-                overflow_overrides
-                    .insert(*overflow.columns.first().unwrap(), overflow.width + excess);
-            } else {
-                // They are dead even - do nothing!
-                assert_eq!(excess, 0);
-                assert_eq!(remainder, 0);
-            }
-        }
+    pub(crate) fn new<C>(render: Render<C>, value_range: Range<f64>, mut grid: Grid) -> Self {
+        let overflow_overrides = grid.build_overflow_overrides();
 
         Self {
+            config: render.into(),
             value_range,
-            width_hint,
-            abbreviate_breakdown,
             grid,
             overflow_overrides,
         }
@@ -434,7 +455,7 @@ impl Flat {
 
 impl Display for Flat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut view_width = self.width_hint.saturating_sub(
+        let mut view_width = self.config.width_hint.saturating_sub(
             self.grid
                 .columns
                 .types
@@ -479,7 +500,7 @@ impl Display for Flat {
         };
 
         let (abbreviation_width, breakdown_abbreviations) = match (
-            self.abbreviate_breakdown,
+            self.config.abbreviate_breakdown,
             view_width > self.grid.maximum_breakdown_width,
         ) {
             // We're supposed to abbreviate, but we don't need to.
@@ -498,10 +519,12 @@ impl Display for Flat {
             (false, _) => (self.grid.maximum_breakdown_width, HashMap::default()),
         };
 
+        let width = std::cmp::max(width, abbreviation_width);
         let view = View {
-            width: std::cmp::max(width, abbreviation_width),
             breakdown_abbreviations,
             scale,
+            positive_marker: self.config.positive_marker,
+            negative_marker: self.config.negative_marker,
         };
 
         for (i, row) in self.grid.rows.iter().enumerate() {
@@ -518,6 +541,7 @@ impl Display for Flat {
                                 f,
                                 cell,
                                 &view,
+                                width,
                                 self.overflow_overrides.get(&j),
                             )?;
                         }
@@ -526,7 +550,7 @@ impl Display for Flat {
                         // Do nothing.
                     }
                     WrappedCell::Fill => {
-                        self.grid.columns.get(j).fill(f, &view)?;
+                        self.grid.columns.get(j).fill(f)?;
                     }
                 }
             }
@@ -542,9 +566,10 @@ impl Display for Flat {
 
 #[derive(Debug)]
 struct View {
-    width: usize,
     breakdown_abbreviations: HashMap<String, String>,
     scale: f64,
+    positive_marker: char,
+    negative_marker: char,
 }
 
 #[derive(Debug)]
@@ -587,4 +612,945 @@ fn filled<'a>(rows: &'a HashMap<usize, Cell>) -> Vec<(usize, WrappedCell)> {
     }
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_empty() {
+        let view = View {
+            breakdown_abbreviations: Default::default(),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+
+        let value = Value::Empty;
+        assert_eq!(value.render_width(), Some(0));
+        assert_eq!(value.render(&view, false), "");
+        assert_eq!(value.render(&view, true), "");
+    }
+
+    #[test]
+    fn render_string() {
+        let view = View {
+            breakdown_abbreviations: Default::default(),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+
+        let value = Value::String("abc".to_string());
+        assert_eq!(value.render_width(), Some(3));
+        assert_eq!(value.render(&view, false), "abc");
+        assert_eq!(value.render(&view, true), "abc");
+
+        let view = View {
+            breakdown_abbreviations: HashMap::from([("abc".to_string(), "12345".to_string())]),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+        assert_eq!(value.render_width(), Some(3));
+        assert_eq!(value.render(&view, false), "abc");
+        assert_eq!(value.render(&view, true), "12345");
+    }
+
+    #[test]
+    fn render_overflow() {
+        let view = View {
+            breakdown_abbreviations: Default::default(),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+
+        let value = Value::Overflow("abc".to_string());
+        assert_eq!(value.render_width(), Some(3));
+        assert_eq!(value.render(&view, false), "abc");
+        assert_eq!(value.render(&view, true), "abc");
+
+        let view = View {
+            breakdown_abbreviations: HashMap::from([("abc".to_string(), "12345".to_string())]),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+        assert_eq!(value.render_width(), Some(3));
+        assert_eq!(value.render(&view, false), "abc");
+        assert_eq!(value.render(&view, true), "abc");
+    }
+
+    #[test]
+    fn render_value() {
+        let view = View {
+            breakdown_abbreviations: Default::default(),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+
+        let value = Value::Value(1.49);
+        assert_eq!(value.render_width(), None);
+        assert_eq!(value.render(&view, false), "+");
+        assert_eq!(value.render(&view, true), "+");
+
+        let value = Value::Value(1.5);
+        assert_eq!(value.render_width(), None);
+        assert_eq!(value.render(&view, false), "++");
+        assert_eq!(value.render(&view, true), "++");
+
+        let view = View {
+            breakdown_abbreviations: HashMap::default(),
+            scale: 2.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+        let value = Value::Value(1.49);
+        assert_eq!(value.render_width(), None);
+        assert_eq!(value.render(&view, false), "++");
+        assert_eq!(value.render(&view, true), "++");
+
+        let value = Value::Value(-1.49);
+        assert_eq!(value.render_width(), None);
+        assert_eq!(value.render(&view, false), "--");
+        assert_eq!(value.render(&view, true), "--");
+    }
+
+    #[test]
+    fn render_width_skip() {
+        let value = Value::Skip;
+        assert_eq!(value.render_width(), None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn render_skip() {
+        let view = View {
+            breakdown_abbreviations: Default::default(),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+
+        let value = Value::Skip;
+        value.render(&view, true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn grid_empty_row() {
+        let columns = Columns::default();
+        let mut grid = Grid::new(columns);
+        let row = Row::default();
+        grid.add(row);
+    }
+
+    #[test]
+    #[should_panic]
+    fn grid_unmatched_column() {
+        let columns = Columns::default();
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::String("abc".to_string()));
+        grid.add(row);
+    }
+
+    // ColumnType::String
+    #[test]
+    fn grid_add_string_string() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::String("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::String("abc".to_string()),
+                }
+            )])]
+        );
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 3);
+        } else {
+            panic!("unexpected column type");
+        }
+
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 3);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_overflow() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert_eq!(
+            grid.overflows,
+            vec![Overflow {
+                width: 3,
+                columns: vec![0]
+            }]
+        );
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Overflow("abc".to_string()),
+                }
+            )])]
+        );
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 0);
+        } else {
+            panic!("unexpected column type");
+        }
+
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 3);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_overflow_skip() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("abc".to_string()));
+        row.push(Value::Skip);
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert_eq!(
+            grid.overflows,
+            vec![Overflow {
+                width: 3,
+                columns: vec![0, 1]
+            }]
+        );
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([
+                (
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::Overflow("abc".to_string()),
+                    }
+                ),
+                (
+                    1,
+                    Cell {
+                        column: 1,
+                        value: Value::Skip,
+                    }
+                )
+            ])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 0);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_overflow_skip_next() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        columns.push(Column::string(Alignment::Center));
+        columns.push(Column::count(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("abc".to_string()));
+        row.push(Value::Skip);
+        row.push(Value::Value(0.0));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert_eq!(
+            grid.overflows,
+            vec![Overflow {
+                width: 3,
+                columns: vec![0, 1]
+            }]
+        );
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([
+                (
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::Overflow("abc".to_string()),
+                    }
+                ),
+                (
+                    1,
+                    Cell {
+                        column: 1,
+                        value: Value::Skip,
+                    }
+                ),
+                (
+                    2,
+                    Cell {
+                        column: 2,
+                        value: Value::Value(0.0),
+                    }
+                )
+            ])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 0);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_empty() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Empty);
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Empty,
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 0);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_skip() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Skip);
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Skip,
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 0);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_value() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Value(0.0));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Value(0.0),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 0);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_overflow_remainder() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("qwerty".to_string()));
+
+        // Execute
+        grid.add(row);
+        let mut row = Row::default();
+        row.push(Value::String("abc".to_string()));
+        grid.add(row);
+
+        // Verify
+        assert_eq!(
+            grid.overflows,
+            vec![Overflow {
+                width: 6,
+                columns: vec![0]
+            }]
+        );
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![
+                HashMap::from([(
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::Overflow("qwerty".to_string()),
+                    }
+                )]),
+                HashMap::from([(
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::String("abc".to_string()),
+                    }
+                )])
+            ]
+        );
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 3);
+        } else {
+            panic!("unexpected column type");
+        }
+
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 6);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_overflow_excess() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+        let mut row = Row::default();
+        row.push(Value::String("qwerty".to_string()));
+        grid.add(row);
+
+        // Verify
+        assert_eq!(
+            grid.overflows,
+            vec![Overflow {
+                width: 3,
+                columns: vec![0]
+            }]
+        );
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![
+                HashMap::from([(
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::Overflow("abc".to_string()),
+                    }
+                )]),
+                HashMap::from([(
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::String("qwerty".to_string()),
+                    }
+                )])
+            ]
+        );
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 6);
+        } else {
+            panic!("unexpected column type");
+        }
+
+        assert_eq!(grid.build_overflow_overrides(), HashMap::from([(0, 6)]));
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 6);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_overflow_deadeven() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("qwerty".to_string()));
+
+        // Execute
+        grid.add(row);
+        let mut row = Row::default();
+        row.push(Value::String("qwerty".to_string()));
+        grid.add(row);
+
+        // Verify
+        assert_eq!(
+            grid.overflows,
+            vec![Overflow {
+                width: 6,
+                columns: vec![0]
+            }]
+        );
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![
+                HashMap::from([(
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::Overflow("qwerty".to_string()),
+                    }
+                )]),
+                HashMap::from([(
+                    0,
+                    Cell {
+                        column: 0,
+                        value: Value::String("qwerty".to_string()),
+                    }
+                )])
+            ]
+        );
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 6);
+        } else {
+            panic!("unexpected column type");
+        }
+
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 6);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    // ColumnType::Count
+    #[test]
+    fn grid_add_count_string() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::count(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::String("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::String("abc".to_string()),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_count_overflow() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::count(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Overflow("abc".to_string()),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_count_empty() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::count(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Empty);
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Empty,
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_count_skip() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::count(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Skip);
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Skip,
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_count_value() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::count(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Value(0.0));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Value(0.0),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    // ColumnType::Breakdown
+    #[test]
+    fn grid_add_breakdown_string() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::breakdown(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::String("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert_eq!(grid.breakdown_values, HashSet::from(["abc".to_string()]));
+        assert_eq!(grid.minimum_breakdown_width, 3);
+        assert_eq!(grid.maximum_breakdown_width, 3);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::String("abc".to_string()),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_breakdown_overflow() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::breakdown(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Overflow("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 3);
+        assert_eq!(grid.maximum_breakdown_width, 3);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Overflow("abc".to_string()),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_breakdown_empty() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::breakdown(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Empty);
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 0);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Empty,
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_breakdown_skip() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::breakdown(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Skip);
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Skip,
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_breakdown_value() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::breakdown(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Value(0.0));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Value(0.0),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
 }

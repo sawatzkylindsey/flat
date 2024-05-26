@@ -369,12 +369,7 @@ where
             grid.add(row);
         }
 
-        Flat::new(
-            minimum_value..maximum_value,
-            config.width_hint,
-            config.abbreviate_breakdown,
-            grid,
-        )
+        Flat::new(config, minimum_value..maximum_value, grid)
     }
 }
 
