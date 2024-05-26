@@ -6,6 +6,24 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::ops::{Add, Sub};
 
+/// The histogram widget.
+///
+/// ```
+/// use flat::*;
+///
+/// let schema = Schema::one("Things");
+/// let builder = Histogram::builder(schema, 2)
+///     .add((0,), 0)
+///     .add((0,), 1)
+///     .add((1,), 4);
+/// let flat = builder.render(Render::default());
+/// println!("{flat}");
+///
+/// // Output (modified for alignment)
+/// r#"Things  |
+///    [0, 1)  |*
+///    [1, 2]  |****"#;
+/// ```
 pub struct Histogram<S: HistogramSchematic> {
     schema: S,
     bins: usize,
@@ -14,7 +32,7 @@ pub struct Histogram<S: HistogramSchematic> {
     max: Option<S::PrimaryDimension>,
 }
 
-impl<S: HistogramSchematic> Histogram<S>
+impl<S> Histogram<S>
 where
     S: HistogramSchematic,
     <S as HistogramSchematic>::PrimaryDimension: Clone

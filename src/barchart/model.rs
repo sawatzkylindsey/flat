@@ -8,12 +8,31 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
+/// The bar chart widget.
+///
+/// ```
+/// use flat::*;
+///
+/// let schema = Schema::one("Animal");
+/// let builder = BarChart::builder(schema)
+///     .add(("whale".to_string(),), 0)
+///     .add(("shark".to_string(),), 1)
+///     .add(("tiger".to_string(),), 4);
+/// let flat = builder.render(Render::default());
+/// println!("{flat}");
+///
+/// // Output (modified for alignment)
+/// r#"Animal
+///    shark   *
+///    tiger   ****
+///    whale   "#;
+/// ```
 pub struct BarChart<S: BarChartSchematic> {
     schema: S,
     data: Vec<(S::Dimensions, f64)>,
 }
 
-impl<S: BarChartSchematic> BarChart<S>
+impl<S> BarChart<S>
 where
     S: BarChartSchematic,
     <S as BarChartSchematic>::PrimaryDimension: Clone + PartialEq + Eq + Hash,

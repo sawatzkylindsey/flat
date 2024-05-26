@@ -61,14 +61,19 @@ pub use render::{Flat, Render};
 pub use schema::*;
 use std::fmt::{Display, Formatter};
 
+/// The internal trait to operate on variadic generics.
+/// Consumers should not implement this trait.
 pub trait Dimensions {
     fn as_strings(&self) -> Vec<String>;
 
     fn len(&self) -> usize;
 }
 
+/// No-op struct used to indicate an unused associated type in the widget's trait.
+/// Consumers should not use this struct.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Nothing;
+#[non_exhaustive]
+pub struct Nothing {}
 
 impl Display for Nothing {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -115,5 +120,34 @@ where
 
     fn len(&self) -> usize {
         3
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dimensions_one() {
+        let one = ("abc".to_string(),);
+        assert_eq!(one.len(), 1);
+        assert_eq!(one.as_strings(), vec!["abc".to_string()]);
+    }
+
+    #[test]
+    fn dimensions_two() {
+        let two = ("abc".to_string(), 1);
+        assert_eq!(two.len(), 2);
+        assert_eq!(two.as_strings(), vec!["abc".to_string(), "1".to_string()]);
+    }
+
+    #[test]
+    fn dimensions_three() {
+        let three = ("abc".to_string(), 1, true);
+        assert_eq!(three.len(), 3);
+        assert_eq!(
+            three.as_strings(),
+            vec!["abc".to_string(), "1".to_string(), "true".to_string()]
+        );
     }
 }

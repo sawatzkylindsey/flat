@@ -1,6 +1,7 @@
 use crate::{Nothing, Schema1, Schema2Breakdown2};
 use std::ops::{Add, Sub};
 
+/// Render configuration specific to [`Histogram`]s.
 #[derive(Debug, Default)]
 pub struct HistogramConfig {}
 
@@ -71,7 +72,7 @@ where
     }
 
     fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
-        Nothing
+        Nothing {}
     }
 
     fn primary_header(&self) -> String {
@@ -164,7 +165,7 @@ mod tests {
     fn schema1_impl_trait() {
         let schema = Schema::one("abc");
         assert_eq!(schema.primary_dim(&(1u64,)), 1u64);
-        assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing);
+        assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing {});
         assert_eq!(schema.primary_header(), "abc".to_string());
         assert_eq!(schema.breakdown_header(), None);
         assert!(!schema.is_breakdown());

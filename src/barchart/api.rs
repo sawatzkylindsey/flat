@@ -2,6 +2,7 @@ use crate::{
     Nothing, Schema1, Schema2, Schema2Breakdown2, Schema3, Schema3Breakdown2, Schema3Breakdown3,
 };
 
+/// Render configuration specific to [`BarChart`]s.
 #[derive(Debug, Default)]
 pub struct BarChartConfig {
     /// Whether to abbreviate the dimensional values in the rendering or not.
@@ -55,7 +56,7 @@ where
     }
 
     fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
-        Nothing
+        Nothing {}
     }
 
     fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
@@ -94,7 +95,7 @@ where
     }
 
     fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
-        Nothing
+        Nothing {}
     }
 
     fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
@@ -173,7 +174,7 @@ where
     }
 
     fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
-        Nothing
+        Nothing {}
     }
 
     fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions {
@@ -286,7 +287,7 @@ mod tests {
     fn schema1_impl_trait() {
         let schema = Schema::one("abc");
         assert_eq!(schema.primary_dim(&(1u64,)), 1u64);
-        assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing);
+        assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing {});
         assert_eq!(schema.sort_dims(&(1u64,)), (1u64,));
         assert_eq!(schema.headers(), vec!["abc".to_string()]);
         assert_eq!(schema.breakdown_header(), None);
@@ -297,7 +298,7 @@ mod tests {
     fn schema2_impl_trait() {
         let schema = Schema::two("abc", "def");
         assert_eq!(schema.primary_dim(&(1u64, true)), 1u64);
-        assert_eq!(schema.breakdown_dim(&(1u64, true)), Nothing);
+        assert_eq!(schema.breakdown_dim(&(1u64, true)), Nothing {});
         assert_eq!(schema.sort_dims(&(1u64, true)), (1u64, true));
         assert_eq!(schema.headers(), vec!["abc".to_string(), "def".to_string()]);
         assert_eq!(schema.breakdown_header(), None);
@@ -319,7 +320,7 @@ mod tests {
     fn schema3_impl_trait() {
         let schema = Schema::three("abc", "def", "ghi");
         assert_eq!(schema.primary_dim(&(1u64, true, 2f32)), 1u64);
-        assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), Nothing);
+        assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), Nothing {});
         assert_eq!(schema.sort_dims(&(1u64, true, 2f32)), (1u64, true, 2f32));
         assert_eq!(
             schema.headers(),
