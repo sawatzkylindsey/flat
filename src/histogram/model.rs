@@ -48,6 +48,7 @@ where
         > + Binnable,
     <S as HistogramSchematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
+    /// Build a histogram widget based off the provided schema and number of bins.
     pub fn builder(schema: S, bins: usize) -> Histogram<S> {
         Self {
             schema,
@@ -60,8 +61,30 @@ where
         }
     }
 
-    pub fn add(mut self, dims: S::Dimensions, value: impl Into<f64>) -> Histogram<S> {
-        let primary_dim = self.schema.primary_dim(&dims);
+    /// Update this histogram with a data point to (key, value).
+    /// Use this method to add data via mutation.
+    ///
+    /// See also: [`Histogram::add`].
+    ///
+    /// ### Example
+    /// ```
+    /// use flat::*;
+    ///
+    /// let schema = Schema::one("Things");
+    /// let mut builder = Histogram::builder(schema, 2);
+    /// builder.update((0,), 0);
+    /// builder.update((0,), 1);
+    /// builder.update((1,), 4);
+    /// let flat = builder.render(Render::default());
+    /// println!("{flat}");
+    ///
+    /// // Output (modified for alignment)
+    /// r#"Things  |
+    ///    [0, 1)  |*
+    ///    [1, 2]  |****"#;
+    /// ```
+    pub fn update(&mut self, key: S::Dimensions, value: impl Into<f64>) {
+        let primary_dim = self.schema.primary_dim(&key);
 
         let update_min = match &self.min {
             Some(min) => primary_dim < *min,
@@ -81,10 +104,37 @@ where
             self.max.replace(primary_dim.clone());
         }
 
-        self.data.push((dims, value.into()));
+        self.data.push((key, value.into()));
+    }
+
+    /// Add a data point to (key, value) to this histogram.
+    /// Use this method to add data via method chaining.
+    ///
+    /// See also: [`Histogram::update`].
+    ///
+    /// ### Example
+    /// ```
+    /// use flat::*;
+    ///
+    /// let schema = Schema::one("Things");
+    /// let builder = Histogram::builder(schema, 2)
+    ///     .add((0,), 0)
+    ///     .add((0,), 1)
+    ///     .add((1,), 4);
+    /// let flat = builder.render(Render::default());
+    /// println!("{flat}");
+    ///
+    /// // Output (modified for alignment)
+    /// r#"Things  |
+    ///    [0, 1)  |*
+    ///    [1, 2]  |****"#;
+    /// ```
+    pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> Histogram<S> {
+        self.update(key, value);
         self
     }
 
+    /// Generate the flat rendering for this histogram.
     pub fn render(self, config: Render<HistogramConfig>) -> Flat {
         let Self {
             bins,
@@ -354,8 +404,10 @@ abc|"#
     #[test]
     fn add_zero_buckets() {
         let schema: Schema1<u64> = Schema::one("abc");
-        let mut builder = Histogram::builder(schema, 0);
-        builder = builder.add((1,), -1).add((2,), 0).add((3,), 1);
+        let builder = Histogram::builder(schema, 0)
+            .add((1,), -1)
+            .add((2,), 0)
+            .add((3,), 1);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -368,8 +420,10 @@ abc     |
     #[test]
     fn add_one_bucket() {
         let schema: Schema1<u64> = Schema::one("abc");
-        let mut builder = Histogram::builder(schema, 1);
-        builder = builder.add((1,), 1).add((2,), 1).add((3,), 1);
+        let builder = Histogram::builder(schema, 1)
+            .add((1,), 1)
+            .add((2,), 1)
+            .add((3,), 1);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -383,7 +437,7 @@ abc     |
     fn add_extra_buckets() {
         let schema: Schema1<u64> = Schema::one("abc");
         let mut builder = Histogram::builder(schema, 2);
-        builder = builder.add((1,), 1);
+        builder.update((1,), 1);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -397,7 +451,7 @@ abc     |
     fn add_zero() {
         let schema: Schema1<u64> = Schema::one("abc");
         let mut builder = Histogram::builder(schema, 1);
-        builder = builder.add((1,), 0);
+        builder.update((1,), 0);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -410,8 +464,10 @@ abc     |
     #[test]
     fn add_zero_and_ones() {
         let schema: Schema1<u64> = Schema::one("abc");
-        let mut builder = Histogram::builder(schema, 3);
-        builder = builder.add((1,), -1).add((2,), 0).add((3,), 1);
+        let builder = Histogram::builder(schema, 3)
+            .add((1,), -1)
+            .add((2,), 0)
+            .add((3,), 1);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -427,7 +483,7 @@ abc     |
     fn add_onethousand() {
         let schema: Schema1<u64> = Schema::one("abc");
         let mut builder = Histogram::builder(schema, 1);
-        builder = builder.add((1,), 1_000);
+        builder.update((1,), 1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -441,7 +497,7 @@ abc     |
     fn add_negative_onethousand() {
         let schema: Schema1<u64> = Schema::one("abc");
         let mut builder = Histogram::builder(schema, 1);
-        builder = builder.add((1,), -1_000);
+        builder.update((1,), -1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),

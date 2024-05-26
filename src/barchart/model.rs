@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
-/// The bar chart widget.
+/// The bar-chart widget.
 ///
 /// ```
 /// use flat::*;
@@ -39,6 +39,7 @@ where
     <S as BarChartSchematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
     <S as BarChartSchematic>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
 {
+    /// Build a bar-chart widget based off the provided schema.
     pub fn builder(schema: S) -> BarChart<S> {
         Self {
             schema,
@@ -46,11 +47,62 @@ where
         }
     }
 
-    pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> BarChart<S> {
+    /// Update this bar-chart with a data point to (key, value).
+    /// Use this method to add data via mutation.
+    ///
+    /// See also: [`BarChart::add`].
+    ///
+    /// ### Example
+    /// ```
+    /// use flat::*;
+    ///
+    /// let schema = Schema::one("Animal");
+    /// let mut builder = BarChart::builder(schema);
+    /// builder.update(("whale".to_string(),), 0);
+    /// builder.update(("shark".to_string(),), 1);
+    /// builder.update(("tiger".to_string(),), 4);
+    /// let flat = builder.render(Render::default());
+    /// println!("{flat}");
+    ///
+    /// // Output (modified for alignment)
+    /// r#"Animal
+    ///    shark   *
+    ///    tiger   ****
+    ///    whale   "#;
+    /// ```
+    pub fn update(&mut self, key: S::Dimensions, value: impl Into<f64>) {
         self.data.push((key, value.into()));
+    }
+
+    /// Add a data point to (key, value) to this bar-chart.
+    /// Use this method to add data via method chaining.
+    ///
+    /// See also: [`BarChart::update`].
+    ///
+    /// ### Example
+    /// ```
+    /// use flat::*;
+    ///
+    /// let schema = Schema::one("Animal");
+    /// let builder = BarChart::builder(schema)
+    ///     .add(("whale".to_string(),), 0)
+    ///     .add(("shark".to_string(),), 1)
+    ///     .add(("tiger".to_string(),), 4);
+    /// let flat = builder.render(Render::default());
+    /// println!("{flat}");
+    ///
+    /// // Output (modified for alignment)
+    /// r#"Animal
+    ///    shark   *
+    ///    tiger   ****
+    ///    whale   "#;
+    /// ```
+    pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> BarChart<S> {
+        self.update(key, value);
         self
     }
 
+    /// Generate the flat rendering for this bar-chart.
     pub fn render(self, config: Render<BarChartConfig>) -> Flat {
         let mut aggregate_values: HashMap<(S::PrimaryDimension, S::BreakdownDimension), Vec<f64>> =
             HashMap::default();
@@ -453,7 +505,7 @@ abc|"#
     fn add_zero() {
         let schema: Schema1<u64> = Schema::one("abc");
         let mut builder = BarChart::builder(schema);
-        builder = builder.add((1,), 0);
+        builder.update((1,), 0);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -466,8 +518,10 @@ abc  |
     #[test]
     fn add_zero_and_ones() {
         let schema: Schema1<u64> = Schema::one("abc");
-        let mut builder = BarChart::builder(schema);
-        builder = builder.add((1,), -1).add((2,), 0).add((3,), 1);
+        let builder = BarChart::builder(schema)
+            .add((1,), -1)
+            .add((2,), 0)
+            .add((3,), 1);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -483,7 +537,7 @@ abc  |
     fn add_onethousand() {
         let schema: Schema1<u64> = Schema::one("abc");
         let mut builder = BarChart::builder(schema);
-        builder = builder.add((1,), 1_000);
+        builder.update((1,), 1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
@@ -497,7 +551,7 @@ abc  |
     fn add_negative_onethousand() {
         let schema: Schema1<u64> = Schema::one("abc");
         let mut builder = BarChart::builder(schema);
-        builder = builder.add((1,), -1_000);
+        builder.update((1,), -1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),

@@ -7,7 +7,7 @@ fn histogram() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64,), i);
+        builder.update(((i % 10) as f64,), i);
     }
 
     let flat = builder.render(Render::default());
@@ -29,7 +29,7 @@ fn histogram_u64() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add((i % 10,), i as f64);
+        builder.update((i % 10,), i as f64);
     }
 
     let flat = builder.render(Render::default());
@@ -56,11 +56,11 @@ fn histogram_squish(#[case] width_hint: usize) {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 8) as f64,), i);
+        builder.update(((i % 8) as f64,), i);
     }
 
     // Make sure one of the bins has a count zero (0).
-    builder = builder.add((9.0,), 0);
+    builder.update((9.0,), 0);
 
     let flat = builder.render(Render {
         width_hint,
@@ -84,7 +84,7 @@ fn histogram_show_sum() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64,), i);
+        builder.update(((i % 10) as f64,), i);
     }
 
     let flat = builder.render(Render {
@@ -109,7 +109,7 @@ fn histogram_show_average() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64,), i);
+        builder.update(((i % 10) as f64,), i);
     }
 
     let flat = builder.render(Render {
@@ -141,11 +141,11 @@ fn histogram_show_sum_squish(#[case] width_hint: usize) {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 8) as f64,), i);
+        builder.update(((i % 8) as f64,), i);
     }
 
     // Make sure one of the bins has a count zero (0).
-    builder = builder.add((9.0,), 0);
+    builder.update((9.0,), 0);
 
     let flat = builder.render(Render {
         width_hint,
@@ -179,11 +179,11 @@ fn histogram_show_average_squish(#[case] width_hint: usize) {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 8) as f64,), i);
+        builder.update(((i % 8) as f64,), i);
     }
 
     // Make sure one of the bins has a count zero (0).
-    builder = builder.add((9.0,), 0);
+    builder.update((9.0,), 0);
 
     let flat = builder.render(Render {
         aggregate: Aggregate::Average,
@@ -210,7 +210,7 @@ fn histogram_breakdown() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
+        builder.update(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render::default());

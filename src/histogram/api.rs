@@ -1,12 +1,16 @@
 use crate::{Nothing, Schema1, Schema2Breakdown2};
 use std::ops::{Add, Sub};
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::Histogram;
 
-/// Render configuration specific to [`Histogram`]s.
+/// Render configuration specific to `Histogram`s.
 #[derive(Debug, Default)]
 pub struct HistogramConfig {}
 
 /// The internal trait which allows rendering [`Histogram`]s across different [`Schema']s.
 /// Consumers should not implement this trait.
+#[doc(hidden)]
 pub trait HistogramSchematic {
     type Dimensions;
     type PrimaryDimension: Binnable;
@@ -76,7 +80,7 @@ where
     }
 
     fn primary_header(&self) -> String {
-        self.column_1.clone()
+        self.dimension_1.clone()
     }
 
     fn breakdown_header(&self) -> Option<String> {
@@ -106,11 +110,11 @@ where
     }
 
     fn primary_header(&self) -> String {
-        self.column_1.clone()
+        self.dimension_1.clone()
     }
 
     fn breakdown_header(&self) -> Option<String> {
-        Some(self.column_2.clone())
+        Some(self.dimension_2.clone())
     }
 
     fn is_breakdown(&self) -> bool {

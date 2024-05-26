@@ -63,6 +63,7 @@ use std::fmt::{Display, Formatter};
 
 /// The internal trait to operate on variadic generics.
 /// Consumers should not implement this trait.
+#[doc(hidden)]
 pub trait Dimensions {
     fn as_strings(&self) -> Vec<String>;
 
@@ -71,6 +72,7 @@ pub trait Dimensions {
 
 /// No-op struct used to indicate an unused associated type in the widget's trait.
 /// Consumers should not use this struct.
+#[doc(hidden)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
 pub struct Nothing {}

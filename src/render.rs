@@ -5,7 +5,7 @@ use std::fmt::{Display, Formatter, Write};
 use std::iter;
 use std::ops::Range;
 
-/// The general configuration for rendering a `flat` chart.
+/// The general configuration for rendering a `flat` widget.
 #[derive(Debug)]
 pub struct Render<C> {
     /// The function to apply when aggregating values in the widget.

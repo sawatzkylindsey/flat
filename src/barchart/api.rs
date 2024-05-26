@@ -1,12 +1,15 @@
 use crate::{
     Nothing, Schema1, Schema2, Schema2Breakdown2, Schema3, Schema3Breakdown2, Schema3Breakdown3,
 };
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::BarChart;
 
 /// Render configuration specific to [`BarChart`]s.
 #[derive(Debug, Default)]
 pub struct BarChartConfig {
     /// Whether to abbreviate the dimensional values in the rendering or not.
-    /// Use this option when the dimensions have long `std::fmt::Display` forms.
+    /// Use this option when the dimensions have long [`std::fmt::Display`] forms.
     /// Abbreviation is attempted irrespective of the `width_hint`.
     ///
     /// **Notice**, abbreviation is performed on values only, and not on the column headers.
@@ -15,8 +18,9 @@ pub struct BarChartConfig {
     pub abbreviate: bool,
 }
 
-/// The internal trait which allows rendering [`BarChar`]s across different [`Schema']s.
+/// The internal trait which allows rendering [`BarChart`]s across different [`Schema']s.
 /// Consumers should not implement this trait.
+#[doc(hidden)]
 pub trait BarChartSchematic {
     type Dimensions;
     type PrimaryDimension;
@@ -64,7 +68,7 @@ where
     }
 
     fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone()]
+        vec![self.dimension_1.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
@@ -103,7 +107,7 @@ where
     }
 
     fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone(), self.column_2.clone()]
+        vec![self.dimension_1.clone(), self.dimension_2.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
@@ -142,11 +146,11 @@ where
     }
 
     fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone()]
+        vec![self.dimension_1.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
-        Some(self.column_2.clone())
+        Some(self.dimension_2.clone())
     }
 
     fn is_breakdown(&self) -> bool {
@@ -183,9 +187,9 @@ where
 
     fn headers(&self) -> Vec<String> {
         vec![
-            self.column_1.clone(),
-            self.column_2.clone(),
-            self.column_3.clone(),
+            self.dimension_1.clone(),
+            self.dimension_2.clone(),
+            self.dimension_3.clone(),
         ]
     }
 
@@ -226,11 +230,11 @@ where
     }
 
     fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone(), self.column_3.clone()]
+        vec![self.dimension_1.clone(), self.dimension_3.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
-        Some(self.column_2.clone())
+        Some(self.dimension_2.clone())
     }
 
     fn is_breakdown(&self) -> bool {
@@ -266,11 +270,11 @@ where
     }
 
     fn headers(&self) -> Vec<String> {
-        vec![self.column_1.clone(), self.column_2.clone()]
+        vec![self.dimension_1.clone(), self.dimension_2.clone()]
     }
 
     fn breakdown_header(&self) -> Option<String> {
-        Some(self.column_3.clone())
+        Some(self.dimension_3.clone())
     }
 
     fn is_breakdown(&self) -> bool {

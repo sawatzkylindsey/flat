@@ -148,7 +148,7 @@ fn histogram_breakdown_abbreviate() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
+        builder.update(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
@@ -174,7 +174,7 @@ fn histogram_breakdown_abbreviate_hint1() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
+        builder.update(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
@@ -201,7 +201,7 @@ fn histogram_breakdown_abbreviate_hint15() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
+        builder.update(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
@@ -228,7 +228,7 @@ fn histogram_breakdown_abbreviate_hint30() {
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
-        builder = builder.add(((i % 10) as f64, pets[i % 3]), i as f64);
+        builder.update(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
     let flat = builder.render(Render {
