@@ -3,7 +3,7 @@ use rstest::rstest;
 
 #[test]
 fn barchart_1d() {
-    let schema = Schema::one("anml");
+    let schema = Schema::one("anml").values("header");
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(),), 0)
         .add(("shark".to_string(),), 1)
@@ -15,7 +15,7 @@ fn barchart_1d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-anml    |
+anml    |header
 shark   |****
 tiger   |*******
 whale   |"#
@@ -24,7 +24,7 @@ whale   |"#
 
 #[test]
 fn barchart_2d() {
-    let schema = Schema::two("animal", "length");
+    let schema = Schema::two("animal", "length").values("header");
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
@@ -36,7 +36,7 @@ fn barchart_2d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal  |
+length   animal  |header
 1      - shark   |****
 4      ┘
 1      ┐
@@ -53,7 +53,7 @@ length   animal  |
 #[case(20)]
 // #[case(21)]
 fn barchart_2d_squish(#[case] width_hint: usize) {
-    let schema = Schema::two("animal", "length");
+    let schema = Schema::two("animal", "length").values("header");
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
@@ -68,7 +68,7 @@ fn barchart_2d_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal  |
+length   animal  |header
 1      - shark   |*
 4      ┘
 1      ┐
@@ -80,7 +80,7 @@ length   animal  |
 
 #[test]
 fn barchart_2d_show_sum() {
-    let schema = Schema::two("animal", "length");
+    let schema = Schema::two("animal", "length").values("header");
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
@@ -95,7 +95,7 @@ fn barchart_2d_show_sum() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal  Sum  |
+length   animal  Sum  |header
 1      - shark   [4]  |****
 4      ┘
 1      ┐
@@ -107,7 +107,7 @@ length   animal  Sum  |
 
 #[test]
 fn barchart_2d_show_average() {
-    let schema = Schema::two("animal", "length");
+    let schema = Schema::two("animal", "length").values("header");
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
@@ -123,7 +123,7 @@ fn barchart_2d_show_average() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   animal  Average  |
+length   animal  Average  |header
 1      - shark   [  2]    |**
 4      ┘
 1      ┐
@@ -147,6 +147,7 @@ fn barchart_2d_breakdown() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+         length
 animal  | 1   4   5 |
 shark   |***  *     |
 tiger   |*** *** ** |
@@ -156,7 +157,7 @@ whale   |           |"#
 
 #[test]
 fn barchart_3d() {
-    let schema = Schema::three("animal", "length", "stable");
+    let schema = Schema::three("animal", "length", "stable").values("header");
     let builder = BarChart::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
@@ -168,7 +169,7 @@ fn barchart_3d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-stable   length   animal  |
+stable   length   animal  |header
 true   - 1      - shark   |****
 false  - 4      ┘
 false  - 1      ┐
@@ -192,6 +193,7 @@ fn barchart_3d_breakdown2() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+                  length
 stable   animal  | 1   4   5 |
 false  - shark   |***  *     |
 true   ┘
@@ -231,6 +233,7 @@ fn barchart_3d_breakdown2_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+                  length
 stable   animal  |1  4  5 |
 false  - shark   |**      |
 true   ┘
@@ -257,6 +260,7 @@ fn barchart_3d_breakdown2_show_sum() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+                        length
 stable   animal  Sum   |  1      4      5   |
 false  - shark   [ 4]  | ***     *          |
 true   ┘
@@ -284,6 +288,7 @@ fn barchart_3d_breakdown2_show_average() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+                           length
 stable   animal  Average  |  1      4      5   |
 false  - shark   [1.3]    | ***     *          |
 true   ┘
@@ -307,6 +312,7 @@ fn barchart_3d_breakdown3() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+                  stable
 length   animal  |false true |
 1      - shark   |  *    *** |
 4      ┘
@@ -319,7 +325,7 @@ length   animal  |false true |
 
 #[test]
 fn abbreviate_barchart_1d() {
-    let schema = Schema::one("animal");
+    let schema = Schema::one("animal").values("header");
     let builder = BarChart::builder(schema)
         .add(("whalewhalewhalewhale".to_string(),), 1)
         .add(("sharksharksharkshark".to_string(),), 2)
@@ -332,7 +338,7 @@ fn abbreviate_barchart_1d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-animal   |
+animal   |header
 shar..   |*
 tige..   |**
 whal..   |"#
@@ -341,7 +347,7 @@ whal..   |"#
 
 #[test]
 fn abbreviate_barchart_2d() {
-    let schema = Schema::two("animal", "laminaanimal");
+    let schema = Schema::two("animal", "laminaanimal").values("header");
     let builder = BarChart::builder(schema)
         .add(
             (
@@ -372,7 +378,7 @@ fn abbreviate_barchart_2d() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-laminaanimal    animal   |
+laminaanimal    animal   |header
 whalewhale..  - shar..   |*
 whalewhale..  - tige..   |**
 whalewhale..  - whal..   |"#

@@ -3,7 +3,7 @@ use rstest::rstest;
 
 #[test]
 fn histogram() {
-    let schema = Schema::one("length");
+    let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
@@ -14,7 +14,7 @@ fn histogram() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      |
+length      |header
 [0, 1.8)    |*
 [1.8, 3.6)  |*****
 [3.6, 5.4)  |*********
@@ -25,7 +25,7 @@ length      |
 
 #[test]
 fn histogram_u64() {
-    let schema = Schema::one("length");
+    let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
@@ -36,7 +36,7 @@ fn histogram_u64() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length   |
+length   |header
 [0, 2)   |*
 [2, 4)   |*****
 [4, 6)   |*********
@@ -52,7 +52,7 @@ length   |
 #[case(15)]
 // #[case(16)]
 fn histogram_squish(#[case] width_hint: usize) {
-    let schema = Schema::one("length");
+    let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
@@ -69,7 +69,7 @@ fn histogram_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      |
+length      |header
 [0, 1.8)    |**
 [1.8, 3.6)  |
 [3.6, 5.4)  |*
@@ -80,7 +80,7 @@ length      |
 
 #[test]
 fn histogram_show_sum() {
-    let schema = Schema::one("length");
+    let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
@@ -94,7 +94,7 @@ fn histogram_show_sum() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Sum   |
+length      Sum   |header
 [0, 1.8)    [ 1]  |*
 [1.8, 3.6)  [ 5]  |*****
 [3.6, 5.4)  [ 9]  |*********
@@ -105,7 +105,7 @@ length      Sum   |
 
 #[test]
 fn histogram_show_average() {
-    let schema = Schema::one("length");
+    let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
@@ -120,7 +120,7 @@ fn histogram_show_average() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Average  |
+length      Average  |header
 [0, 1.8)    [0.5]    |*
 [1.8, 3.6)  [2.5]    |***
 [3.6, 5.4)  [4.5]    |*****
@@ -137,7 +137,7 @@ length      Average  |
 #[case(21)]
 // #[case(22)]
 fn histogram_show_sum_squish(#[case] width_hint: usize) {
-    let schema = Schema::one("length");
+    let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
@@ -155,7 +155,7 @@ fn histogram_show_sum_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Sum   |
+length      Sum   |header
 [0, 1.8)    [18]  |**
 [1.8, 3.6)  [ 5]  |
 [3.6, 5.4)  [ 9]  |*
@@ -175,7 +175,7 @@ length      Sum   |
 #[case(24)]
 // #[case(25)]
 fn histogram_show_average_squish(#[case] width_hint: usize) {
-    let schema = Schema::one("length");
+    let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
 
     for i in 0..10 {
@@ -194,7 +194,7 @@ fn histogram_show_average_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Average  |
+length      Average  |header
 [0, 1.8)    [4.5]    |*
 [1.8, 3.6)  [2.5]    |
 [3.6, 5.4)  [4.5]    |*
@@ -217,6 +217,7 @@ fn histogram_breakdown() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+             pet
 length      |  kipp     orville    ralf   |
 [0, 1.8)    |    *                        |
 [1.8, 3.6)  |             **        ***   |

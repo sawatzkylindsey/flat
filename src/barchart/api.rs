@@ -15,6 +15,8 @@ pub struct BarChartConfig {
     /// **Notice**, abbreviation is performed on values only, and not on the column headers.
     /// Moreover, the abbreviation is bounded by the column header width.
     /// If you want shorter abbreviations, be sure to shorten the headers as well!
+    ///
+    /// Default: `false`.
     pub abbreviate: bool,
 }
 
@@ -27,18 +29,25 @@ pub trait BarChartSchematic {
     type BreakdownDimension;
     type SortDimensions;
 
+    #[doc(hidden)]
     fn total_width(&self) -> usize;
 
+    #[doc(hidden)]
     fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension;
 
+    #[doc(hidden)]
     fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension;
 
+    #[doc(hidden)]
     fn sort_dims(&self, dims: &Self::Dimensions) -> Self::SortDimensions;
 
+    #[doc(hidden)]
     fn headers(&self) -> Vec<String>;
 
-    fn breakdown_header(&self) -> Option<String>;
+    #[doc(hidden)]
+    fn data_header(&self) -> String;
 
+    #[doc(hidden)]
     fn is_breakdown(&self) -> bool;
 }
 
@@ -71,8 +80,8 @@ where
         vec![self.dimension_1.clone()]
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        None
+    fn data_header(&self) -> String {
+        self.values.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -110,8 +119,8 @@ where
         vec![self.dimension_1.clone(), self.dimension_2.clone()]
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        None
+    fn data_header(&self) -> String {
+        self.values.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -149,8 +158,8 @@ where
         vec![self.dimension_1.clone()]
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        Some(self.dimension_2.clone())
+    fn data_header(&self) -> String {
+        self.dimension_2.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -193,8 +202,8 @@ where
         ]
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        None
+    fn data_header(&self) -> String {
+        self.values.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -233,8 +242,8 @@ where
         vec![self.dimension_1.clone(), self.dimension_3.clone()]
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        Some(self.dimension_2.clone())
+    fn data_header(&self) -> String {
+        self.dimension_2.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -273,8 +282,8 @@ where
         vec![self.dimension_1.clone(), self.dimension_2.clone()]
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        Some(self.dimension_3.clone())
+    fn data_header(&self) -> String {
+        self.dimension_3.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -289,23 +298,23 @@ mod tests {
 
     #[test]
     fn schema1_impl_trait() {
-        let schema = Schema::one("abc");
+        let schema = Schema::one("abc").values("header");
         assert_eq!(schema.primary_dim(&(1u64,)), 1u64);
         assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing {});
         assert_eq!(schema.sort_dims(&(1u64,)), (1u64,));
         assert_eq!(schema.headers(), vec!["abc".to_string()]);
-        assert_eq!(schema.breakdown_header(), None);
+        assert_eq!(schema.data_header(), "header".to_string());
         assert!(!schema.is_breakdown());
     }
 
     #[test]
     fn schema2_impl_trait() {
-        let schema = Schema::two("abc", "def");
+        let schema = Schema::two("abc", "def").values("header");
         assert_eq!(schema.primary_dim(&(1u64, true)), 1u64);
         assert_eq!(schema.breakdown_dim(&(1u64, true)), Nothing {});
         assert_eq!(schema.sort_dims(&(1u64, true)), (1u64, true));
         assert_eq!(schema.headers(), vec!["abc".to_string(), "def".to_string()]);
-        assert_eq!(schema.breakdown_header(), None);
+        assert_eq!(schema.data_header(), "header".to_string());
         assert!(!schema.is_breakdown());
     }
 
@@ -316,13 +325,13 @@ mod tests {
         assert_eq!(schema.breakdown_dim(&(1u64, true)), true);
         assert_eq!(schema.sort_dims(&(1u64, true)), (1u64,));
         assert_eq!(schema.headers(), vec!["abc".to_string()]);
-        assert_eq!(schema.breakdown_header(), Some("def".to_string()));
+        assert_eq!(schema.data_header(), "def".to_string());
         assert!(schema.is_breakdown());
     }
 
     #[test]
     fn schema3_impl_trait() {
-        let schema = Schema::three("abc", "def", "ghi");
+        let schema = Schema::three("abc", "def", "ghi").values("header");
         assert_eq!(schema.primary_dim(&(1u64, true, 2f32)), 1u64);
         assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), Nothing {});
         assert_eq!(schema.sort_dims(&(1u64, true, 2f32)), (1u64, true, 2f32));
@@ -330,7 +339,7 @@ mod tests {
             schema.headers(),
             vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
         );
-        assert_eq!(schema.breakdown_header(), None);
+        assert_eq!(schema.data_header(), "header".to_string());
         assert!(!schema.is_breakdown());
     }
 
@@ -341,7 +350,7 @@ mod tests {
         assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), true);
         assert_eq!(schema.sort_dims(&(1u64, true, 2f32)), (1u64, 2f32));
         assert_eq!(schema.headers(), vec!["abc".to_string(), "ghi".to_string()]);
-        assert_eq!(schema.breakdown_header(), Some("def".to_string()));
+        assert_eq!(schema.data_header(), "def".to_string());
         assert!(schema.is_breakdown());
     }
 
@@ -352,7 +361,7 @@ mod tests {
         assert_eq!(schema.breakdown_dim(&(1u64, true, 2f32)), 2f32);
         assert_eq!(schema.sort_dims(&(1u64, true, 2f32)), (1u64, true));
         assert_eq!(schema.headers(), vec!["abc".to_string(), "def".to_string()]);
-        assert_eq!(schema.breakdown_header(), Some("ghi".to_string()));
+        assert_eq!(schema.data_header(), "ghi".to_string());
         assert!(schema.is_breakdown());
     }
 }

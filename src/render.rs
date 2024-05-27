@@ -9,11 +9,15 @@ use std::ops::Range;
 #[derive(Debug)]
 pub struct Render<C> {
     /// The function to apply when aggregating values in the widget.
+    ///
+    /// Default: `Aggregate::Sum`.
     pub aggregate: Aggregate,
     /// The hint to use to determine the width of the rendering.
     /// [`Flat`] will try to make the rendering at most `width_hint` wide, with some exceptions:
     /// * If the rendering can reasonably fit in a smaller width, the `width_hint` is ignored.
     /// * If the rendering cannot reasonably fit the `width_hint`, then it is minimally extended (such that a reasonable rendering may be produced).
+    ///
+    /// Default: `160`.
     pub width_hint: usize,
     /// Whether to show the aggregated result for the *primary* dimension of the dataset.
     /// While the *rendered* data in `flat` uses a relative representation, this option extends the widget to show the absolute values of the data.
@@ -28,16 +32,25 @@ pub struct Render<C> {
     /// |-|-|-|
     /// | aggregate([aggregate([1, 2, 3]), aggregate(\[4\])]) | aggregate([1, 2, 3]) | aggregate(\[4\]) |
     ///
+    /// Default: `false`.
     pub show_aggregate: bool,
     /// Whether to abbreviate the column headings (which come from dimensional values) in the breakdown or not.
     /// Use this option when the breakdown dimensions have long `std::fmt::Display` forms.
     /// Abbreviation is attempted irrespective of the `width_hint`.
+    ///
+    /// Default: `false`.
     pub abbreviate_breakdown: bool,
     /// The marker character for positive values of the rendering.
+    ///
+    /// Default: `'*'`.
     pub positive_marker: char,
     /// The marker character for negative values of the rendering.
+    ///
+    /// Default: `'⊖'`.
     pub negative_marker: char,
     /// The widget specific rendering configuration.
+    ///
+    /// Default: `C::default()`.
     pub widget_config: C,
 }
 
@@ -45,7 +58,7 @@ impl<C: Default> Default for Render<C> {
     fn default() -> Self {
         Self {
             aggregate: Aggregate::Sum,
-            width_hint: 180,
+            width_hint: 160,
             show_aggregate: false,
             abbreviate_breakdown: false,
             positive_marker: '*',
@@ -186,6 +199,7 @@ pub(crate) enum Value {
     Empty,
     String(String),
     Overflow(String),
+    Plain(String),
     Value(f64),
     Skip,
 }
@@ -195,7 +209,7 @@ impl Value {
         match &self {
             Value::Empty => Some(0),
             Value::String(string) | Value::Overflow(string) => Some(string.chars().count()),
-            Value::Value(_) | Value::Skip => None,
+            Value::Plain(_) | Value::Value(_) | Value::Skip => None,
         }
     }
 
@@ -213,7 +227,7 @@ impl Value {
                     string.clone()
                 }
             }
-            Value::Overflow(string) => string.clone(),
+            Value::Overflow(string) | Value::Plain(string) => string.clone(),
             Value::Value(value) => {
                 let value = value.round();
 
@@ -418,7 +432,7 @@ impl Grid {
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schema::one("Animal");
+/// let schema = Schema::one("Animal").values("Count");
 /// let builder = BarChart::builder(schema)
 ///     .add(("whale".to_string(),), 0)
 ///     .add(("shark".to_string(),), 1)
@@ -427,10 +441,10 @@ impl Grid {
 /// println!("{flat}");
 ///
 /// // Output (modified for alignment)
-/// r#"Animal
-///    shark   *
-///    tiger   ****
-///    whale   "#;
+/// r#"Animal  |Count
+///    shark   |*
+///    tiger   |****
+///    whale   |"#;
 /// ```
 #[derive(Debug)]
 pub struct Flat {
@@ -679,6 +693,21 @@ mod tests {
             negative_marker: '-',
         };
         assert_eq!(value.render_width(), Some(3));
+        assert_eq!(value.render(&view, false), "abc");
+        assert_eq!(value.render(&view, true), "abc");
+    }
+
+    #[test]
+    fn render_plain() {
+        let view = View {
+            breakdown_abbreviations: Default::default(),
+            scale: 1.0,
+            positive_marker: '+',
+            negative_marker: '-',
+        };
+
+        let value = Value::Plain("abc".to_string());
+        assert_eq!(value.render_width(), None);
         assert_eq!(value.render(&view, false), "abc");
         assert_eq!(value.render(&view, true), "abc");
     }
@@ -954,6 +983,42 @@ mod tests {
                     }
                 )
             ])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+
+        if let ColumnType::String(size) = grid.columns.types[0].column_type {
+            assert_eq!(size, 0);
+        } else {
+            panic!("unexpected column type");
+        }
+    }
+
+    #[test]
+    fn grid_add_string_plain() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Plain("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Plain("abc".to_string()),
+                }
+            )])]
         );
         assert_eq!(grid.build_overflow_overrides(), HashMap::default());
 
@@ -1314,6 +1379,36 @@ mod tests {
     }
 
     #[test]
+    fn grid_add_count_plain() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::count(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Plain("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Plain("abc".to_string()),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
     fn grid_add_count_empty() {
         // Setup
         let mut columns = Columns::default();
@@ -1458,6 +1553,36 @@ mod tests {
                 Cell {
                     column: 0,
                     value: Value::Overflow("abc".to_string()),
+                }
+            )])]
+        );
+        assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[test]
+    fn grid_add_breakdown_plain() {
+        // Setup
+        let mut columns = Columns::default();
+        columns.push(Column::breakdown(Alignment::Center));
+        let mut grid = Grid::new(columns);
+        let mut row = Row::default();
+        row.push(Value::Plain("abc".to_string()));
+
+        // Execute
+        grid.add(row);
+
+        // Verify
+        assert!(grid.overflows.is_empty());
+        assert!(grid.breakdown_values.is_empty());
+        assert_eq!(grid.minimum_breakdown_width, 18446744073709551615);
+        assert_eq!(grid.maximum_breakdown_width, 0);
+        assert_eq!(
+            grid.rows,
+            vec![HashMap::from([(
+                0,
+                Cell {
+                    column: 0,
+                    value: Value::Plain("abc".to_string()),
                 }
             )])]
         );

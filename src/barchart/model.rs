@@ -13,7 +13,7 @@ use std::hash::Hash;
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schema::one("Animal");
+/// let schema = Schema::one("Animal").values("Count");
 /// let builder = BarChart::builder(schema)
 ///     .add(("whale".to_string(),), 0)
 ///     .add(("shark".to_string(),), 1)
@@ -22,10 +22,10 @@ use std::hash::Hash;
 /// println!("{flat}");
 ///
 /// // Output (modified for alignment)
-/// r#"Animal
-///    shark   *
-///    tiger   ****
-///    whale   "#;
+/// r#"Animal  |Count
+///    shark   |*
+///    tiger   |****
+///    whale   |"#;
 /// ```
 pub struct BarChart<S: BarChartSchematic> {
     schema: S,
@@ -56,7 +56,7 @@ where
     /// ```
     /// use flat::*;
     ///
-    /// let schema = Schema::one("Animal");
+    /// let schema = Schema::one("Animal").values("Count");
     /// let mut builder = BarChart::builder(schema);
     /// builder.update(("whale".to_string(),), 0);
     /// builder.update(("shark".to_string(),), 1);
@@ -65,10 +65,10 @@ where
     /// println!("{flat}");
     ///
     /// // Output (modified for alignment)
-    /// r#"Animal
-    ///    shark   *
-    ///    tiger   ****
-    ///    whale   "#;
+    /// r#"Animal  |Count
+    ///    shark   |*
+    ///    tiger   |****
+    ///    whale   |"#;
     /// ```
     pub fn update(&mut self, key: S::Dimensions, value: impl Into<f64>) {
         self.data.push((key, value.into()));
@@ -83,7 +83,7 @@ where
     /// ```
     /// use flat::*;
     ///
-    /// let schema = Schema::one("Animal");
+    /// let schema = Schema::one("Animal").values("Count");
     /// let builder = BarChart::builder(schema)
     ///     .add(("whale".to_string(),), 0)
     ///     .add(("shark".to_string(),), 1)
@@ -92,10 +92,10 @@ where
     /// println!("{flat}");
     ///
     /// // Output (modified for alignment)
-    /// r#"Animal
-    ///    shark   *
-    ///    tiger   ****
-    ///    whale   "#;
+    /// r#"Animal  |Count
+    ///    shark   |*
+    ///    tiger   |****
+    ///    whale   |"#;
     /// ```
     pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> BarChart<S> {
         self.update(key, value);
@@ -232,6 +232,27 @@ where
         }
 
         let mut grid = Grid::new(columns);
+
+        if self.schema.is_breakdown() {
+            let mut row = Row::default();
+
+            for _ in 0..self.schema.headers().len() {
+                row.push(Value::Empty);
+                row.push(Value::Empty);
+            }
+
+            if config.show_aggregate {
+                row.push(Value::Empty);
+                row.push(Value::Empty);
+                row.push(Value::Empty);
+                row.push(Value::Empty);
+            }
+
+            row.push(Value::Empty);
+            row.push(Value::Plain(self.schema.data_header()));
+            grid.add(row);
+        }
+
         let mut row = Row::default();
 
         for name in self.schema.headers().iter().rev() {
@@ -258,6 +279,8 @@ where
             }
 
             row.push(Value::String("|".to_string()));
+        } else {
+            row.push(Value::Plain(self.schema.data_header()));
         }
 
         grid.add(row);
@@ -491,33 +514,33 @@ mod tests {
 
     #[test]
     fn empty() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let builder = BarChart::builder(schema);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc|"#
+abc|header"#
         );
     }
 
     #[test]
     fn add_zero() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let mut builder = BarChart::builder(schema);
         builder.update((1,), 0);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc  |
+abc  |header
 1    |"#
         );
     }
 
     #[test]
     fn add_zero_and_ones() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let builder = BarChart::builder(schema)
             .add((1,), -1)
             .add((2,), 0)
@@ -526,7 +549,7 @@ abc  |
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc  |
+abc  |header
 1    |⊖
 2    |
 3    |*"#
@@ -535,29 +558,48 @@ abc  |
 
     #[test]
     fn add_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let mut builder = BarChart::builder(schema);
         builder.update((1,), 1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc  |
-1    |******************************************************************************************************************************************************************************"#
+abc  |header
+1    |**********************************************************************************************************************************************************"#
         );
     }
 
     #[test]
     fn add_negative_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let mut builder = BarChart::builder(schema);
         builder.update((1,), -1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc  |
-1    |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
+abc  |header
+1    |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
+        );
+    }
+
+    #[test]
+    fn breakdown() {
+        let schema = Schema::two("abc", "something long").breakdown_2nd();
+        let builder = BarChart::builder(schema)
+            .add((1, 2), -1)
+            .add((2, 3), 0)
+            .add((3, 4), 1);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+      something long
+abc  |2 3 4|
+1    |⊖    |
+2    |     |
+3    |    *|"#
         );
     }
 }

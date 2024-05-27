@@ -3,14 +3,27 @@
 //! The goal of `flat` is to provide access to complex data in a low-resolution textual form.
 //! This can be useful in certain contexts where high-resolution graphics are not suitable for logistic reasons (ex: space constraints, accessibility, etc).
 //! Although textual rendering has its drawbacks, we believe these are acceptable in certain contexts.
-//! We also think `flat` provides a few visual mechanisms that help overcome some of the low-resolution textual form drawbacks.
+//! The output of `flat` is best observed using a monospaced font.
 //!
-//! To get a little specific, we employ a few techniques which improve the "analyzability" of our low-resolution charts.
-//! 1. Flattening multi-dimensional categories across a visual hierarchy (tree).
-//! 2. Breaking down a single-dimension category across the columnar visual space.
+//! This documentation begins with a few example renderings to showcase `flat`.
+//! Read beyond the examples for usage instructions.
 //!
-//! #### Hierarchy Tree
-//! TODO
+//! #### Simple BarChart
+//! ```ignore
+//! Species      |Petal Length
+//! setosa       |*
+//! versicolor   |****
+//! virginica    |******
+//! ```
+//!
+//! ```ignore
+//!                 Species
+//! Attribute      |  setosa   versicolor virginica |
+//! petal_length   |    *         ****      ******  |
+//! petal_width    |               *          **    |
+//! sepal_length   |  *****      ******    *******  |
+//! sepal_width    |   ***        ***        ***    |
+//! ```
 //!
 //! #### Breakdowns
 //! TODO

@@ -15,6 +15,7 @@ fn abbreviate_barchart_breakdown_hint1() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+         dinosaur
 animal  |pt.. tr.. ty..|
 shark   |      *       |
 tiger   | **           |
@@ -37,6 +38,7 @@ fn abbreviate_barchart_breakdown_hint15() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+         dinosaur
 animal  |pt.. tr.. ty..|
 shark   |      *       |
 tiger   | **           |
@@ -59,6 +61,7 @@ fn abbreviate_barchart_breakdown_hint30() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+         dinosaur
 animal  |pter.. tric.. tyra..|
 shark   |         **         |
 tiger   | ***                |
@@ -81,6 +84,7 @@ fn abbreviate_barchart_breakdown_hint180() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+         dinosaur
 animal  |pterodactyl  triceratops  tyrannosaurs|
 shark   |                  **                  |
 tiger   |    ***                               |
@@ -105,6 +109,7 @@ fn barchart_3d_breakdown2_abbreviate() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+                  length
 stable   animal  | 1   4   5 |
 false  - shark   |***  *     |
 true   ┘
@@ -131,6 +136,7 @@ fn barchart_3d_breakdown3_abbreviate() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+                  stable
 length   animal  |false true |
 1      - shark   |  *    *** |
 4      ┘
@@ -158,6 +164,7 @@ fn histogram_breakdown_abbreviate() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+             pet
 length      |  kipp     orvi..     ralf   |
 [0, 1.8)    |    *                        |
 [1.8, 3.6)  |             **        ***   |
@@ -185,6 +192,7 @@ fn histogram_breakdown_abbreviate_hint1() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+             pet
 length      |k.. o.. r..|
 [0, 1.8)    |           |
 [1.8, 3.6)  |           |
@@ -212,6 +220,7 @@ fn histogram_breakdown_abbreviate_hint15() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+             pet
 length      |k.. o.. r..|
 [0, 1.8)    |           |
 [1.8, 3.6)  |           |
@@ -239,6 +248,7 @@ fn histogram_breakdown_abbreviate_hint30() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+             pet
 length      | kipp  orvi..  ralf |
 [0, 1.8)    |                    |
 [1.8, 3.6)  |                *   |
@@ -263,6 +273,7 @@ fn abbreviate_barchart_breakdown_separation() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
+               dinosaur
 pterodactyl   |pt.. tr.. ty..|
 shark         |      *       |
 tiger         | **           |

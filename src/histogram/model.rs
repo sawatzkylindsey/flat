@@ -11,7 +11,7 @@ use std::ops::{Add, Sub};
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schema::one("Things");
+/// let schema = Schema::one("Things").values("Count");
 /// let builder = Histogram::builder(schema, 2)
 ///     .add((0,), 0)
 ///     .add((0,), 1)
@@ -20,7 +20,7 @@ use std::ops::{Add, Sub};
 /// println!("{flat}");
 ///
 /// // Output (modified for alignment)
-/// r#"Things  |
+/// r#"Things  |Count
 ///    [0, 1)  |*
 ///    [1, 2]  |****"#;
 /// ```
@@ -70,7 +70,7 @@ where
     /// ```
     /// use flat::*;
     ///
-    /// let schema = Schema::one("Things");
+    /// let schema = Schema::one("Things").values("Count");
     /// let mut builder = Histogram::builder(schema, 2);
     /// builder.update((0,), 0);
     /// builder.update((0,), 1);
@@ -79,7 +79,7 @@ where
     /// println!("{flat}");
     ///
     /// // Output (modified for alignment)
-    /// r#"Things  |
+    /// r#"Things  |Count
     ///    [0, 1)  |*
     ///    [1, 2]  |****"#;
     /// ```
@@ -107,8 +107,8 @@ where
         self.data.push((key, value.into()));
     }
 
-    /// Add a data point to (key, value) to this histogram.
-    /// Use this method to add data via method chaining.
+    /// Add a.values point to (key, value) to this histogram.
+    /// Use this method to add.values via method chaining.
     ///
     /// See also: [`Histogram::update`].
     ///
@@ -116,7 +116,7 @@ where
     /// ```
     /// use flat::*;
     ///
-    /// let schema = Schema::one("Things");
+    /// let schema = Schema::one("Things").values("Count");
     /// let builder = Histogram::builder(schema, 2)
     ///     .add((0,), 0)
     ///     .add((0,), 1)
@@ -125,7 +125,7 @@ where
     /// println!("{flat}");
     ///
     /// // Output (modified for alignment)
-    /// r#"Things  |
+    /// r#"Things  |Count
     ///    [0, 1)  |*
     ///    [1, 2]  |****"#;
     /// ```
@@ -147,8 +147,8 @@ where
         let bin_ranges: Vec<Bounds<S::PrimaryDimension>> = if min.is_none() {
             Vec::default()
         } else {
-            let min = min.expect("histogram must have some data");
-            let max = max.expect("histogram must have some data");
+            let min = min.expect("histogram must have some.values");
+            let max = max.expect("histogram must have some.values");
 
             if min == max {
                 vec![Bounds {
@@ -240,6 +240,24 @@ where
         }
 
         let mut grid = Grid::new(columns);
+
+        if self.schema.is_breakdown() {
+            let mut row = Row::default();
+            row.push(Value::Empty);
+            row.push(Value::Empty);
+
+            if config.show_aggregate {
+                row.push(Value::Empty);
+                row.push(Value::Empty);
+                row.push(Value::Empty);
+                row.push(Value::Empty);
+            }
+
+            row.push(Value::Empty);
+            row.push(Value::Plain(self.schema.data_header()));
+            grid.add(row);
+        }
+
         let mut row = Row::default();
 
         row.push(Value::String(self.schema.primary_header()));
@@ -264,6 +282,8 @@ where
             }
 
             row.push(Value::String("|".to_string()));
+        } else {
+            row.push(Value::Plain(self.schema.data_header()));
         }
 
         grid.add(row);
@@ -391,19 +411,19 @@ mod tests {
 
     #[test]
     fn empty() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let builder = Histogram::builder(schema, 0);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc|"#
+abc|header"#
         );
     }
 
     #[test]
     fn add_zero_buckets() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let builder = Histogram::builder(schema, 0)
             .add((1,), -1)
             .add((2,), 0)
@@ -412,14 +432,14 @@ abc|"#
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc     |
+abc     |header
 [1, 3]  |"#
         );
     }
 
     #[test]
     fn add_one_bucket() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let builder = Histogram::builder(schema, 1)
             .add((1,), 1)
             .add((2,), 1)
@@ -428,42 +448,42 @@ abc     |
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc     |
+abc     |header
 [1, 3]  |***"#
         );
     }
 
     #[test]
     fn add_extra_buckets() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let mut builder = Histogram::builder(schema, 2);
         builder.update((1,), 1);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc     |
+abc     |header
 [1, 1]  |*"#
         );
     }
 
     #[test]
     fn add_zero() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let mut builder = Histogram::builder(schema, 1);
         builder.update((1,), 0);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc     |
+abc     |header
 [1, 1]  |"#
         );
     }
 
     #[test]
     fn add_zero_and_ones() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let builder = Histogram::builder(schema, 3)
             .add((1,), -1)
             .add((2,), 0)
@@ -472,7 +492,7 @@ abc     |
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc     |
+abc     |header
 [1, 2)  |⊖
 [2, 3)  |
 [3, 4]  |*"#
@@ -481,29 +501,48 @@ abc     |
 
     #[test]
     fn add_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let mut builder = Histogram::builder(schema, 1);
         builder.update((1,), 1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc     |
-[1, 1]  |***************************************************************************************************************************************************************************"#
+abc     |header
+[1, 1]  |*******************************************************************************************************************************************************"#
         );
     }
 
     #[test]
     fn add_negative_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc");
+        let schema: Schema1<u64> = Schema::one("abc").values("header");
         let mut builder = Histogram::builder(schema, 1);
         builder.update((1,), -1_000);
         let flat = builder.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc     |
-[1, 1]  |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
+abc     |header
+[1, 1]  |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
+        );
+    }
+
+    #[test]
+    fn breakdown() {
+        let schema = Schema::two("abc", "something long").breakdown_2nd();
+        let builder = Histogram::builder(schema, 3)
+            .add((1, 2), -1)
+            .add((2, 3), 0)
+            .add((3, 4), 1);
+        let flat = builder.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+         something long
+abc     |2 3 4|
+[1, 2)  |⊖    |
+[2, 3)  |     |
+[3, 4]  |    *|"#
         );
     }
 }

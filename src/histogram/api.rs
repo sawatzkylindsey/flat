@@ -16,14 +16,19 @@ pub trait HistogramSchematic {
     type PrimaryDimension: Binnable;
     type BreakdownDimension;
 
+    #[doc(hidden)]
     fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension;
 
+    #[doc(hidden)]
     fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension;
 
+    #[doc(hidden)]
     fn primary_header(&self) -> String;
 
-    fn breakdown_header(&self) -> Option<String>;
+    #[doc(hidden)]
+    fn data_header(&self) -> String;
 
+    #[doc(hidden)]
     fn is_breakdown(&self) -> bool;
 }
 
@@ -83,8 +88,8 @@ where
         self.dimension_1.clone()
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        None
+    fn data_header(&self) -> String {
+        self.values.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -113,8 +118,8 @@ where
         self.dimension_1.clone()
     }
 
-    fn breakdown_header(&self) -> Option<String> {
-        Some(self.dimension_2.clone())
+    fn data_header(&self) -> String {
+        self.dimension_2.clone()
     }
 
     fn is_breakdown(&self) -> bool {
@@ -167,11 +172,11 @@ mod tests {
 
     #[test]
     fn schema1_impl_trait() {
-        let schema = Schema::one("abc");
+        let schema = Schema::one("abc").values("header");
         assert_eq!(schema.primary_dim(&(1u64,)), 1u64);
         assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing {});
         assert_eq!(schema.primary_header(), "abc".to_string());
-        assert_eq!(schema.breakdown_header(), None);
+        assert_eq!(schema.data_header(), "header".to_string());
         assert!(!schema.is_breakdown());
     }
 
@@ -181,7 +186,7 @@ mod tests {
         assert_eq!(schema.primary_dim(&(1u64, true)), 1u64);
         assert_eq!(schema.breakdown_dim(&(1u64, true)), true);
         assert_eq!(schema.primary_header(), "abc".to_string());
-        assert_eq!(schema.breakdown_header(), Some("def".to_string()));
+        assert_eq!(schema.data_header(), "def".to_string());
         assert!(schema.is_breakdown());
     }
 }

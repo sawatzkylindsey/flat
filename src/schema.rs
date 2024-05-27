@@ -5,9 +5,15 @@ use std::marker::PhantomData;
 /// ```ignore
 /// use flat::Schema;
 ///
-/// let my_dimensions = Schema::two("dimension_1", "dimension_2");
+/// let my_dimensions = Schema::two("dimension_1", "dimension_2").values("header");
 /// ```
 pub struct Schema;
+
+#[doc(hidden)]
+pub struct InterimSchema1<T> {
+    pub(crate) one: PhantomData<T>,
+    pub(crate) dimension_1: String,
+}
 
 /// A one-dimensional schema.
 ///
@@ -15,11 +21,20 @@ pub struct Schema;
 /// # use flat::*;
 /// // Note, explicit type annotation included for clarity.
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
-/// let my_dimensions: Schema1<usize> = Schema::one("dimension_1");
+/// let my_dimensions: Schema1<usize> = Schema::one("dimension_1").values("header");
 /// ```
 pub struct Schema1<T> {
     pub(crate) one: PhantomData<T>,
     pub(crate) dimension_1: String,
+    pub(crate) values: String,
+}
+
+#[doc(hidden)]
+pub struct InterimSchema2<T, U> {
+    pub(crate) one: PhantomData<T>,
+    pub(crate) dimension_1: String,
+    pub(crate) two: PhantomData<U>,
+    pub(crate) dimension_2: String,
 }
 
 /// A two-dimensional schema.
@@ -28,13 +43,14 @@ pub struct Schema1<T> {
 /// # use flat::*;
 /// // Note, explicit type annotation included for clarity.
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
-/// let my_dimensions: Schema2<usize, f64> = Schema::two("dimension_1", "dimension_2");
+/// let my_dimensions: Schema2<usize, f64> = Schema::two("dimension_1", "dimension_2").values("header");
 /// ```
 pub struct Schema2<T, U> {
     pub(crate) one: PhantomData<T>,
     pub(crate) dimension_1: String,
     pub(crate) two: PhantomData<U>,
     pub(crate) dimension_2: String,
+    pub(crate) values: String,
 }
 
 /// A two-dimensional schema with a breakdown on the 2nd dimension.
@@ -52,13 +68,23 @@ pub struct Schema2Breakdown2<T, U> {
     pub(crate) dimension_2: String,
 }
 
+#[doc(hidden)]
+pub struct InterimSchema3<T, U, V> {
+    pub(crate) one: PhantomData<T>,
+    pub(crate) dimension_1: String,
+    pub(crate) two: PhantomData<U>,
+    pub(crate) dimension_2: String,
+    pub(crate) three: PhantomData<V>,
+    pub(crate) dimension_3: String,
+}
+
 /// A three-dimensional schema.
 ///
 /// ```
 /// # use flat::*;
 /// // Note, explicit type annotation included for clarity.
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
-/// let my_dimensions: Schema3<usize, f64, bool> = Schema::three("dimension_1", "dimension_2", "dimension_3");
+/// let my_dimensions: Schema3<usize, f64, bool> = Schema::three("dimension_1", "dimension_2", "dimension_3").values("header");
 /// ```
 pub struct Schema3<T, U, V> {
     pub(crate) one: PhantomData<T>,
@@ -67,6 +93,7 @@ pub struct Schema3<T, U, V> {
     pub(crate) dimension_2: String,
     pub(crate) three: PhantomData<V>,
     pub(crate) dimension_3: String,
+    pub(crate) values: String,
 }
 
 /// A three-dimensional schema with a breakdown on the 2nd dimension
@@ -110,20 +137,22 @@ pub struct Schema3Breakdown3<T, U, V> {
 // pub struct Schema7<T, U, V, W, X, Y, Z>;
 
 impl Schema {
-    /// Define a one-dimensional schema.
-    pub fn one<T>(dimension_1: impl Into<String>) -> Schema1<T> {
-        Schema1 {
+    /// Create an interim schema for one-dimensional data.
+    /// The interim schema must be finalized by either `values(..)` or `breakdown_ORDINAL()`.
+    pub fn one<T>(dimension_1: impl Into<String>) -> InterimSchema1<T> {
+        InterimSchema1 {
             one: PhantomData,
             dimension_1: dimension_1.into(),
         }
     }
 
-    /// Define a two-dimensional schema.
+    /// Create an interim schema for two-dimensional data.
+    /// The interim schema must be finalized by either `values(..)` or `breakdown_ORDINAL()`.
     pub fn two<T, U>(
         dimension_1: impl Into<String>,
         dimension_2: impl Into<String>,
-    ) -> Schema2<T, U> {
-        Schema2 {
+    ) -> InterimSchema2<T, U> {
+        InterimSchema2 {
             one: PhantomData,
             dimension_1: dimension_1.into(),
             two: PhantomData,
@@ -131,13 +160,14 @@ impl Schema {
         }
     }
 
-    /// Define a three-dimensional schema.
+    /// Create an interim schema for three-dimensional data.
+    /// The interim schema must be finalized by either `values(..)` or `breakdown_ORDINAL()`.
     pub fn three<T, U, V>(
         dimension_1: impl Into<String>,
         dimension_2: impl Into<String>,
         dimension_3: impl Into<String>,
-    ) -> Schema3<T, U, V> {
-        Schema3 {
+    ) -> InterimSchema3<T, U, V> {
+        InterimSchema3 {
             one: PhantomData,
             dimension_1: dimension_1.into(),
             two: PhantomData,
@@ -148,14 +178,44 @@ impl Schema {
     }
 }
 
-impl<T, U> Schema2<T, U> {
-    /// Use the 2nd dimension as the breakdown dimension.
-    pub fn breakdown_2nd(self) -> Schema2Breakdown2<T, U> {
-        let Schema2 {
+impl<T> InterimSchema1<T> {
+    /// Specify the name of the values' header.
+    pub fn values(self, header: impl Into<String>) -> Schema1<T> {
+        let InterimSchema1 { one, dimension_1 } = self;
+        Schema1 {
+            one,
+            dimension_1,
+            values: header.into(),
+        }
+    }
+}
+
+impl<T, U> InterimSchema2<T, U> {
+    /// Specify the name of the values' header.
+    pub fn values(self, header: impl Into<String>) -> Schema2<T, U> {
+        let InterimSchema2 {
             one,
             dimension_1,
             two,
             dimension_2,
+        } = self;
+        Schema2 {
+            one,
+            dimension_1,
+            two,
+            dimension_2,
+            values: header.into(),
+        }
+    }
+
+    /// Use the 2nd dimension as the breakdown dimension.
+    pub fn breakdown_2nd(self) -> Schema2Breakdown2<T, U> {
+        let InterimSchema2 {
+            one,
+            dimension_1,
+            two,
+            dimension_2,
+            ..
         } = self;
         Schema2Breakdown2 {
             one,
@@ -166,16 +226,38 @@ impl<T, U> Schema2<T, U> {
     }
 }
 
-impl<T, U, V> Schema3<T, U, V> {
-    /// Use the 2nd dimension as the breakdown dimension.
-    pub fn breakdown_2nd(self) -> Schema3Breakdown2<T, U, V> {
-        let Schema3 {
+impl<T, U, V> InterimSchema3<T, U, V> {
+    /// Specify the name of the values' header.
+    pub fn values(self, header: impl Into<String>) -> Schema3<T, U, V> {
+        let InterimSchema3 {
             one,
             dimension_1,
             two,
             dimension_2,
             three,
             dimension_3,
+        } = self;
+        Schema3 {
+            one,
+            dimension_1,
+            two,
+            dimension_2,
+            three,
+            dimension_3,
+            values: header.into(),
+        }
+    }
+
+    /// Use the 2nd dimension as the breakdown dimension.
+    pub fn breakdown_2nd(self) -> Schema3Breakdown2<T, U, V> {
+        let InterimSchema3 {
+            one,
+            dimension_1,
+            two,
+            dimension_2,
+            three,
+            dimension_3,
+            ..
         } = self;
         Schema3Breakdown2 {
             one,
@@ -189,13 +271,14 @@ impl<T, U, V> Schema3<T, U, V> {
 
     /// Use the 3rd dimension as the breakdown dimension.
     pub fn breakdown_3rd(self) -> Schema3Breakdown3<T, U, V> {
-        let Schema3 {
+        let InterimSchema3 {
             one,
             dimension_1,
             two,
             dimension_2,
             three,
             dimension_3,
+            ..
         } = self;
         Schema3Breakdown3 {
             one,
