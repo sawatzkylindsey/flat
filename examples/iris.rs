@@ -7,18 +7,20 @@ fn main() {
     let parameters = Parameters::blarg_parse();
     let dataset: Vec<Flower> = serde_json::from_str(IRIS_JSON).unwrap();
 
-    match parameters.use_case {
-        UseCase::BarChart => {
-            bar_chart(&parameters, dataset);
+    match parameters.widget {
+        Widget::BarChart => {
+            if parameters.breakdown {
+                bar_chart_breakdown(&parameters, dataset);
+            } else {
+                bar_chart(&parameters, dataset);
+            }
         }
-        UseCase::BarChartBreakdown => {
-            bar_chart_breakdown(&parameters, dataset);
-        }
-        UseCase::Histogram => {
-            histogram(&parameters, dataset);
-        }
-        UseCase::HistogramBreakdown => {
-            histogram_breakdown(&parameters, dataset);
+        Widget::Histogram => {
+            if parameters.breakdown {
+                histogram_breakdown(&parameters, dataset);
+            } else {
+                histogram(&parameters, dataset);
+            }
         }
     }
 }
@@ -33,7 +35,13 @@ fn bar_chart(parameters: &Parameters, dataset: Vec<Flower>) {
 
     let flat = builder.render(Render {
         aggregate: Aggregate::Average,
-        show_aggregate: parameters.show_aggregate,
+        show_aggregate: parameters.verbose,
+        widget_config: {
+            BarChartConfig {
+                show_aggregate: parameters.verbose,
+                ..BarChartConfig::default()
+            }
+        },
         ..Render::default()
     });
     println!("Shows the relative lengths of flowers in the dataset, based off their species.");
@@ -60,7 +68,13 @@ fn bar_chart_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
 
     let flat = builder.render(Render {
         aggregate: Aggregate::Average,
-        show_aggregate: parameters.show_aggregate,
+        show_aggregate: parameters.verbose,
+        widget_config: {
+            BarChartConfig {
+                show_aggregate: parameters.verbose,
+                ..BarChartConfig::default()
+            }
+        },
         ..Render::default()
     });
     println!("Shows the relative attribute values of flowers in the dataset, broken down by their species.");
@@ -78,7 +92,7 @@ fn histogram(parameters: &Parameters, dataset: Vec<Flower>) {
 
     let flat = builder.render(Render {
         aggregate: Aggregate::Sum,
-        show_aggregate: parameters.show_aggregate,
+        show_aggregate: parameters.verbose,
         ..Render::default()
     });
     println!("Shows the relative count of flowers in the dataset, organized into bins based off their petal length.");
@@ -96,7 +110,7 @@ fn histogram_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
 
     let flat = builder.render(Render {
         aggregate: Aggregate::Sum,
-        show_aggregate: parameters.show_aggregate,
+        show_aggregate: parameters.verbose,
         ..Render::default()
     });
     println!("Shows the relative count of flowers in the dataset, broken down by their petal widths, organized into bins based off their petal length.");
@@ -105,43 +119,35 @@ fn histogram_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
 }
 
 #[derive(BlargChoices, PartialEq)]
-enum UseCase {
-    #[blarg(help = "Render the BarChart use case.")]
+enum Widget {
+    #[blarg(help = "Use the BarChart widget.")]
     BarChart,
-    #[blarg(help = "Render the BarChart with Breakdown use case.")]
-    BarChartBreakdown,
-    #[blarg(help = "Render the Histogram use case.")]
+    #[blarg(help = "Use the Histogram widget.")]
     Histogram,
-    #[blarg(help = "Render the Histogram with Breakdown use case.")]
-    HistogramBreakdown,
 }
 
-impl Default for UseCase {
+impl Default for Widget {
     fn default() -> Self {
-        UseCase::BarChart
+        Widget::BarChart
     }
 }
 
-impl std::fmt::Display for UseCase {
+impl std::fmt::Display for Widget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            UseCase::BarChart => write!(f, "barchart"),
-            UseCase::BarChartBreakdown => write!(f, "barchart-breakdown"),
-            UseCase::Histogram => write!(f, "histogram"),
-            UseCase::HistogramBreakdown => write!(f, "histogram-breakdown"),
+            Widget::BarChart => write!(f, "barchart"),
+            Widget::Histogram => write!(f, "histogram"),
         }
     }
 }
 
-impl std::str::FromStr for UseCase {
+impl std::str::FromStr for Widget {
     type Err = String;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value.to_lowercase().as_str() {
-            "barchart" => Ok(UseCase::BarChart),
-            "barchart-breakdown" => Ok(UseCase::BarChartBreakdown),
-            "histogram" => Ok(UseCase::Histogram),
-            "histogram-breakdown" => Ok(UseCase::HistogramBreakdown),
+            "barchart" => Ok(Widget::BarChart),
+            "histogram" => Ok(Widget::Histogram),
             _ => Err(format!("unknown: {}", value)),
         }
     }
@@ -149,9 +155,11 @@ impl std::str::FromStr for UseCase {
 
 #[derive(Default, BlargParser)]
 struct Parameters {
-    show_aggregate: bool,
+    #[blarg(short = 'v')]
+    verbose: bool,
     #[blarg(choices)]
-    use_case: UseCase,
+    widget: Widget,
+    breakdown: bool,
 }
 
 #[derive(Debug, Deserialize)]

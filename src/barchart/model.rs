@@ -106,6 +106,7 @@ where
     pub fn render(self, config: Render<BarChartConfig>) -> Flat {
         let mut aggregate_values: HashMap<(S::PrimaryDimension, S::BreakdownDimension), Vec<f64>> =
             HashMap::default();
+        let mut partial_aggregate_values: HashMap<String, Vec<f64>> = HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
         let mut sort_dimensions: Vec<S::SortDimensions> = Vec::default();
         let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
@@ -151,6 +152,16 @@ where
                 }
             }
 
+            if config.widget_config.show_aggregate {
+                for dag_index in 1..sort_dims.len() {
+                    let partial_path = sort_dims.as_strings()[0..dag_index + 1]
+                        .iter()
+                        .fold(String::default(), |acc, part| acc + part + ";");
+                    let values = partial_aggregate_values.entry(partial_path).or_default();
+                    values.push(*v);
+                }
+            }
+
             let values = aggregate_values.entry(aggregate_dims.clone()).or_default();
             values.push(*v);
 
@@ -192,24 +203,41 @@ where
 
         let mut columns = Columns::default();
 
-        for _ in 0..self.schema.headers().len() {
+        for j in 0..self.schema.headers().len() {
             // dimension value
             columns.push(Column::string(Alignment::Left));
-            // spacer "  "
-            columns.push(Column::string(Alignment::Left));
+
+            if j + 1 < self.schema.headers().len() {
+                // spacer " "
+                columns.push(Column::string(Alignment::Center));
+
+                if config.widget_config.show_aggregate {
+                    // total left [
+                    columns.push(Column::string(Alignment::Left));
+                    // total value
+                    columns.push(Column::string(Alignment::Right));
+                    // total right ]
+                    columns.push(Column::string(Alignment::Left));
+                }
+
+                // dag marker " . "
+                columns.push(Column::string(Alignment::Center));
+            }
         }
 
         if config.show_aggregate {
+            // spacer " "
+            columns.push(Column::string(Alignment::Center));
             // total left [
             columns.push(Column::string(Alignment::Left));
             // total value
             columns.push(Column::string(Alignment::Right));
             // total right ]
             columns.push(Column::string(Alignment::Left));
-            // spacer "  "
-            columns.push(Column::string(Alignment::Center));
         }
 
+        // spacer "  "
+        columns.push(Column::string(Alignment::Center));
         // rendering delimiter |
         columns.push(Column::string(Alignment::Center));
 
@@ -234,56 +262,81 @@ where
         let mut grid = Grid::new(columns);
 
         if self.schema.is_breakdown() {
-            let mut row = Row::default();
+            let mut pre_header = Row::default();
 
-            for _ in 0..self.schema.headers().len() {
-                row.push(Value::Empty);
-                row.push(Value::Empty);
-            }
+            for j in 0..self.schema.headers().len() {
+                pre_header.push(Value::Empty);
 
-            if config.show_aggregate {
-                row.push(Value::Empty);
-                row.push(Value::Empty);
-                row.push(Value::Empty);
-                row.push(Value::Empty);
-            }
+                if j + 1 < self.schema.headers().len() {
+                    pre_header.push(Value::Empty);
 
-            row.push(Value::Empty);
-            row.push(Value::Plain(self.schema.data_header()));
-            grid.add(row);
-        }
+                    if config.widget_config.show_aggregate {
+                        pre_header.push(Value::Empty);
+                        pre_header.push(Value::Empty);
+                        pre_header.push(Value::Empty);
+                    }
 
-        let mut row = Row::default();
-
-        for name in self.schema.headers().iter().rev() {
-            row.push(Value::String(name.clone()));
-            row.push(Value::Empty);
-        }
-
-        if config.show_aggregate {
-            row.push(Value::Overflow(config.aggregate.to_string()));
-            row.push(Value::Skip);
-            row.push(Value::Skip);
-            row.push(Value::Empty);
-        }
-
-        row.push(Value::String("|".to_string()));
-
-        if self.schema.is_breakdown() {
-            for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
-                row.push(Value::String(breakdown_dim.to_string()));
-
-                if k + 1 < sort_breakdowns.len() {
-                    row.push(Value::String(" ".to_string()));
+                    pre_header.push(Value::Empty);
                 }
             }
 
-            row.push(Value::String("|".to_string()));
-        } else {
-            row.push(Value::Plain(self.schema.data_header()));
+            if config.show_aggregate {
+                pre_header.push(Value::Empty);
+                pre_header.push(Value::Empty);
+                pre_header.push(Value::Empty);
+                pre_header.push(Value::Empty);
+            }
+
+            pre_header.push(Value::Empty);
+            pre_header.push(Value::Empty);
+            pre_header.push(Value::Plain(self.schema.data_header()));
+            grid.add(pre_header);
         }
 
-        grid.add(row);
+        let mut header = Row::default();
+
+        for (j, name) in self.schema.headers().iter().rev().enumerate() {
+            header.push(Value::String(name.clone()));
+
+            if j + 1 < self.schema.headers().len() {
+                header.push(Value::String(" ".to_string()));
+
+                if config.widget_config.show_aggregate {
+                    header.push(Value::Overflow(config.aggregate.to_string()));
+                    header.push(Value::Skip);
+                    header.push(Value::Skip);
+                }
+
+                // For the dag marker " . "
+                header.push(Value::String("   ".to_string()));
+            }
+        }
+
+        if config.show_aggregate {
+            header.push(Value::Empty);
+            header.push(Value::Overflow(config.aggregate.to_string()));
+            header.push(Value::Skip);
+            header.push(Value::Skip);
+        }
+
+        header.push(Value::String("  ".to_string()));
+        header.push(Value::String("|".to_string()));
+
+        if self.schema.is_breakdown() {
+            for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
+                header.push(Value::String(breakdown_dim.to_string()));
+
+                if k + 1 < sort_breakdowns.len() {
+                    header.push(Value::String(" ".to_string()));
+                }
+            }
+
+            header.push(Value::String("|".to_string()));
+        } else {
+            header.push(Value::Plain(self.schema.data_header()));
+        }
+
+        grid.add(header);
         let mut column_groups: HashMap<usize, Group> = HashMap::default();
         let mut minimum_value = f64::MAX;
         let mut maximum_value = f64::MIN;
@@ -351,19 +404,17 @@ where
 
                 if position == Position::At {
                     if config.widget_config.abbreviate {
-                        column_chunks.push(Value::String(format!(
-                            "{} ",
-                            dimension_abbreviations[dag_index][part]
-                        )));
+                        column_chunks.push(Value::String(
+                            dimension_abbreviations[dag_index][part].clone(),
+                        ));
                     } else {
-                        column_chunks.push(Value::String(format!("{part} ")));
+                        column_chunks.push(Value::String(part.clone()));
                     }
 
                     if dag_index == 0 {
                         let (primary_dim, breakdown_dim) = lookup
                             .get(sort_dims)
                             .expect("sort dimensions must be mapped to dimensions");
-                        column_chunks.push(Value::String(format!("  ")));
 
                         if self.schema.is_breakdown() {
                             let breakdown_values: Vec<f64> = sort_breakdowns
@@ -382,14 +433,15 @@ where
                                 .collect();
 
                             if config.show_aggregate {
+                                column_chunks.push(Value::String(" ".to_string()));
                                 column_chunks.push(Value::String("[".to_string()));
                                 column_chunks.push(Value::String(minimal_precision_string(
                                     config.aggregate.apply(breakdown_values.as_slice()),
                                 )));
                                 column_chunks.push(Value::String("]".to_string()));
-                                column_chunks.push(Value::String("  ".to_string()));
                             }
 
+                            column_chunks.push(Value::String("  ".to_string()));
                             column_chunks.push(Value::String("|".to_string()));
 
                             for (k, breakdown_value) in breakdown_values.iter().enumerate() {
@@ -412,12 +464,13 @@ where
                             );
 
                             if config.show_aggregate {
+                                column_chunks.push(Value::String(" ".to_string()));
                                 column_chunks.push(Value::String("[".to_string()));
                                 column_chunks.push(Value::String(minimal_precision_string(value)));
                                 column_chunks.push(Value::String("]".to_string()));
-                                column_chunks.push(Value::String("  ".to_string()));
                             }
 
+                            column_chunks.push(Value::String("  ".to_string()));
                             column_chunks.push(Value::String("|".to_string()));
                             column_chunks.push(Value::Value(value));
 
@@ -431,18 +484,49 @@ where
                         }
                     } else {
                         assert!(descendant_position.is_some());
+                        column_chunks.push(Value::String(" ".to_string()));
+
+                        if config.widget_config.show_aggregate {
+                            let value = config
+                                .aggregate
+                                .apply(partial_aggregate_values[&partial_path].as_slice());
+                            column_chunks.push(Value::String("[".to_string()));
+                            column_chunks.push(Value::String(minimal_precision_string(value)));
+                            column_chunks.push(Value::String("]".to_string()));
+                        }
 
                         if let Some(desc_pos) = &descendant_position {
                             match desc_pos {
                                 Position::Above => {
-                                    column_chunks.push(Value::String(format!(" ┐")));
+                                    column_chunks.push(Value::String(format!("┐")));
                                 }
                                 Position::At => {
-                                    column_chunks.push(Value::String(format!(" - ")));
+                                    column_chunks.push(Value::String(format!("-")));
                                 }
                                 Position::Below => {
-                                    column_chunks.push(Value::String(format!(" ┘")));
+                                    column_chunks.push(Value::String(format!("┘")));
                                 }
+                            }
+                        }
+                    }
+                } else if dag_index != 0 {
+                    assert!(descendant_position.is_some());
+
+                    if let Some(desc_pos) = &descendant_position {
+                        match desc_pos {
+                            Position::At => {
+                                column_chunks.push(Value::Empty);
+                                column_chunks.push(Value::String(" ".to_string()));
+
+                                if config.widget_config.show_aggregate {
+                                    column_chunks.push(Value::Empty);
+                                    column_chunks.push(Value::Empty);
+                                    column_chunks.push(Value::Empty);
+                                }
+                                column_chunks.push(Value::String(format!("-")));
+                            }
+                            Position::Above | Position::Below => {
+                                // TODO: handle this case
                             }
                         }
                     }
@@ -520,7 +604,7 @@ mod tests {
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc|header"#
+abc  |header"#
         );
     }
 
@@ -600,6 +684,259 @@ abc  |2 3 4|
 1    |⊖    |
 2    |     |
 3    |    *|"#
+        );
+    }
+
+    #[test]
+    fn doc_example() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b2", "c1"), 2)
+            .add(("a1", "b2", "c2"), 3);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] - b1 [1] ┐
+c1 [2] - b2 [5] - a1 [6]  |******
+c2 [3] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo111() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema).add(("a1", "b1", "c1"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] - b1 [1] - a1 [1]  |*"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo211() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] - b1 [2] - a1 [2]  |**
+c2 [1] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo221() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1)
+            .add(("a1", "b2", "c2"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] - b1 [2] ┐
+c2 [1] ┘        - a1 [3]  |***
+c2 [1] - b2 [1] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo221x() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1)
+            .add(("a1", "b2", "c1"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] - b1 [2] ┐
+c2 [1] ┘        - a1 [3]  |***
+c1 [1] - b2 [1] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo311() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1)
+            .add(("a1", "b1", "c3"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] ┐
+c2 [1] - b1 [3] - a1 [3]  |***
+c3 [1] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo321() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1)
+            .add(("a1", "b1", "c3"), 1)
+            .add(("a1", "b2", "c3"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] ┐
+c2 [1] - b1 [3] - a1 [4]  |****
+c3 [1] ┘
+c3 [1] - b2 [1] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo321x() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1)
+            .add(("a1", "b1", "c3"), 1)
+            .add(("a1", "b2", "c2"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] ┐
+c2 [1] - b1 [3] - a1 [4]  |****
+c3 [1] ┘
+c2 [1] - b2 [1] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo321y() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1)
+            .add(("a1", "b1", "c3"), 1)
+            .add(("a1", "b2", "c1"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] ┐
+c2 [1] - b1 [3] - a1 [4]  |****
+c3 [1] ┘
+c1 [1] - b2 [1] ┘"#
+        );
+    }
+
+    #[test]
+    fn depth_3_combo331() {
+        let schema = Schema::three("A", "B", "C").values("header");
+        let builder = BarChart::builder(schema)
+            .add(("a1", "b1", "c1"), 1)
+            .add(("a1", "b1", "c2"), 1)
+            .add(("a1", "b1", "c3"), 1)
+            .add(("a1", "b2", "c1"), 1)
+            .add(("a1", "b3", "c1"), 1);
+        let flat = builder.render(Render {
+            show_aggregate: true,
+            widget_config: BarChartConfig {
+                show_aggregate: true,
+                ..BarChartConfig::default()
+            },
+            ..Render::default()
+        });
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+C  Sum   B  Sum   A  Sum  |header
+c1 [1] ┐
+c2 [1] - b1 [3] ┐
+c3 [1] ┘        - a1 [5]  |*****
+c1 [1] - b2 [1] ┘
+c1 [1] - b3 [1] ┘"#
         );
     }
 }

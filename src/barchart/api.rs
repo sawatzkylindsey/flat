@@ -18,6 +18,40 @@ pub struct BarChartConfig {
     ///
     /// Default: `false`.
     pub abbreviate: bool,
+    /// Whether to show the aggregated result for the *non-primary* dimension(s) of the dataset.
+    /// Notice, this is different from `show_aggregate` in the root [`Render`] configuration (which shows the *primary* dimension).
+    ///
+    /// The aggregate always represents the matched columns from the *primary* towards the *non-primary*.
+    /// Consequently, the result at each level shows the aggregate across the previous level - the aggregates "cascade".
+    ///
+    /// | A (primary) | B | C | value |
+    /// |-|-|-|-|
+    /// | a1 | b1 | c1 | 1 |
+    /// | a1 | b2 | c1 | 2 |
+    /// | a1 | b2 | c2 | 3 |
+    ///
+    /// | Dimensional Combinations | Show Aggregate |
+    /// |-|-|
+    /// | (a1, ) | aggregate([1, 2, 3]) |
+    /// | (a1, b1) | aggregate(\[1\]) |
+    /// | (a1, b2) | aggregate([2, 3]) |
+    /// | (a1, b1, c1) | aggregate(\[1\]) |
+    /// | (a1, b2, c1) | aggregate(\[2\]) |
+    /// | (a1, b2, c2) | aggregate(\[3\]) |
+    ///
+    /// In `flat`, the above dataset as [`Aggregate::Sum`] will render as follows:
+    /// ```ignore
+    /// // Output (modified for alignment)
+    /// // Observe the cascade (ex: `b2 [5] = c1 [2] + c2 [3]`).
+    /// r#"C  Sum   B  Sum   A  Sum
+    ///    c1 [1] - b1 [1] ┐
+    ///    c1 [2] - b2 [5] - a1 [6]
+    ///    c2 [3] ┘        ┘
+    ///  "#
+    /// ```
+    ///
+    /// Default: `false`.
+    pub show_aggregate: bool,
 }
 
 /// The internal trait which allows rendering [`BarChart`]s across different [`Schema']s.

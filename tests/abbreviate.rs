@@ -109,13 +109,13 @@ fn barchart_3d_breakdown2_abbreviate() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                  length
-stable   animal  | 1   4   5 |
-false  - shark   |***  *     |
-true   ┘
-false  - tiger   |***  *  ***|
-true   ┘
-true   - whale   |           |"#
+                   length
+stable    animal  | 1   4   5 |
+false   - shark   |***  *     |
+true    ┘
+false   - tiger   |***  *  ***|
+true    ┘
+true    - whale   |           |"#
     );
 }
 
@@ -136,14 +136,14 @@ fn barchart_3d_breakdown3_abbreviate() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                  stable
-length   animal  |false true |
-1      - shark   |  *    *** |
-4      ┘
-1      ┐
-4      - tiger   |****   *** |
-5      ┘
-4      - whale   |           |"#
+                   stable
+length    animal  |false true |
+1       - shark   |  *    *** |
+4       ┘
+1       ┐
+4       - tiger   |****   *** |
+5       ┘
+4       - whale   |           |"#
     );
 }
 
@@ -273,10 +273,10 @@ fn abbreviate_barchart_breakdown_separation() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-               dinosaur
-pterodactyl   |pt.. tr.. ty..|
-shark         |      *       |
-tiger         | **           |
-triceratops   |              |"#
+              dinosaur
+pterodactyl  |pt.. tr.. ty..|
+shark        |      *       |
+tiger        | **           |
+triceratops  |              |"#
     );
 }

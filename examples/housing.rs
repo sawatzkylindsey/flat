@@ -1,6 +1,8 @@
-use flat::{BarChart, Render, Schema};
+use blarg::{derive::*, CommandLineParser, Parameter, Switch};
+use flat::{BarChart, BarChartConfig, Render, Schema};
 
 fn main() {
+    let parameters = Parameters::blarg_parse();
     let schema = Schema::three("City", "Quadrant", "Green Rating").breakdown_3rd();
     let mut builder = BarChart::builder(schema);
 
@@ -8,8 +10,21 @@ fn main() {
         builder.update((house.0, house.1, house.2), 1);
     }
 
-    let flat = builder.render(Render::default());
+    let flat = builder.render(Render {
+        show_aggregate: parameters.verbose,
+        widget_config: BarChartConfig {
+            show_aggregate: parameters.verbose,
+            ..BarChartConfig::default()
+        },
+        ..Render::default()
+    });
     println!("{flat}");
+}
+
+#[derive(Default, BlargParser)]
+struct Parameters {
+    #[blarg(short = 'v')]
+    verbose: bool,
 }
 
 struct House(City, Quadrant, GreenRating);

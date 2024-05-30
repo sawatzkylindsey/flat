@@ -204,20 +204,20 @@ where
         let mut columns = Columns::default();
         // histogram range
         columns.push(Column::string(Alignment::Left));
-        // spacer "  "
-        columns.push(Column::string(Alignment::Center));
 
         if config.show_aggregate {
+            // spacer " "
+            columns.push(Column::string(Alignment::Center));
             // total left [
             columns.push(Column::string(Alignment::Left));
             // total value
             columns.push(Column::string(Alignment::Right));
             // total right ]
             columns.push(Column::string(Alignment::Left));
-            // spacer "  "
-            columns.push(Column::string(Alignment::Center));
         }
 
+        // spacer "  "
+        columns.push(Column::string(Alignment::Center));
         // rendering delimiter |
         columns.push(Column::string(Alignment::Center));
 
@@ -242,58 +242,57 @@ where
         let mut grid = Grid::new(columns);
 
         if self.schema.is_breakdown() {
-            let mut row = Row::default();
-            row.push(Value::Empty);
-            row.push(Value::Empty);
+            let mut pre_header = Row::default();
+            pre_header.push(Value::Empty);
 
             if config.show_aggregate {
-                row.push(Value::Empty);
-                row.push(Value::Empty);
-                row.push(Value::Empty);
-                row.push(Value::Empty);
+                pre_header.push(Value::Empty);
+                pre_header.push(Value::Empty);
+                pre_header.push(Value::Empty);
+                pre_header.push(Value::Empty);
             }
 
-            row.push(Value::Empty);
-            row.push(Value::Plain(self.schema.data_header()));
-            grid.add(row);
+            pre_header.push(Value::Empty);
+            pre_header.push(Value::Empty);
+            pre_header.push(Value::Plain(self.schema.data_header()));
+            grid.add(pre_header);
         }
 
-        let mut row = Row::default();
+        let mut header = Row::default();
 
-        row.push(Value::String(self.schema.primary_header()));
-        row.push(Value::Empty);
+        header.push(Value::String(self.schema.primary_header()));
 
         if config.show_aggregate {
-            row.push(Value::Overflow(config.aggregate.to_string()));
-            row.push(Value::Skip);
-            row.push(Value::Skip);
-            row.push(Value::Empty);
+            header.push(Value::Empty);
+            header.push(Value::Overflow(config.aggregate.to_string()));
+            header.push(Value::Skip);
+            header.push(Value::Skip);
         }
 
-        row.push(Value::String("|".to_string()));
+        header.push(Value::String("  ".to_string()));
+        header.push(Value::String("|".to_string()));
 
         if self.schema.is_breakdown() {
             for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
-                row.push(Value::String(breakdown_dim.to_string()));
+                header.push(Value::String(breakdown_dim.to_string()));
 
                 if k + 1 < sort_breakdowns.len() {
-                    row.push(Value::String(" ".to_string()));
+                    header.push(Value::String(" ".to_string()));
                 }
             }
 
-            row.push(Value::String("|".to_string()));
+            header.push(Value::String("|".to_string()));
         } else {
-            row.push(Value::Plain(self.schema.data_header()));
+            header.push(Value::Plain(self.schema.data_header()));
         }
 
-        grid.add(row);
+        grid.add(header);
         let mut minimum_value = f64::MAX;
         let mut maximum_value = f64::MIN;
 
         for (bounds, aggregates) in bin_ranges.into_iter().zip(bin_aggregates) {
             let mut row = Row::default();
             row.push(Value::String(bounds.to_string()));
-            row.push(Value::String("  ".to_string()));
 
             if self.schema.is_breakdown() {
                 let breakdown_values: Vec<f64> = sort_breakdowns
@@ -310,14 +309,15 @@ where
                     .collect();
 
                 if config.show_aggregate {
+                    row.push(Value::String(" ".to_string()));
                     row.push(Value::String("[".to_string()));
                     row.push(Value::String(minimal_precision_string(
                         config.aggregate.apply(breakdown_values.as_slice()),
                     )));
                     row.push(Value::String("]".to_string()));
-                    row.push(Value::String("  ".to_string()));
                 }
 
+                row.push(Value::String("  ".to_string()));
                 row.push(Value::String("|".to_string()));
 
                 for (k, breakdown_value) in breakdown_values.iter().enumerate() {
@@ -339,12 +339,13 @@ where
                 );
 
                 if config.show_aggregate {
+                    row.push(Value::String(" ".to_string()));
                     row.push(Value::String("[".to_string()));
                     row.push(Value::String(minimal_precision_string(value)));
                     row.push(Value::String("]".to_string()));
-                    row.push(Value::String("  ".to_string()));
                 }
 
+                row.push(Value::String("  ".to_string()));
                 row.push(Value::String("|".to_string()));
                 row.push(Value::Value(value));
             }
@@ -417,7 +418,7 @@ mod tests {
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-abc|header"#
+abc  |header"#
         );
     }
 

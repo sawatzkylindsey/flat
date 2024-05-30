@@ -94,12 +94,12 @@ fn histogram_show_sum() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Sum   |header
-[0, 1.8)    [ 1]  |*
-[1.8, 3.6)  [ 5]  |*****
-[3.6, 5.4)  [ 9]  |*********
-[5.4, 7.2)  [13]  |*************
-[7.2, 9]    [17]  |*****************"#
+length     Sum   |header
+[0, 1.8)   [ 1]  |*
+[1.8, 3.6) [ 5]  |*****
+[3.6, 5.4) [ 9]  |*********
+[5.4, 7.2) [13]  |*************
+[7.2, 9]   [17]  |*****************"#
     );
 }
 
@@ -120,12 +120,12 @@ fn histogram_show_average() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Average  |header
-[0, 1.8)    [0.5]    |*
-[1.8, 3.6)  [2.5]    |***
-[3.6, 5.4)  [4.5]    |*****
-[5.4, 7.2)  [6.5]    |*******
-[7.2, 9]    [8.5]    |*********"#
+length     Average  |header
+[0, 1.8)   [0.5]    |*
+[1.8, 3.6) [2.5]    |***
+[3.6, 5.4) [4.5]    |*****
+[5.4, 7.2) [6.5]    |*******
+[7.2, 9]   [8.5]    |*********"#
     );
 }
 
@@ -134,8 +134,7 @@ length      Average  |header
 #[case(18)]
 #[case(19)]
 #[case(20)]
-#[case(21)]
-// #[case(22)]
+// #[case(21)]
 fn histogram_show_sum_squish(#[case] width_hint: usize) {
     let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
@@ -155,12 +154,12 @@ fn histogram_show_sum_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Sum   |header
-[0, 1.8)    [18]  |**
-[1.8, 3.6)  [ 5]  |
-[3.6, 5.4)  [ 9]  |*
-[5.4, 7.2)  [13]  |*
-[7.2, 9]    [ 0]  |"#
+length     Sum   |header
+[0, 1.8)   [18]  |**
+[1.8, 3.6) [ 5]  |
+[3.6, 5.4) [ 9]  |*
+[5.4, 7.2) [13]  |*
+[7.2, 9]   [ 0]  |"#
     );
 }
 
@@ -172,8 +171,7 @@ length      Sum   |header
 #[case(21)]
 #[case(22)]
 #[case(23)]
-#[case(24)]
-// #[case(25)]
+// #[case(24)]
 fn histogram_show_average_squish(#[case] width_hint: usize) {
     let schema = Schema::one("length").values("header");
     let mut builder = Histogram::builder(schema, 5);
@@ -194,12 +192,12 @@ fn histogram_show_average_squish(#[case] width_hint: usize) {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-length      Average  |header
-[0, 1.8)    [4.5]    |*
-[1.8, 3.6)  [2.5]    |
-[3.6, 5.4)  [4.5]    |*
-[5.4, 7.2)  [6.5]    |**
-[7.2, 9]    [  0]    |"#
+length     Average  |header
+[0, 1.8)   [4.5]    |*
+[1.8, 3.6) [2.5]    |
+[3.6, 5.4) [4.5]    |*
+[5.4, 7.2) [6.5]    |**
+[7.2, 9]   [  0]    |"#
     );
 }
 

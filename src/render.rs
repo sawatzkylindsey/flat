@@ -168,12 +168,46 @@ impl Column {
         }
     }
 
-    fn write_final(&self, f: &mut Formatter<'_>, cell: &Cell, view: &View) -> std::fmt::Result {
+    fn write_final(
+        &self,
+        f: &mut Formatter<'_>,
+        cell: &Cell,
+        view: &View,
+        width: usize,
+    ) -> std::fmt::Result {
+        let width = match &self.column_type {
+            ColumnType::String(width) => *width,
+            ColumnType::Count | ColumnType::Breakdown => width,
+        };
+
         let is_breakdown = match &self.column_type {
             ColumnType::Breakdown => true,
             _ => false,
         };
-        write!(f, "{}", cell.value.render(view, is_breakdown))
+
+        if let Value::Plain(value) = &cell.value {
+            write!(f, "{value}")
+        } else {
+            match &self.alignment {
+                Alignment::Left => {
+                    write!(f, "{}", cell.value.render(&view, is_breakdown))
+                }
+                Alignment::Center => {
+                    let render_string = cell.value.render(&view, is_breakdown);
+                    let render_length = render_string.chars().count();
+
+                    if render_length < width {
+                        let left = (width - render_length) / 2;
+                        write!(f, "{:left$}{}", "", render_string)
+                    } else {
+                        write!(f, "{}", cell.value.render(&view, is_breakdown))
+                    }
+                }
+                Alignment::Right => {
+                    write!(f, "{:>width$}", cell.value.render(&view, is_breakdown))
+                }
+            }
+        }
     }
 
     fn fill(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -549,7 +583,10 @@ impl Display for Flat {
                 match wrapped_cell {
                     WrappedCell::Cell(cell) => {
                         if j + 1 == filled_row_length {
-                            self.grid.columns.get(j).write_final(f, cell, &view)?;
+                            self.grid
+                                .columns
+                                .get(j)
+                                .write_final(f, cell, &view, width)?;
                         } else {
                             self.grid.columns.get(j).write(
                                 f,
