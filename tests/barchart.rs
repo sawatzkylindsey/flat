@@ -3,15 +3,16 @@ use rstest::rstest;
 
 #[test]
 fn barchart_1d() {
-    let schema = Schema::one("anml").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::one("anml", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(),), 0)
         .add(("shark".to_string(),), 1)
         .add(("shark".to_string(),), 3)
         .add(("tiger".to_string(),), 1)
         .add(("tiger".to_string(),), 3)
         .add(("tiger".to_string(),), 3);
-    let flat = builder.render(Render::default());
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -24,15 +25,16 @@ whale  |"#
 
 #[test]
 fn barchart_2d() {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render::default());
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -54,15 +56,16 @@ length    animal  |header
 #[case(21)]
 // #[case(22)]
 fn barchart_2d_squish(#[case] width_hint: usize) {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         width_hint,
         ..Render::default()
     });
@@ -80,16 +83,17 @@ length    animal  |header
 }
 
 #[test]
-fn barchart_2d_show_sum_render() {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+fn barchart_2d_show_sum() {
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         ..Render::default()
     });
@@ -108,15 +112,16 @@ length    animal Sum  |header
 
 #[test]
 fn barchart_2d_show_sum_widget() {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         widget_config: {
             BarChartConfig {
                 show_aggregate: true,
@@ -140,15 +145,16 @@ length Sum   animal  |header
 
 #[test]
 fn barchart_2d_show_sum_both() {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         widget_config: {
             BarChartConfig {
@@ -172,16 +178,17 @@ length Sum   animal Sum  |header
 }
 
 #[test]
-fn barchart_2d_show_average_render() {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+fn barchart_2d_show_average() {
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         ..Render::default()
@@ -201,15 +208,16 @@ length    animal Average  |header
 
 #[test]
 fn barchart_2d_show_average_widget() {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         widget_config: {
             BarChartConfig {
@@ -234,15 +242,16 @@ length Average   animal  |header
 
 #[test]
 fn barchart_2d_show_average_both() {
-    let schema = Schema::two("animal", "length").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "length", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 1)
         .add(("tiger".to_string(), 5u32), 3)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         widget_config: {
@@ -268,15 +277,16 @@ length Average   animal Average  |header
 
 #[test]
 fn barchart_2d_breakdown() {
-    let schema = Schema::two("animal", "length").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "length", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32), 0)
         .add(("shark".to_string(), 4u32), 1)
         .add(("shark".to_string(), 1u32), 3)
         .add(("tiger".to_string(), 4u32), 3)
         .add(("tiger".to_string(), 5u32), 2)
         .add(("tiger".to_string(), 1u32), 3);
-    let flat = builder.render(Render::default());
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -290,8 +300,8 @@ whale   |           |"#
 
 #[test]
 fn barchart_3d() {
-    let schema = Schema::three("animal", "length", "stable").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -300,7 +310,8 @@ fn barchart_3d() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render::default());
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -316,9 +327,9 @@ true    - 4       - whale   |"#
 }
 
 #[test]
-fn barchart_3d_show_sum_render() {
-    let schema = Schema::three("animal", "length", "stable").values("header");
-    let builder = BarChart::builder(schema)
+fn barchart_3d_show_sum() {
+    let schema = Schemas::three("animal", "length", "stable", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -327,7 +338,8 @@ fn barchart_3d_show_sum_render() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         ..Render::default()
     });
@@ -347,8 +359,8 @@ true    - 4       - whale  [ 0]  |"#
 
 #[test]
 fn barchart_3d_show_sum_widget() {
-    let schema = Schema::three("animal", "length", "stable").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -357,7 +369,8 @@ fn barchart_3d_show_sum_widget() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         widget_config: {
             BarChartConfig {
                 show_aggregate: true,
@@ -382,8 +395,8 @@ true   [0] - 4      [0] - whale   |"#
 
 #[test]
 fn barchart_3d_show_sum_both() {
-    let schema = Schema::three("animal", "length", "stable").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -392,7 +405,8 @@ fn barchart_3d_show_sum_both() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         widget_config: {
             BarChartConfig {
@@ -417,9 +431,9 @@ true   [0] - 4      [0] - whale  [ 0]  |"#
 }
 
 #[test]
-fn barchart_3d_show_average_render() {
-    let schema = Schema::three("animal", "length", "stable").values("header");
-    let builder = BarChart::builder(schema)
+fn barchart_3d_show_average() {
+    let schema = Schemas::three("animal", "length", "stable", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -428,7 +442,8 @@ fn barchart_3d_show_average_render() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         ..Render::default()
@@ -449,8 +464,8 @@ true    - 4       - whale  [  0]    |"#
 
 #[test]
 fn barchart_3d_show_average_widget() {
-    let schema = Schema::three("animal", "length", "stable").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -459,7 +474,8 @@ fn barchart_3d_show_average_widget() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         widget_config: {
             BarChartConfig {
@@ -485,8 +501,8 @@ true   [0]     - 4      [0]     - whale   |"#
 
 #[test]
 fn barchart_3d_show_average_both() {
-    let schema = Schema::three("animal", "length", "stable").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "header");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -495,7 +511,8 @@ fn barchart_3d_show_average_both() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         widget_config: {
@@ -522,8 +539,8 @@ true   [0]     - 4      [0]     - whale  [  0]    |"#
 
 #[test]
 fn barchart_3d_breakdown2() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -532,7 +549,8 @@ fn barchart_3d_breakdown2() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render::default());
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -562,8 +580,8 @@ true    - whale   |                    |"#
 #[case(30)]
 // #[case(31)]
 fn barchart_3d_breakdown2_squish(#[case] width_hint: usize) {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -572,7 +590,8 @@ fn barchart_3d_breakdown2_squish(#[case] width_hint: usize) {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         width_hint,
         ..Render::default()
     });
@@ -590,9 +609,9 @@ true    - whale   |        |"#
 }
 
 #[test]
-fn barchart_3d_breakdown2_show_sum_render() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+fn barchart_3d_breakdown2_show_sum() {
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -601,7 +620,8 @@ fn barchart_3d_breakdown2_show_sum_render() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         ..Render::default()
     });
@@ -620,8 +640,8 @@ true    - whale  [ 0]  |                    |"#
 
 #[test]
 fn barchart_3d_breakdown2_show_sum_widget() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -630,7 +650,8 @@ fn barchart_3d_breakdown2_show_sum_widget() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         widget_config: {
             BarChartConfig {
                 show_aggregate: true,
@@ -654,8 +675,8 @@ true   [0] - whale   |                    |"#
 
 #[test]
 fn barchart_3d_breakdown2_show_sum_both() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -664,7 +685,8 @@ fn barchart_3d_breakdown2_show_sum_both() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         widget_config: {
             BarChartConfig {
@@ -688,9 +710,9 @@ true   [0] - whale  [ 0]  |                    |"#
 }
 
 #[test]
-fn barchart_3d_breakdown2_show_average_render() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+fn barchart_3d_breakdown2_show_average() {
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -699,7 +721,8 @@ fn barchart_3d_breakdown2_show_average_render() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         ..Render::default()
@@ -719,8 +742,8 @@ true    - whale  [  0]    |                    |"#
 
 #[test]
 fn barchart_3d_breakdown2_show_average_widget() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -729,7 +752,8 @@ fn barchart_3d_breakdown2_show_average_widget() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         widget_config: {
             BarChartConfig {
@@ -754,8 +778,8 @@ true   [  0]   - whale   |                    |"#
 
 #[test]
 fn barchart_3d_breakdown2_show_average_both() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_2nd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -764,7 +788,8 @@ fn barchart_3d_breakdown2_show_average_both() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         widget_config: {
@@ -790,8 +815,8 @@ true   [  0]   - whale  [  0]    |                    |"#
 
 #[test]
 fn barchart_3d_breakdown3() {
-    let schema = Schema::three("animal", "length", "stable").breakdown_3rd();
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::three("animal", "length", "stable", "moot");
+    let builder = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true), 0)
         .add(("shark".to_string(), 4u32, false), 1)
         .add(("shark".to_string(), 1u32, false), 1)
@@ -800,7 +825,8 @@ fn barchart_3d_breakdown3() {
         .add(("tiger".to_string(), 4u32, false), 1)
         .add(("tiger".to_string(), 5u32, true), 6)
         .add(("tiger".to_string(), 1u32, false), 3);
-    let flat = builder.render(Render::default());
+    let view = builder.view_breakdown3();
+    let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -817,12 +843,13 @@ length    animal  |false   true |
 
 #[test]
 fn abbreviate_barchart_1d() {
-    let schema = Schema::one("animal").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::one("animal", "header");
+    let builder = Dataset::builder(schema)
         .add(("whalewhalewhalewhale".to_string(),), 1)
         .add(("sharksharksharkshark".to_string(),), 2)
         .add(("tigertigertigertiger".to_string(),), 3);
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         widget_config: BarChartConfig {
             abbreviate: true,
@@ -842,8 +869,8 @@ whal..  |"#
 
 #[test]
 fn abbreviate_barchart_2d() {
-    let schema = Schema::two("animal", "laminaanimal").values("header");
-    let builder = BarChart::builder(schema)
+    let schema = Schemas::two("animal", "laminaanimal", "header");
+    let builder = Dataset::builder(schema)
         .add(
             (
                 "whalewhalewhalewhale".to_string(),
@@ -865,7 +892,8 @@ fn abbreviate_barchart_2d() {
             ),
             3,
         );
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         widget_config: BarChartConfig {
             abbreviate: true,

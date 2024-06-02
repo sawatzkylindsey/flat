@@ -466,12 +466,13 @@ impl Grid {
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schema::one("Animal").values("Count");
-/// let builder = BarChart::builder(schema)
+/// let schema = Schemas::one("Animal", "Count");
+/// let builder = Dataset::builder(schema)
 ///     .add(("whale".to_string(),), 0)
 ///     .add(("shark".to_string(),), 1)
 ///     .add(("tiger".to_string(),), 4);
-/// let flat = builder.render(Render::default());
+/// let view = builder.view();
+/// let flat = BarChart::new(&view).render(Render::default());
 /// println!("{flat}");
 ///
 /// // Output (modified for alignment)

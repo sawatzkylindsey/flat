@@ -1,24 +1,26 @@
 use crate::abbreviate::find_abbreviations;
 use crate::aggregate::{aggregate_apply, minimal_precision_string};
-use crate::barchart::api::BarChartSchematic;
 use crate::render::{Alignment, Column, Columns, Grid, Row, Value};
-use crate::{BarChartConfig, Dimensions};
+use crate::{BarChartConfig, Dimensions, Schema, View};
 use crate::{Flat, Render};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 /// The bar-chart widget.
 ///
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schema::one("Animal").values("Count");
-/// let builder = BarChart::builder(schema)
+/// let schema = Schemas::one("Animal", "Count");
+/// let builder = Dataset::builder(schema)
 ///     .add(("whale".to_string(),), 0)
 ///     .add(("shark".to_string(),), 1)
 ///     .add(("tiger".to_string(),), 4);
-/// let flat = builder.render(Render::default());
+/// let view = builder.view();
+/// let flat = BarChart::new(&view)
+///     .render(Render::default());
 /// println!("{flat}");
 ///
 /// // Output (modified for alignment)
@@ -27,101 +29,56 @@ use std::hash::Hash;
 ///    tiger   |****
 ///    whale   |"#;
 /// ```
-pub struct BarChart<S: BarChartSchematic> {
-    schema: S,
-    data: Vec<(S::Dimensions, f64)>,
+pub struct BarChart<'a, S, V>
+where
+    S: Schema,
+    <S as Schema>::Dimensions: Dimensions,
+    V: View<S>,
+    <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
+    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
+    <V as View<S>>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
+{
+    view: &'a V,
+    _phantom: PhantomData<S>,
 }
 
-impl<S> BarChart<S>
+impl<'a, S, V> BarChart<'a, S, V>
 where
-    S: BarChartSchematic,
-    <S as BarChartSchematic>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
-    <S as BarChartSchematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
-    <S as BarChartSchematic>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
+    S: Schema,
+    <S as Schema>::Dimensions: Dimensions,
+    V: View<S>,
+    <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
+    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
+    <V as View<S>>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
 {
-    /// Build a bar-chart widget based off the provided schema.
-    pub fn builder(schema: S) -> BarChart<S> {
+    /// Construct a bar-chart widget from the provided view.
+    pub fn new(view: &'a V) -> Self {
         Self {
-            schema,
-            data: Vec::default(),
+            view,
+            _phantom: PhantomData::default(),
         }
-    }
-
-    /// Update this bar-chart with a data point to (key, value).
-    /// Use this method to add data via mutation.
-    ///
-    /// See also: [`BarChart::add`].
-    ///
-    /// ### Example
-    /// ```
-    /// use flat::*;
-    ///
-    /// let schema = Schema::one("Animal").values("Count");
-    /// let mut builder = BarChart::builder(schema);
-    /// builder.update(("whale".to_string(),), 0);
-    /// builder.update(("shark".to_string(),), 1);
-    /// builder.update(("tiger".to_string(),), 4);
-    /// let flat = builder.render(Render::default());
-    /// println!("{flat}");
-    ///
-    /// // Output (modified for alignment)
-    /// r#"Animal  |Count
-    ///    shark   |*
-    ///    tiger   |****
-    ///    whale   |"#;
-    /// ```
-    pub fn update(&mut self, key: S::Dimensions, value: impl Into<f64>) {
-        self.data.push((key, value.into()));
-    }
-
-    /// Add a data point to (key, value) to this bar-chart.
-    /// Use this method to add data via method chaining.
-    ///
-    /// See also: [`BarChart::update`].
-    ///
-    /// ### Example
-    /// ```
-    /// use flat::*;
-    ///
-    /// let schema = Schema::one("Animal").values("Count");
-    /// let builder = BarChart::builder(schema)
-    ///     .add(("whale".to_string(),), 0)
-    ///     .add(("shark".to_string(),), 1)
-    ///     .add(("tiger".to_string(),), 4);
-    /// let flat = builder.render(Render::default());
-    /// println!("{flat}");
-    ///
-    /// // Output (modified for alignment)
-    /// r#"Animal  |Count
-    ///    shark   |*
-    ///    tiger   |****
-    ///    whale   |"#;
-    /// ```
-    pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> BarChart<S> {
-        self.update(key, value);
-        self
     }
 
     /// Generate the flat rendering for this bar-chart.
     pub fn render(self, config: Render<BarChartConfig>) -> Flat {
-        let mut aggregate_values: HashMap<(S::PrimaryDimension, S::BreakdownDimension), Vec<f64>> =
+        let mut aggregate_values: HashMap<(V::PrimaryDimension, V::BreakdownDimension), Vec<f64>> =
             HashMap::default();
         let mut partial_aggregate_values: HashMap<String, Vec<f64>> = HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
-        let mut sort_dimensions: Vec<S::SortDimensions> = Vec::default();
-        let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
-        let mut lookup: HashMap<S::SortDimensions, (S::PrimaryDimension, S::BreakdownDimension)> =
+        let mut sort_dimensions: Vec<V::SortDimensions> = Vec::default();
+        let mut sort_breakdowns: Vec<V::BreakdownDimension> = Vec::default();
+        let mut lookup: HashMap<V::SortDimensions, (V::PrimaryDimension, V::BreakdownDimension)> =
             HashMap::default();
-        let mut dimension_values: Vec<HashSet<String>> = (0..self.schema.headers().len())
+        let mut dimension_values: Vec<HashSet<String>> = (0..self.view.headers().len())
             .map(|_| HashSet::default())
             .collect();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
 
-        for (dims, v) in self.data.iter() {
-            let primary_dim = self.schema.primary_dim(dims);
-            let breakdown_dims = self.schema.breakdown_dim(dims);
+        for (dims, v) in self.view.dataset().data.iter() {
+            let primary_dim = self.view.primary_dim(dims);
+            let breakdown_dims = self.view.breakdown_dim(dims);
             let aggregate_dims = (primary_dim.clone(), breakdown_dims.clone());
-            let sort_dims = self.schema.sort_dims(dims);
+            let sort_dims = self.view.sort_dims(dims);
             let full_path = sort_dims
                 .as_strings()
                 .iter()
@@ -134,7 +91,7 @@ where
             // Only count the occurrences once per 'full path'.
             // This is because we might have multiple entries, for example:
             // ```
-            // BarChart::builder(schema)
+            // Dataset::builder(schema)
             //     .add(("whale".to_string(), 4u32), 2)
             //     .add(("whale".to_string(), 4u32), 3)
             // ```
@@ -185,12 +142,12 @@ where
         sort_breakdowns.sort();
 
         let mut dimension_abbreviations: Vec<HashMap<String, String>> =
-            (0..self.schema.headers().len())
+            (0..self.view.headers().len())
                 .map(|_| HashMap::default())
                 .collect();
 
         if config.widget_config.abbreviate {
-            let headers = self.schema.headers();
+            let headers = self.view.headers();
             let max_header_length = headers.iter().map(|h| h.chars().count()).max().unwrap();
 
             for (dag_index, values) in dimension_values.iter().enumerate() {
@@ -203,11 +160,11 @@ where
 
         let mut columns = Columns::default();
 
-        for j in 0..self.schema.headers().len() {
+        for j in 0..self.view.headers().len() {
             // dimension value
             columns.push(Column::string(Alignment::Left));
 
-            if j + 1 < self.schema.headers().len() {
+            if j + 1 < self.view.headers().len() {
                 // spacer " "
                 columns.push(Column::string(Alignment::Center));
 
@@ -241,7 +198,7 @@ where
         // rendering delimiter |
         columns.push(Column::string(Alignment::Center));
 
-        if self.schema.is_breakdown() {
+        if self.view.is_breakdown() {
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
                 columns.push(Column::breakdown(Alignment::Center));
@@ -261,13 +218,13 @@ where
 
         let mut grid = Grid::new(columns);
 
-        if self.schema.is_breakdown() {
+        if self.view.is_breakdown() {
             let mut pre_header = Row::default();
 
-            for j in 0..self.schema.headers().len() {
+            for j in 0..self.view.headers().len() {
                 pre_header.push(Value::Empty);
 
-                if j + 1 < self.schema.headers().len() {
+                if j + 1 < self.view.headers().len() {
                     pre_header.push(Value::Empty);
 
                     if config.widget_config.show_aggregate {
@@ -289,16 +246,16 @@ where
 
             pre_header.push(Value::Empty);
             pre_header.push(Value::Empty);
-            pre_header.push(Value::Plain(self.schema.data_header()));
+            pre_header.push(Value::Plain(self.view.data_header()));
             grid.add(pre_header);
         }
 
         let mut header = Row::default();
 
-        for (j, name) in self.schema.headers().iter().rev().enumerate() {
+        for (j, name) in self.view.headers().iter().rev().enumerate() {
             header.push(Value::String(name.clone()));
 
-            if j + 1 < self.schema.headers().len() {
+            if j + 1 < self.view.headers().len() {
                 header.push(Value::String(" ".to_string()));
 
                 if config.widget_config.show_aggregate {
@@ -322,7 +279,7 @@ where
         header.push(Value::String("  ".to_string()));
         header.push(Value::String("|".to_string()));
 
-        if self.schema.is_breakdown() {
+        if self.view.is_breakdown() {
             for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
                 header.push(Value::String(breakdown_dim.to_string()));
 
@@ -333,7 +290,7 @@ where
 
             header.push(Value::String("|".to_string()));
         } else {
-            header.push(Value::Plain(self.schema.data_header()));
+            header.push(Value::Plain(self.view.data_header()));
         }
 
         grid.add(header);
@@ -416,7 +373,7 @@ where
                             .get(sort_dims)
                             .expect("sort dimensions must be mapped to dimensions");
 
-                        if self.schema.is_breakdown() {
+                        if self.view.is_breakdown() {
                             let breakdown_values: Vec<f64> = sort_breakdowns
                                 .iter()
                                 .map(|breakdown_dim| {
@@ -594,13 +551,15 @@ impl Group {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Schema, Schema1};
+    use crate::{Dataset, Schema1, Schemas};
 
     #[test]
     fn empty() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let builder = BarChart::builder(schema);
-        let flat = builder.render(Render::default());
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let builder = Dataset::builder(schema);
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -610,10 +569,12 @@ abc  |header"#
 
     #[test]
     fn add_zero() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let mut builder = BarChart::builder(schema);
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let mut builder = Dataset::builder(schema);
         builder.update((1,), 0);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -624,12 +585,14 @@ abc  |header
 
     #[test]
     fn add_zero_and_ones() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let builder = BarChart::builder(schema)
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let builder = Dataset::builder(schema)
             .add((1,), -1)
             .add((2,), 0)
             .add((3,), 1);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -642,10 +605,12 @@ abc  |header
 
     #[test]
     fn add_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let mut builder = BarChart::builder(schema);
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let mut builder = Dataset::builder(schema);
         builder.update((1,), 1_000);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -656,10 +621,12 @@ abc  |header
 
     #[test]
     fn add_negative_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let mut builder = BarChart::builder(schema);
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let mut builder = Dataset::builder(schema);
         builder.update((1,), -1_000);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -670,12 +637,14 @@ abc  |header
 
     #[test]
     fn breakdown() {
-        let schema = Schema::two("abc", "something long").breakdown_2nd();
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::two("abc", "something long", "header");
+        let builder = Dataset::builder(schema)
             .add((1, 2), -1)
             .add((2, 3), 0)
             .add((3, 4), 1);
-        let flat = builder.render(Render::default());
+        let view = builder.view_breakdown2();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -689,12 +658,14 @@ abc  |2 3 4|
 
     #[test]
     fn doc_example() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b2", "c1"), 2)
             .add(("a1", "b2", "c2"), 3);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -714,9 +685,11 @@ c2 [3] ┘"#
 
     #[test]
     fn depth_3_combo111() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema).add(("a1", "b1", "c1"), 1);
-        let flat = builder.render(Render {
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema).add(("a1", "b1", "c1"), 1);
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -734,11 +707,13 @@ c1 [1] - b1 [1] - a1 [1]  |*"#
 
     #[test]
     fn depth_3_combo211() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -757,12 +732,14 @@ c2 [1] ┘"#
 
     #[test]
     fn depth_3_combo221() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1)
             .add(("a1", "b2", "c2"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -782,12 +759,14 @@ c2 [1] - b2 [1] ┘"#
 
     #[test]
     fn depth_3_combo221x() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1)
             .add(("a1", "b2", "c1"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -807,12 +786,14 @@ c1 [1] - b2 [1] ┘"#
 
     #[test]
     fn depth_3_combo311() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1)
             .add(("a1", "b1", "c3"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -832,13 +813,15 @@ c3 [1] ┘"#
 
     #[test]
     fn depth_3_combo321() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1)
             .add(("a1", "b1", "c3"), 1)
             .add(("a1", "b2", "c3"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -859,13 +842,15 @@ c3 [1] - b2 [1] ┘"#
 
     #[test]
     fn depth_3_combo321x() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1)
             .add(("a1", "b1", "c3"), 1)
             .add(("a1", "b2", "c2"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -886,13 +871,15 @@ c2 [1] - b2 [1] ┘"#
 
     #[test]
     fn depth_3_combo321y() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1)
             .add(("a1", "b1", "c3"), 1)
             .add(("a1", "b2", "c1"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,
@@ -913,14 +900,16 @@ c1 [1] - b2 [1] ┘"#
 
     #[test]
     fn depth_3_combo331() {
-        let schema = Schema::three("A", "B", "C").values("header");
-        let builder = BarChart::builder(schema)
+        let schema = Schemas::three("A", "B", "C", "header");
+        let builder = Dataset::builder(schema)
             .add(("a1", "b1", "c1"), 1)
             .add(("a1", "b1", "c2"), 1)
             .add(("a1", "b1", "c3"), 1)
             .add(("a1", "b2", "c1"), 1)
             .add(("a1", "b3", "c1"), 1);
-        let flat = builder.render(Render {
+        let view = builder.view();
+        let barchart = BarChart::new(&view);
+        let flat = barchart.render(Render {
             show_aggregate: true,
             widget_config: BarChartConfig {
                 show_aggregate: true,

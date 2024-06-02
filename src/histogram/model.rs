@@ -1,9 +1,10 @@
 use crate::aggregate::{aggregate_apply, minimal_precision_string};
 use crate::render::{Alignment, Column, Columns, Flat, Grid, Render, Row, Value};
-use crate::{Binnable, HistogramConfig, HistogramSchematic};
+use crate::{Binnable, Dimensions, HistogramConfig, Schema, View};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
 /// The histogram widget.
@@ -11,12 +12,14 @@ use std::ops::{Add, Sub};
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schema::one("Things").values("Count");
-/// let builder = Histogram::builder(schema, 2)
+/// let schema = Schemas::one("Things", "Count");
+/// let builder = Dataset::builder(schema)
 ///     .add((0,), 0)
 ///     .add((0,), 1)
 ///     .add((1,), 4);
-/// let flat = builder.render(Render::default());
+/// let view = builder.view();
+/// let flat = Histogram::new(&view, 2)
+///     .render(Render::default());
 /// println!("{flat}");
 ///
 /// // Output (modified for alignment)
@@ -24,129 +27,80 @@ use std::ops::{Add, Sub};
 ///    [0, 1)  |*
 ///    [1, 2]  |****"#;
 /// ```
-pub struct Histogram<S: HistogramSchematic> {
-    schema: S,
-    bins: usize,
-    data: Vec<(S::Dimensions, f64)>,
-    min: Option<S::PrimaryDimension>,
-    max: Option<S::PrimaryDimension>,
-}
-
-impl<S> Histogram<S>
+pub struct Histogram<'a, S, V>
 where
-    S: HistogramSchematic,
-    <S as HistogramSchematic>::PrimaryDimension: Clone
+    S: Schema,
+    <S as Schema>::Dimensions: Dimensions,
+    V: View<S>,
+    <V as View<S>>::PrimaryDimension: Clone
         + Display
         + PartialEq
         + PartialOrd
-        + Add<
-            <S as HistogramSchematic>::PrimaryDimension,
-            Output = <S as HistogramSchematic>::PrimaryDimension,
-        > + Sub<
-            <S as HistogramSchematic>::PrimaryDimension,
-            Output = <S as HistogramSchematic>::PrimaryDimension,
-        > + Binnable,
-    <S as HistogramSchematic>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
+        + Add<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
+        + Sub<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
+        + Binnable,
+    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
-    /// Build a histogram widget based off the provided schema and number of bins.
-    pub fn builder(schema: S, bins: usize) -> Histogram<S> {
+    view: &'a V,
+    bins: usize,
+    _phantom: PhantomData<S>,
+}
+
+impl<'a, S, V> Histogram<'a, S, V>
+where
+    S: Schema,
+    <S as Schema>::Dimensions: Dimensions,
+    V: View<S>,
+    <V as View<S>>::PrimaryDimension: Clone
+        + Display
+        + PartialEq
+        + PartialOrd
+        + Add<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
+        + Sub<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
+        + Binnable,
+    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
+{
+    /// Construct a histogram widget from the provided view and number of bins.
+    pub fn new(view: &'a V, bins: usize) -> Self {
         Self {
-            schema,
+            view,
             // Make sure there's always at least 1 bin.
             // It is either this, or return a Result<Histogram<S>, _>.
             bins: std::cmp::max(bins, 1),
-            data: Vec::default(),
-            min: None,
-            max: None,
+            _phantom: PhantomData::default(),
         }
-    }
-
-    /// Update this histogram with a data point to (key, value).
-    /// Use this method to add data via mutation.
-    ///
-    /// See also: [`Histogram::add`].
-    ///
-    /// ### Example
-    /// ```
-    /// use flat::*;
-    ///
-    /// let schema = Schema::one("Things").values("Count");
-    /// let mut builder = Histogram::builder(schema, 2);
-    /// builder.update((0,), 0);
-    /// builder.update((0,), 1);
-    /// builder.update((1,), 4);
-    /// let flat = builder.render(Render::default());
-    /// println!("{flat}");
-    ///
-    /// // Output (modified for alignment)
-    /// r#"Things  |Count
-    ///    [0, 1)  |*
-    ///    [1, 2]  |****"#;
-    /// ```
-    pub fn update(&mut self, key: S::Dimensions, value: impl Into<f64>) {
-        let primary_dim = self.schema.primary_dim(&key);
-
-        let update_min = match &self.min {
-            Some(min) => primary_dim < *min,
-            None => true,
-        };
-
-        if update_min {
-            self.min.replace(primary_dim.clone());
-        }
-
-        let update_max = match &self.max {
-            Some(max) => primary_dim > *max,
-            None => true,
-        };
-
-        if update_max {
-            self.max.replace(primary_dim.clone());
-        }
-
-        self.data.push((key, value.into()));
-    }
-
-    /// Add a.values point to (key, value) to this histogram.
-    /// Use this method to add.values via method chaining.
-    ///
-    /// See also: [`Histogram::update`].
-    ///
-    /// ### Example
-    /// ```
-    /// use flat::*;
-    ///
-    /// let schema = Schema::one("Things").values("Count");
-    /// let builder = Histogram::builder(schema, 2)
-    ///     .add((0,), 0)
-    ///     .add((0,), 1)
-    ///     .add((1,), 4);
-    /// let flat = builder.render(Render::default());
-    /// println!("{flat}");
-    ///
-    /// // Output (modified for alignment)
-    /// r#"Things  |Count
-    ///    [0, 1)  |*
-    ///    [1, 2]  |****"#;
-    /// ```
-    pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> Histogram<S> {
-        self.update(key, value);
-        self
     }
 
     /// Generate the flat rendering for this histogram.
     pub fn render(self, config: Render<HistogramConfig>) -> Flat {
-        let Self {
-            bins,
-            data,
-            min,
-            max,
-            ..
-        } = self;
-
-        let bin_ranges: Vec<Bounds<S::PrimaryDimension>> = if min.is_none() {
+        let bin_ranges: Vec<Bounds<V::PrimaryDimension>> = if self.view.dataset().data.is_empty() {
             Vec::default()
         } else {
+            let mut min = None;
+            let mut max = None;
+
+            for (dims, _) in self.view.dataset().data.iter() {
+                let primary_dim = self.view.primary_dim(dims);
+
+                let update_min = match &min {
+                    Some(min) => primary_dim < *min,
+                    None => true,
+                };
+
+                if update_min {
+                    min.replace(primary_dim.clone());
+                }
+
+                let update_max = match &max {
+                    Some(max) => primary_dim > *max,
+                    None => true,
+                };
+
+                if update_max {
+                    max.replace(primary_dim.clone());
+                }
+            }
+
             let min = min.expect("histogram must have some.values");
             let max = max.expect("histogram must have some.values");
 
@@ -157,10 +111,10 @@ where
                 }]
             } else {
                 let delta = max - min.clone();
-                let size = delta.divide(bins);
-                (0..bins)
+                let size = delta.divide(self.bins);
+                (0..self.bins)
                     .map(|i| {
-                        if i + 1 == bins {
+                        if i + 1 == self.bins {
                             Bounds {
                                 lower: Bound::Inclusive(min.clone() + (size.multiply(i))),
                                 upper: Bound::Inclusive(min.clone() + (size.multiply(i + 1))),
@@ -176,13 +130,13 @@ where
             }
         };
 
-        let mut bin_aggregates: Vec<HashMap<S::BreakdownDimension, Vec<f64>>> =
-            (0..bins).map(|_| HashMap::default()).collect();
-        let mut sort_breakdowns: Vec<S::BreakdownDimension> = Vec::default();
+        let mut bin_aggregates: Vec<HashMap<V::BreakdownDimension, Vec<f64>>> =
+            (0..self.bins).map(|_| HashMap::default()).collect();
+        let mut sort_breakdowns: Vec<V::BreakdownDimension> = Vec::default();
 
-        for (dims, v) in data {
-            let primary_dim = self.schema.primary_dim(&dims);
-            let breakdown_dim = self.schema.breakdown_dim(&dims);
+        for (dims, v) in self.view.dataset().data.iter() {
+            let primary_dim = self.view.primary_dim(&dims);
+            let breakdown_dim = self.view.breakdown_dim(&dims);
             // TODO: Fix for performance
             let (index, _) = bin_ranges
                 .iter()
@@ -192,7 +146,7 @@ where
             let values = bin_aggregates[index]
                 .entry(breakdown_dim.clone())
                 .or_default();
-            values.push(v);
+            values.push(*v);
 
             if !sort_breakdowns.contains(&breakdown_dim) {
                 sort_breakdowns.push(breakdown_dim);
@@ -221,7 +175,7 @@ where
         // rendering delimiter |
         columns.push(Column::string(Alignment::Center));
 
-        if self.schema.is_breakdown() {
+        if self.view.is_breakdown() {
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
                 columns.push(Column::breakdown(Alignment::Center));
@@ -241,7 +195,7 @@ where
 
         let mut grid = Grid::new(columns);
 
-        if self.schema.is_breakdown() {
+        if self.view.is_breakdown() {
             let mut pre_header = Row::default();
             pre_header.push(Value::Empty);
 
@@ -254,13 +208,13 @@ where
 
             pre_header.push(Value::Empty);
             pre_header.push(Value::Empty);
-            pre_header.push(Value::Plain(self.schema.data_header()));
+            pre_header.push(Value::Plain(self.view.data_header()));
             grid.add(pre_header);
         }
 
         let mut header = Row::default();
 
-        header.push(Value::String(self.schema.primary_header()));
+        header.push(Value::String(self.view.headers()[0].clone()));
 
         if config.show_aggregate {
             header.push(Value::Empty);
@@ -272,7 +226,7 @@ where
         header.push(Value::String("  ".to_string()));
         header.push(Value::String("|".to_string()));
 
-        if self.schema.is_breakdown() {
+        if self.view.is_breakdown() {
             for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
                 header.push(Value::String(breakdown_dim.to_string()));
 
@@ -283,7 +237,7 @@ where
 
             header.push(Value::String("|".to_string()));
         } else {
-            header.push(Value::Plain(self.schema.data_header()));
+            header.push(Value::Plain(self.view.data_header()));
         }
 
         grid.add(header);
@@ -294,7 +248,7 @@ where
             let mut row = Row::default();
             row.push(Value::String(bounds.to_string()));
 
-            if self.schema.is_breakdown() {
+            if self.view.is_breakdown() {
                 let breakdown_values: Vec<f64> = sort_breakdowns
                     .iter()
                     .map(|breakdown_dim| {
@@ -408,13 +362,15 @@ impl<T: PartialOrd> Bound<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Histogram, Schema, Schema1};
+    use crate::{Dataset, Histogram, Schema1, Schemas};
 
     #[test]
     fn empty() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let builder = Histogram::builder(schema, 0);
-        let flat = builder.render(Render::default());
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let builder = Dataset::builder(schema);
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 0);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -424,12 +380,14 @@ abc  |header"#
 
     #[test]
     fn add_zero_buckets() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let builder = Histogram::builder(schema, 0)
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let builder = Dataset::builder(schema)
             .add((1,), -1)
             .add((2,), 0)
             .add((3,), 1);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 0);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -440,12 +398,14 @@ abc     |header
 
     #[test]
     fn add_one_bucket() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let builder = Histogram::builder(schema, 1)
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let builder = Dataset::builder(schema)
             .add((1,), 1)
             .add((2,), 1)
             .add((3,), 1);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 1);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -456,10 +416,12 @@ abc     |header
 
     #[test]
     fn add_extra_buckets() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let mut builder = Histogram::builder(schema, 2);
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let mut builder = Dataset::builder(schema);
         builder.update((1,), 1);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 2);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -470,10 +432,12 @@ abc     |header
 
     #[test]
     fn add_zero() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let mut builder = Histogram::builder(schema, 1);
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let mut builder = Dataset::builder(schema);
         builder.update((1,), 0);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 1);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -484,12 +448,14 @@ abc     |header
 
     #[test]
     fn add_zero_and_ones() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let builder = Histogram::builder(schema, 3)
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let builder = Dataset::builder(schema)
             .add((1,), -1)
             .add((2,), 0)
             .add((3,), 1);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 3);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -502,10 +468,12 @@ abc     |header
 
     #[test]
     fn add_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let mut builder = Histogram::builder(schema, 1);
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let mut builder = Dataset::builder(schema);
         builder.update((1,), 1_000);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 1);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -516,10 +484,12 @@ abc     |header
 
     #[test]
     fn add_negative_onethousand() {
-        let schema: Schema1<u64> = Schema::one("abc").values("header");
-        let mut builder = Histogram::builder(schema, 1);
+        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let mut builder = Dataset::builder(schema);
         builder.update((1,), -1_000);
-        let flat = builder.render(Render::default());
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 3);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -530,12 +500,14 @@ abc     |header
 
     #[test]
     fn breakdown() {
-        let schema = Schema::two("abc", "something long").breakdown_2nd();
-        let builder = Histogram::builder(schema, 3)
+        let schema = Schemas::two("abc", "something long", "header");
+        let builder = Dataset::builder(schema)
             .add((1, 2), -1)
             .add((2, 3), 0)
             .add((3, 4), 1);
-        let flat = builder.render(Render::default());
+        let view = builder.view_breakdown2();
+        let histogram = Histogram::new(&view, 3);
+        let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"

@@ -1,36 +1,11 @@
-use crate::{Nothing, Schema1, Schema2Breakdown2};
 use std::ops::{Add, Sub};
 // We use this in the doc strings.
 #[allow(unused_imports)]
 use super::Histogram;
 
-/// Render configuration specific to `Histogram`s.
+/// Render configuration specific to [`Histogram`]s.
 #[derive(Debug, Default)]
 pub struct HistogramConfig {}
-
-/// The internal trait which allows rendering [`Histogram`]s across different [`Schema']s.
-/// Consumers should not implement this trait.
-#[doc(hidden)]
-pub trait HistogramSchematic {
-    type Dimensions;
-    type PrimaryDimension: Binnable;
-    type BreakdownDimension;
-
-    #[doc(hidden)]
-    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension;
-
-    #[doc(hidden)]
-    fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension;
-
-    #[doc(hidden)]
-    fn primary_header(&self) -> String;
-
-    #[doc(hidden)]
-    fn data_header(&self) -> String;
-
-    #[doc(hidden)]
-    fn is_breakdown(&self) -> bool;
-}
 
 /// Allows a type `T` to be used as the *primary* dimension of a [`Histogram`].
 /// Consumers may choose to implement this to bin non-standard types in a histogram.
@@ -68,69 +43,9 @@ impl Binnable for u64 {
     }
 }
 
-impl<T> HistogramSchematic for Schema1<T>
-where
-    T: Clone + PartialEq + PartialOrd + Add + Sub + Binnable,
-{
-    type Dimensions = (T,);
-    type PrimaryDimension = T;
-    type BreakdownDimension = Nothing;
-
-    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
-        dims.0.clone()
-    }
-
-    fn breakdown_dim(&self, _dims: &Self::Dimensions) -> Self::BreakdownDimension {
-        Nothing {}
-    }
-
-    fn primary_header(&self) -> String {
-        self.dimension_1.clone()
-    }
-
-    fn data_header(&self) -> String {
-        self.values.clone()
-    }
-
-    fn is_breakdown(&self) -> bool {
-        false
-    }
-}
-
-impl<T, U> HistogramSchematic for Schema2Breakdown2<T, U>
-where
-    T: Clone + Binnable,
-    U: Clone,
-{
-    type Dimensions = (T, U);
-    type PrimaryDimension = T;
-    type BreakdownDimension = U;
-
-    fn primary_dim(&self, dims: &Self::Dimensions) -> Self::PrimaryDimension {
-        dims.0.clone()
-    }
-
-    fn breakdown_dim(&self, dims: &Self::Dimensions) -> Self::BreakdownDimension {
-        dims.1.clone()
-    }
-
-    fn primary_header(&self) -> String {
-        self.dimension_1.clone()
-    }
-
-    fn data_header(&self) -> String {
-        self.dimension_2.clone()
-    }
-
-    fn is_breakdown(&self) -> bool {
-        true
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Schema;
 
     #[test]
     fn binnable_f64() {
@@ -168,25 +83,5 @@ mod tests {
         assert_eq!(0u64.divide(2), 0);
         assert_eq!(1u64.divide(2), 1);
         assert_eq!(2u64.divide(2), 1);
-    }
-
-    #[test]
-    fn schema1_impl_trait() {
-        let schema = Schema::one("abc").values("header");
-        assert_eq!(schema.primary_dim(&(1u64,)), 1u64);
-        assert_eq!(schema.breakdown_dim(&(1u64,)), Nothing {});
-        assert_eq!(schema.primary_header(), "abc".to_string());
-        assert_eq!(schema.data_header(), "header".to_string());
-        assert!(!schema.is_breakdown());
-    }
-
-    #[test]
-    fn schema2_breakdown2_impl_trait() {
-        let schema = Schema::two("abc", "def").breakdown_2nd();
-        assert_eq!(schema.primary_dim(&(1u64, true)), 1u64);
-        assert_eq!(schema.breakdown_dim(&(1u64, true)), true);
-        assert_eq!(schema.primary_header(), "abc".to_string());
-        assert_eq!(schema.data_header(), "def".to_string());
-        assert!(schema.is_breakdown());
     }
 }

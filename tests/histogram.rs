@@ -3,14 +3,15 @@ use rstest::rstest;
 
 #[test]
 fn histogram() {
-    let schema = Schema::one("length").values("header");
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::one("length", "header");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update(((i % 10) as f64,), i);
     }
 
-    let flat = builder.render(Render::default());
+    let view = builder.view();
+    let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -25,14 +26,15 @@ length      |header
 
 #[test]
 fn histogram_u64() {
-    let schema = Schema::one("length").values("header");
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::one("length", "header");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update((i % 10,), i as f64);
     }
 
-    let flat = builder.render(Render::default());
+    let view = builder.view();
+    let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
@@ -52,8 +54,8 @@ length   |header
 #[case(15)]
 // #[case(16)]
 fn histogram_squish(#[case] width_hint: usize) {
-    let schema = Schema::one("length").values("header");
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::one("length", "header");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update(((i % 8) as f64,), i);
@@ -62,7 +64,8 @@ fn histogram_squish(#[case] width_hint: usize) {
     // Make sure one of the bins has a count zero (0).
     builder.update((9.0,), 0);
 
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = Histogram::new(&view, 5).render(Render {
         width_hint,
         ..Render::default()
     });
@@ -80,14 +83,15 @@ length      |header
 
 #[test]
 fn histogram_show_sum() {
-    let schema = Schema::one("length").values("header");
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::one("length", "header");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update(((i % 10) as f64,), i);
     }
 
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = Histogram::new(&view, 5).render(Render {
         show_aggregate: true,
         ..Render::default()
     });
@@ -105,14 +109,15 @@ length     Sum   |header
 
 #[test]
 fn histogram_show_average() {
-    let schema = Schema::one("length").values("header");
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::one("length", "header");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update(((i % 10) as f64,), i);
     }
 
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = Histogram::new(&view, 5).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         ..Render::default()
@@ -136,8 +141,8 @@ length     Average  |header
 #[case(20)]
 // #[case(21)]
 fn histogram_show_sum_squish(#[case] width_hint: usize) {
-    let schema = Schema::one("length").values("header");
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::one("length", "header");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update(((i % 8) as f64,), i);
@@ -146,7 +151,8 @@ fn histogram_show_sum_squish(#[case] width_hint: usize) {
     // Make sure one of the bins has a count zero (0).
     builder.update((9.0,), 0);
 
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = Histogram::new(&view, 5).render(Render {
         width_hint,
         show_aggregate: true,
         ..Render::default()
@@ -173,8 +179,8 @@ length     Sum   |header
 #[case(23)]
 // #[case(24)]
 fn histogram_show_average_squish(#[case] width_hint: usize) {
-    let schema = Schema::one("length").values("header");
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::one("length", "header");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update(((i % 8) as f64,), i);
@@ -183,7 +189,8 @@ fn histogram_show_average_squish(#[case] width_hint: usize) {
     // Make sure one of the bins has a count zero (0).
     builder.update((9.0,), 0);
 
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = Histogram::new(&view, 5).render(Render {
         aggregate: Aggregate::Average,
         width_hint,
         show_aggregate: true,
@@ -204,14 +211,15 @@ length     Average  |header
 #[test]
 fn histogram_breakdown() {
     let pets = vec!["ralf", "kipp", "orville"];
-    let schema = Schema::two("length", "pet").breakdown_2nd();
-    let mut builder = Histogram::builder(schema, 5);
+    let schema = Schemas::two("length", "pet", "moot");
+    let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {
         builder.update(((i % 10) as f64, pets[i % 3]), i as f64);
     }
 
-    let flat = builder.render(Render::default());
+    let view = builder.view_breakdown2();
+    let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"

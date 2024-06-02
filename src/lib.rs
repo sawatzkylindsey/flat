@@ -63,16 +63,20 @@
 mod abbreviate;
 mod aggregate;
 mod barchart;
+mod dataset;
 mod histogram;
 mod render;
 mod schema;
+mod view;
 
 pub use aggregate::Aggregate;
 pub use barchart::*;
+pub use dataset::*;
 pub use histogram::*;
 pub use render::{Flat, Render};
 pub use schema::*;
 use std::fmt::{Display, Formatter};
+pub use view::*;
 
 /// The internal trait to operate on variadic generics.
 /// Consumers should not implement this trait.

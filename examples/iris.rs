@@ -26,14 +26,15 @@ fn main() {
 }
 
 fn bar_chart(parameters: &Parameters, dataset: Vec<Flower>) {
-    let schema = Schema::one("Species").values("Petal Length");
-    let mut builder = BarChart::builder(schema);
+    let schema = Schemas::one("Species", "Petal Length");
+    let mut builder = Dataset::builder(schema);
 
     for flower in dataset {
         builder.update((flower.species.clone(),), flower.petal_length);
     }
 
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: parameters.verbose,
         widget_config: {
@@ -50,8 +51,8 @@ fn bar_chart(parameters: &Parameters, dataset: Vec<Flower>) {
 }
 
 fn bar_chart_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
-    let schema = Schema::two("Attribute", "Species").breakdown_2nd();
-    let mut builder = BarChart::builder(schema);
+    let schema = Schemas::two("Attribute", "Species", "moot");
+    let mut builder = Dataset::builder(schema);
 
     for flower in dataset {
         builder.update(
@@ -66,7 +67,8 @@ fn bar_chart_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
         builder.update(("petal_width", flower.species.clone()), flower.petal_width);
     }
 
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: parameters.verbose,
         widget_config: {
@@ -83,14 +85,15 @@ fn bar_chart_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
 }
 
 fn histogram(parameters: &Parameters, dataset: Vec<Flower>) {
-    let schema = Schema::one("Petal Length").values("Flower Count");
-    let mut builder = Histogram::builder(schema, 10);
+    let schema = Schemas::one("Petal Length", "Flower Count");
+    let mut builder = Dataset::builder(schema);
 
     for flower in dataset {
         builder.update((flower.petal_length,), 1);
     }
 
-    let flat = builder.render(Render {
+    let view = builder.view();
+    let flat = Histogram::new(&view, 10).render(Render {
         aggregate: Aggregate::Sum,
         show_aggregate: parameters.verbose,
         ..Render::default()
@@ -101,14 +104,15 @@ fn histogram(parameters: &Parameters, dataset: Vec<Flower>) {
 }
 
 fn histogram_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
-    let schema = Schema::two("Petal Length", "Petal Widths").breakdown_2nd();
-    let mut builder = Histogram::builder(schema, 10);
+    let schema = Schemas::two("Petal Length", "Petal Widths", "moot");
+    let mut builder = Dataset::builder(schema);
 
     for flower in dataset {
         builder.update((flower.petal_length, OrderedFloat(flower.petal_width)), 1);
     }
 
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown2();
+    let flat = Histogram::new(&view, 10).render(Render {
         aggregate: Aggregate::Sum,
         show_aggregate: parameters.verbose,
         ..Render::default()

@@ -1,16 +1,17 @@
 use blarg::{derive::*, CommandLineParser, Parameter, Switch};
-use flat::{BarChart, BarChartConfig, Render, Schema};
+use flat::{BarChart, BarChartConfig, Dataset, Render, Schemas};
 
 fn main() {
     let parameters = Parameters::blarg_parse();
-    let schema = Schema::three("City", "Quadrant", "Green Rating").breakdown_3rd();
-    let mut builder = BarChart::builder(schema);
+    let schema = Schemas::three("City", "Quadrant", "Green Rating", "moot");
+    let mut builder = Dataset::builder(schema);
 
     for house in generate_dataset() {
         builder.update((house.0, house.1, house.2), 1);
     }
 
-    let flat = builder.render(Render {
+    let view = builder.view_breakdown3();
+    let flat = BarChart::new(&view).render(Render {
         show_aggregate: parameters.verbose,
         widget_config: BarChartConfig {
             show_aggregate: parameters.verbose,
