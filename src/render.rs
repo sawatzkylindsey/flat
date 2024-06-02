@@ -6,6 +6,21 @@ use std::iter;
 use std::ops::Range;
 
 /// The general configuration for rendering a `flat` widget.
+///
+/// ### Example
+/// ```
+/// # use flat::{Aggregate, HistogramConfig, Render};
+/// let config = Render {
+///     aggregate: Aggregate::Average,
+///     width_hint: 10,
+///     show_aggregate: true,
+///     abbreviate_breakdown: true,
+///     positive_marker: '+',
+///     negative_marker: '-',
+///     widget_config: HistogramConfig::default(),
+///     ..Render::default()
+/// };
+/// ```
 #[derive(Debug)]
 pub struct Render<C> {
     /// The function to apply when aggregating values in the widget.
@@ -13,7 +28,7 @@ pub struct Render<C> {
     /// Default: `Aggregate::Sum`.
     pub aggregate: Aggregate,
     /// The hint to use to determine the width of the rendering.
-    /// [`Flat`] will try to make the rendering at most `width_hint` wide, with some exceptions:
+    /// `Flat` will try to make the rendering at most `width_hint` wide, with some exceptions:
     /// * If the rendering can reasonably fit in a smaller width, the `width_hint` is ignored.
     /// * If the rendering cannot reasonably fit the `width_hint`, then it is minimally extended (such that a reasonable rendering may be produced).
     ///

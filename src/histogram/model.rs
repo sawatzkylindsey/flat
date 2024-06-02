@@ -362,7 +362,7 @@ impl<T: PartialOrd> Bound<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Dataset, Histogram, Schema1, Schemas};
+    use crate::{Dataset, Histogram, Schema1, Schema2, Schemas};
 
     #[test]
     fn empty() {
@@ -495,6 +495,34 @@ abc     |header
             r#"
 abc     |header
 [1, 1]  |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
+        );
+    }
+
+    #[test]
+    fn view2() {
+        let schema: Schema2<u64, f64> = Schemas::two("abc", "def", "header");
+        let builder = Dataset::builder(schema)
+            .add((1, 0.1), 1)
+            .add((2, 0.2), 1)
+            .add((3, 0.3), 1);
+        let view = builder.view();
+        let histogram = Histogram::new(&view, 1);
+        let flat = histogram.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+abc     |header
+[1, 3]  |***"#
+        );
+
+        let view = builder.reverse_view();
+        let histogram = Histogram::new(&view, 1);
+        let flat = histogram.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+def         |header
+[0.1, 0.3]  |***"#
         );
     }
 

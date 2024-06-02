@@ -1,10 +1,10 @@
 use crate::{
-    Schema, Schema1, Schema2, Schema3, View1, View2, View2Breakdown2, View3, View3Breakdown2,
-    View3Breakdown3,
+    ReverseView2, Schema, Schema1, Schema2, Schema3, View1, View2, View2Breakdown2, View3,
+    View3Breakdown2, View3Breakdown3,
 };
 
 /// A dataset in `flat`.
-/// The same dataset may be observed through multiple [`View`]s.
+/// The same dataset may be observed through multiple views.
 pub struct Dataset<S: Schema> {
     pub(crate) schema: S,
     pub(crate) data: Vec<(S::Dimensions, f64)>,
@@ -12,6 +12,9 @@ pub struct Dataset<S: Schema> {
 
 impl<T> Dataset<Schema1<T>> {
     /// Take a regular view of this 1-dimensional dataset.
+    /// * primary dimension: `T`
+    /// * secondary dimension: N/A
+    /// * breakdown dimension: N/A
     pub fn view(&self) -> View1<Schema1<T>> {
         View1 { dataset: &self }
     }
@@ -19,11 +22,25 @@ impl<T> Dataset<Schema1<T>> {
 
 impl<T, U> Dataset<Schema2<T, U>> {
     /// Take a regular view of this 2-dimensional dataset.
+    /// * primary dimension: `T`
+    /// * secondary dimension: `U`
+    /// * breakdown dimension: N/A
     pub fn view(&self) -> View2<Schema2<T, U>> {
         View2 { dataset: &self }
     }
 
+    /// Take a reverse view of this 2-dimensional dataset.
+    /// * primary dimension: `U`
+    /// * secondary dimension: `T`
+    /// * breakdown dimension: N/A
+    pub fn reverse_view(&self) -> ReverseView2<Schema2<T, U>> {
+        ReverseView2 { dataset: &self }
+    }
+
     /// Take a view of this 2-dimensional dataset using the 2nd column as the breakdown.
+    /// * primary dimension: `T`
+    /// * secondary dimension: N/A
+    /// * breakdown dimension: `U`
     pub fn view_breakdown2(&self) -> View2Breakdown2<Schema2<T, U>> {
         View2Breakdown2 { dataset: &self }
     }
@@ -31,16 +48,28 @@ impl<T, U> Dataset<Schema2<T, U>> {
 
 impl<T, U, V> Dataset<Schema3<T, U, V>> {
     /// Take a regular view of this 3-dimensional dataset.
+    /// * primary dimension: `T`
+    /// * secondary dimension: `U`
+    /// * tertiary dimension: `V`
+    /// * breakdown dimension: N/A
     pub fn view(&self) -> View3<Schema3<T, U, V>> {
         View3 { dataset: &self }
     }
 
     /// Take a view of this 3-dimensional dataset using the 2nd column as the breakdown.
+    /// * primary dimension: `T`
+    /// * secondary dimension: `V`
+    /// * tertiary dimension: N/A
+    /// * breakdown dimension: `U`
     pub fn view_breakdown2(&self) -> View3Breakdown2<Schema3<T, U, V>> {
         View3Breakdown2 { dataset: &self }
     }
 
     /// Take a view of this 3-dimensional dataset using the 3rd column as the breakdown.
+    /// * primary dimension: `T`
+    /// * secondary dimension: `U`
+    /// * tertiary dimension: N/A
+    /// * breakdown dimension: `V`
     pub fn view_breakdown3(&self) -> View3Breakdown3<Schema3<T, U, V>> {
         View3Breakdown3 { dataset: &self }
     }

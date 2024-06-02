@@ -1,8 +1,24 @@
 // We use this in the doc strings.
 #[allow(unused_imports)]
 use super::BarChart;
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::super::Aggregate;
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::super::Render;
 
 /// Render configuration specific to [`BarChart`]s.
+///
+/// ### Example
+/// ```
+/// # use flat::BarChartConfig;
+/// let barchart_config = BarChartConfig {
+///     abbreviate: true,
+///     show_aggregate: true,
+///     ..BarChartConfig::default()
+/// };
+/// ```
 #[derive(Debug, Default)]
 pub struct BarChartConfig {
     /// Whether to abbreviate the dimensional values in the rendering or not.

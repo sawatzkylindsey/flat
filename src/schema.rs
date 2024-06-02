@@ -28,6 +28,7 @@ impl Schemas {
     /// // This dataset has 2 bears, and 1 tiger.
     /// let schema = Schemas::one("Animals", "Count");
     /// let builder = Dataset::builder(schema)
+    ///     // ((Animal, ), Count)
     ///     .add(("Bear", ), 2)
     ///     .add(("Tiger", ), 1);
     ///
@@ -36,6 +37,7 @@ impl Schemas {
     /// // There is also a tiger which measures height "5".
     /// let schema = Schemas::one("Animals", "Height");
     /// let builder = Dataset::builder(schema)
+    ///     // ((Animal, ) Height)
     ///     .add(("Bear", ), 10)
     ///     .add(("Bear", ), 11)
     ///     .add(("Tiger", ), 5);
@@ -60,6 +62,7 @@ impl Schemas {
     /// // There is also a tiger which measures height "5".
     /// let schema = Schemas::two("Animals", "Height", "Count");
     /// let builder = Dataset::builder(schema)
+    ///     // ((Animal, Height), Count)
     ///     .add(("Bear", 10), 1)
     ///     .add(("Bear", 11), 1)
     ///     .add(("Tiger", 5), 1);
@@ -91,6 +94,7 @@ impl Schemas {
     /// // The bears live in Pen01, while the tiger lives in Pen02.
     /// let schema = Schemas::three("Animals", "Height", "Enclosure", "Count");
     /// let builder = Dataset::builder(schema)
+    ///     // ((Animal, Height, Enclosure), Count)
     ///     .add(("Bear", 10, "Pen01"), 1)
     ///     .add(("Bear", 11, "Pen01"), 1)
     ///     .add(("Tiger", 5, "Pen02"), 1);
@@ -114,8 +118,7 @@ impl Schemas {
 }
 
 /// A 1-dimensional schema.
-///
-/// See also: [`Schemas::one`]
+/// Constructed via [`Schemas`].
 ///
 /// ```
 /// # use flat::*;
@@ -123,6 +126,7 @@ impl Schemas {
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
 /// let my_dimensions: Schema1<usize> = Schemas::one("dimension_1", "header");
 /// ```
+#[doc(hidden)]
 pub struct Schema1<T> {
     pub(crate) one: PhantomData<T>,
     pub(crate) dimension_1: String,
@@ -134,8 +138,7 @@ impl<T> Schema for Schema1<T> {
 }
 
 /// A 2-dimensional schema.
-///
-/// See also: [`Schemas::two`]
+/// Constructed via [`Schemas`].
 ///
 /// ```
 /// # use flat::*;
@@ -143,6 +146,7 @@ impl<T> Schema for Schema1<T> {
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
 /// let my_dimensions: Schema2<usize, f64> = Schemas::two("dimension_1", "dimension_2", "header");
 /// ```
+#[doc(hidden)]
 pub struct Schema2<T, U> {
     pub(crate) one: PhantomData<T>,
     pub(crate) dimension_1: String,
@@ -156,8 +160,7 @@ impl<T, U> Schema for Schema2<T, U> {
 }
 
 /// A 3-dimensional schema.
-///
-/// See also: [`Schemas::three`]
+/// Constructed via [`Schemas`].
 ///
 /// ```
 /// # use flat::*;
@@ -165,6 +168,7 @@ impl<T, U> Schema for Schema2<T, U> {
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
 /// let my_dimensions: Schema3<usize, f64, bool> = Schemas::three("dimension_1", "dimension_2", "dimension_3", "header");
 /// ```
+#[doc(hidden)]
 pub struct Schema3<T, U, V> {
     pub(crate) one: PhantomData<T>,
     pub(crate) dimension_1: String,

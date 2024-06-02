@@ -4,6 +4,14 @@ use std::ops::{Add, Sub};
 use super::Histogram;
 
 /// Render configuration specific to [`Histogram`]s.
+///
+/// ### Example
+/// ```
+/// # use flat::HistogramConfig;
+/// let histogram_config = HistogramConfig {
+///     ..HistogramConfig::default()
+/// };
+/// ```
 #[derive(Debug, Default)]
 pub struct HistogramConfig {}
 
