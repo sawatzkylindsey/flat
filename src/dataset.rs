@@ -7,34 +7,124 @@ use crate::{
 /// The same dataset may be observed through multiple views.
 pub struct Dataset<S: Schema> {
     pub(crate) schema: S,
-    pub(crate) data: Vec<(S::Dimensions, f64)>,
+    pub(crate) data: Vec<S::Dimensions>,
 }
 
-impl<T> Dataset<Schema1<T>> {
+/// A reference dataset in `flat`.
+/// The same dataset may be observed through multiple views.
+pub struct ReferenceDataset<'a, S: Schema> {
+    pub(crate) schema: S,
+    pub(crate) data: &'a Vec<S::Dimensions>,
+}
+
+// impl<'a, S: Schema> Dataset<S> {
+//     pub fn downcast_2d<T, U>(&self) -> &'a Dataset<Schema2<T, U>> {
+//         &Dataset {
+//             schema: todo!(),
+//             data: &self.data,
+//         }
+//     }
+// }
+
+impl Dataset<Schema1<f64>> {
     /// Take a regular view of this 1-dimensional dataset.
     /// * primary dimension: `T`
-    /// * secondary dimension: N/A
-    /// * breakdown dimension: N/A
-    pub fn view(&self) -> View1<Schema1<T>> {
-        View1 { dataset: &self }
+    pub fn view(&self) -> View1<Schema1<f64>> {
+        let extractor: Box<dyn Fn(&<Schema1<f64> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| d.0);
+        View1 {
+            dataset: &self,
+            extractor,
+            value_header: self.schema.dimension_0.clone(),
+        }
     }
 }
 
-impl<T, U> Dataset<Schema2<T, U>> {
+impl Dataset<Schema1<i64>> {
+    /// Take a regular view of this 1-dimensional dataset.
+    /// * primary dimension: `T`
+    pub fn view(&self) -> View1<Schema1<i64>> {
+        let extractor: Box<dyn Fn(&<Schema1<i64> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| d.0 as f64);
+        View1 {
+            dataset: &self,
+            extractor,
+            value_header: self.schema.dimension_0.clone(),
+        }
+    }
+}
+
+impl<T> Dataset<Schema1<T>> {
+    /// Take a counting view of this 1-dimensional dataset.
+    /// * primary dimension: `T`
+    /// * secondary dimension: `1`
+    pub fn view_count(&self) -> View1<Schema1<T>> {
+        let extractor: Box<dyn Fn(&<Schema1<T> as Schema>::Dimensions) -> f64> = Box::new(|_| 1f64);
+        View1 {
+            dataset: &self,
+            extractor,
+            value_header: "Count".to_string(),
+        }
+    }
+}
+
+impl<T> Dataset<Schema2<T, f64>> {
     /// Take a regular view of this 2-dimensional dataset.
     /// * primary dimension: `T`
     /// * secondary dimension: `U`
     /// * breakdown dimension: N/A
-    pub fn view(&self) -> View2<Schema2<T, U>> {
-        View2 { dataset: &self }
+    pub fn view(&self) -> View2<Schema2<T, f64>> {
+        let extractor: Box<dyn Fn(&<Schema2<T, f64> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| d.1);
+        View2 {
+            dataset: &self,
+            extractor,
+            value_header: self.schema.dimension_1.clone(),
+        }
     }
+}
 
+impl<U> Dataset<Schema2<f64, U>> {
     /// Take a reverse view of this 2-dimensional dataset.
     /// * primary dimension: `U`
     /// * secondary dimension: `T`
     /// * breakdown dimension: N/A
-    pub fn reverse_view(&self) -> ReverseView2<Schema2<T, U>> {
-        ReverseView2 { dataset: &self }
+    pub fn reverse_view(&self) -> ReverseView2<Schema2<f64, U>> {
+        let extractor: Box<dyn Fn(&<Schema2<f64, U> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| d.0);
+        ReverseView2 {
+            dataset: &self,
+            extractor,
+            value_header: self.schema.dimension_0.clone(),
+        }
+    }
+}
+
+impl<U> Dataset<Schema2<i64, U>> {
+    /// Take a reverse view of this 2-dimensional dataset.
+    /// * primary dimension: `U`
+    /// * secondary dimension: `T`
+    /// * breakdown dimension: N/A
+    pub fn reverse_view(&self) -> ReverseView2<Schema2<i64, U>> {
+        let extractor: Box<dyn Fn(&<Schema2<i64, U> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| d.0 as f64);
+        ReverseView2 {
+            dataset: &self,
+            extractor,
+            value_header: self.schema.dimension_0.clone(),
+        }
+    }
+}
+
+impl<T, U> Dataset<Schema2<T, U>> {
+    pub fn view_count(&self) -> View2<Schema2<T, U>> {
+        let extractor: Box<dyn Fn(&<Schema2<T, U> as Schema>::Dimensions) -> f64> =
+            Box::new(|_| 1.0);
+        View2 {
+            dataset: &self,
+            extractor,
+            value_header: "Count".to_string(),
+        }
     }
 
     /// Take a view of this 2-dimensional dataset using the 2nd column as the breakdown.
@@ -46,14 +136,49 @@ impl<T, U> Dataset<Schema2<T, U>> {
     }
 }
 
-impl<T, U, V> Dataset<Schema3<T, U, V>> {
+impl<T, U> Dataset<Schema3<T, U, f64>> {
     /// Take a regular view of this 3-dimensional dataset.
     /// * primary dimension: `T`
     /// * secondary dimension: `U`
     /// * tertiary dimension: `V`
     /// * breakdown dimension: N/A
-    pub fn view(&self) -> View3<Schema3<T, U, V>> {
-        View3 { dataset: &self }
+    pub fn view(&self) -> View3<Schema3<T, U, f64>> {
+        let extractor: Box<dyn Fn(&<Schema3<T, U, f64> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| d.2);
+        View3 {
+            dataset: &self,
+            extractor,
+            value_header: self.schema.dimension_2.to_string(),
+        }
+    }
+}
+
+impl<T, U> Dataset<Schema3<T, U, i64>> {
+    /// Take a regular view of this 3-dimensional dataset.
+    /// * primary dimension: `T`
+    /// * secondary dimension: `U`
+    /// * tertiary dimension: `V`
+    /// * breakdown dimension: N/A
+    pub fn view(&self) -> View3<Schema3<T, U, i64>> {
+        let extractor: Box<dyn Fn(&<Schema3<T, U, i64> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| d.2 as f64);
+        View3 {
+            dataset: &self,
+            extractor,
+            value_header: self.schema.dimension_2.to_string(),
+        }
+    }
+}
+
+impl<T, U, V> Dataset<Schema3<T, U, V>> {
+    pub fn view_count(&self) -> View3<Schema3<T, U, V>> {
+        let extractor: Box<dyn Fn(&<Schema3<T, U, V> as Schema>::Dimensions) -> f64> =
+            Box::new(|_| 1.0);
+        View3 {
+            dataset: &self,
+            extractor,
+            value_header: "Count".to_string(),
+        }
     }
 
     /// Take a view of this 3-dimensional dataset using the 2nd column as the breakdown.
@@ -84,7 +209,7 @@ impl<S: Schema> Dataset<S> {
         }
     }
 
-    /// Update this histogram with a data point to (key, value).
+    /// Update this dataset with a data point `vector`.
     /// Use this method to add data via mutation.
     ///
     /// See also: [`Dataset::add`].
@@ -93,35 +218,37 @@ impl<S: Schema> Dataset<S> {
     /// ```
     /// use flat::*;
     ///
-    /// let schema = Schemas::one("Things", "Count");
+    /// let schema = Schemas::one("Things");
     /// let mut builder = Dataset::builder(schema);
-    /// builder.update((0, ), 0);
-    /// builder.update((0, ), 1);
-    /// builder.update((1, ), 4);
+    /// builder.update((0, ));
+    /// builder.update((0, ));
+    /// builder.update((1, ));
     /// let view = builder.view();
     ///
     /// let flat = BarChart::new(&view)
     ///     .render(Render::default());
-    /// println!("{flat}");
-    /// // Output (modified for alignment)
-    /// r#"Things  |Count
-    ///    0       |*
-    ///    1       |****"#;
+    /// assert_eq!(
+    ///     format!("\n{}", flat.to_string()),
+    ///     r#"
+    /// Things  |Sum(Things)
+    /// 0       |
+    /// 1       |*"#);
     ///
     /// let flat = Histogram::new(&view, 2)
     ///     .render(Render::default());
-    /// println!("{flat}");
-    /// // Output (modified for alignment)
-    /// r#"Things  |Count
-    ///    [0, 1)  |*
-    ///    [1, 2]  |****"#;
+    /// assert_eq!(
+    ///     format!("\n{}", flat.to_string()),
+    ///     r#"
+    /// Things  |Sum(Things)
+    /// [0, 1)  |
+    /// [1, 2]  |*"#);
     /// ```
-    pub fn update(&mut self, key: S::Dimensions, value: impl Into<f64>) {
-        self.data.push((key, value.into()));
+    pub fn update(&mut self, vector: S::Dimensions) {
+        self.data.push(vector);
     }
 
-    /// Add a.values point to (key, value) to this histogram.
-    /// Use this method to add.values via method chaining.
+    /// Add a data point `vector` to this dataset.
+    /// Use this method to add via method chaining.
     ///
     /// See also: [`Dataset::update`].
     ///
@@ -129,31 +256,33 @@ impl<S: Schema> Dataset<S> {
     /// ```
     /// use flat::*;
     ///
-    /// let schema = Schemas::one("Things", "Count");
+    /// let schema = Schemas::one("Things");
     /// let builder = Dataset::builder(schema)
-    ///     .add((0,), 0)
-    ///     .add((0,), 1)
-    ///     .add((1,), 4);
+    ///     .add((0, ))
+    ///     .add((0, ))
+    ///     .add((1, ));
     /// let view = builder.view();
     ///
     /// let flat = BarChart::new(&view)
     ///     .render(Render::default());
-    /// println!("{flat}");
-    /// // Output (modified for alignment)
-    /// r#"Things  |Count
-    ///    0       |*
-    ///    1       |****"#;
+    /// assert_eq!(
+    ///     format!("\n{}", flat.to_string()),
+    ///     r#"
+    /// Things  |Sum(Things)
+    /// 0       |
+    /// 1       |*"#);
     ///
     /// let flat = Histogram::new(&view, 2)
     ///     .render(Render::default());
-    /// println!("{flat}");
-    /// // Output (modified for alignment)
-    /// r#"Things  |Count
-    ///    [0, 1)  |*
-    ///    [1, 2]  |****"#;
+    /// assert_eq!(
+    ///     format!("\n{}", flat.to_string()),
+    ///     r#"
+    /// Things  |Sum(Things)
+    /// [0, 1)  |
+    /// [1, 2]  |*"#);
     /// ```
-    pub fn add(mut self, key: S::Dimensions, value: impl Into<f64>) -> Self {
-        self.update(key, value);
+    pub fn add(mut self, vector: S::Dimensions) -> Self {
+        self.update(vector);
         self
     }
 }
@@ -161,25 +290,22 @@ impl<S: Schema> Dataset<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Schemas;
+    use crate::{BarChart, Histogram, Render, Schemas};
 
     #[test]
     fn builder_add() {
-        let schema: Schema1<u64> = Schemas::one("abc", "header");
-        let builder = Dataset::builder(schema)
-            .add((1,), -1)
-            .add((2,), 0)
-            .add((3,), 1);
+        let schema: Schema1<i64> = Schemas::one("abc");
+        let builder = Dataset::builder(schema).add((1,)).add((2,)).add((3,));
         assert_eq!(builder.data.len(), 3);
     }
 
     #[test]
     fn builder_update() {
-        let schema: Schema1<u64> = Schemas::one("abc", "header");
+        let schema: Schema1<i64> = Schemas::one("abc");
         let mut builder = Dataset::builder(schema);
-        builder.update((1,), -1);
-        builder.update((2,), 0);
-        builder.update((3,), 1);
+        builder.update((1,));
+        builder.update((2,));
+        builder.update((3,));
         assert_eq!(builder.data.len(), 3);
     }
 }

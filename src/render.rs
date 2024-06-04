@@ -481,20 +481,23 @@ impl Grid {
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schemas::one("Animal", "Count");
+/// let schema = Schemas::one("Animal");
 /// let builder = Dataset::builder(schema)
-///     .add(("whale".to_string(),), 0)
-///     .add(("shark".to_string(),), 1)
-///     .add(("tiger".to_string(),), 4);
-/// let view = builder.view();
+///     .add(("whale".to_string(), ))
+///     .add(("shark".to_string(), ))
+///     .add(("shark".to_string(), ))
+///     .add(("tiger".to_string(), ))
+///     .add(("tiger".to_string(), ))
+///     .add(("tiger".to_string(), ));
+/// let view = builder.view_count();
 /// let flat = BarChart::new(&view).render(Render::default());
-/// println!("{flat}");
-///
-/// // Output (modified for alignment)
-/// r#"Animal  |Count
-///    shark   |*
-///    tiger   |****
-///    whale   |"#;
+/// assert_eq!(
+///     format!("\n{}", flat.to_string()),
+///     r#"
+/// Animal  |Sum(Count)
+/// shark   |**
+/// tiger   |***
+/// whale   |*"#);
 /// ```
 #[derive(Debug)]
 pub struct Flat {

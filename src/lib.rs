@@ -69,7 +69,7 @@ mod render;
 mod schema;
 mod view;
 
-pub use aggregate::Aggregate;
+pub use aggregate::{minimal_precision_string, Aggregate};
 pub use barchart::*;
 pub use dataset::*;
 pub use histogram::*;
@@ -88,11 +88,8 @@ pub trait Dimensions {
 }
 
 /// No-op struct used to indicate an unused associated type in the widget's trait.
-/// Consumers should not use this struct.
-#[doc(hidden)]
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[non_exhaustive]
-pub struct Nothing {}
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Nothing;
 
 impl Display for Nothing {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

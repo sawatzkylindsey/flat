@@ -68,7 +68,7 @@ pub(crate) fn aggregate_apply<T: Eq + Hash>(
 ///     1.011 vs 1.2 -> 1.01 vs 1.2
 ///
 /// See unit tests for more examples.
-pub(crate) fn minimal_precision_string(value: f64) -> String {
+pub fn minimal_precision_string(value: f64) -> String {
     let value_string = value.to_string();
 
     let decimal_truncated = match value_string.split_once('.') {

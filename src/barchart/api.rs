@@ -45,7 +45,7 @@ pub struct BarChartConfig {
     ///
     /// | Dimensional Combinations | Show Aggregate |
     /// |-|-|
-    /// | (a1, ) | aggregate([1, 2, 3]) |
+    /// | (a1,) | aggregate([1, 2, 3]) |
     /// | (a1, b1) | aggregate(\[1\]) |
     /// | (a1, b2) | aggregate([2, 3]) |
     /// | (a1, b1, c1) | aggregate(\[1\]) |

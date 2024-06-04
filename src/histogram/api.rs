@@ -41,13 +41,13 @@ impl Binnable for f64 {
     }
 }
 
-impl Binnable for u64 {
+impl Binnable for i64 {
     fn multiply(&self, rhs: usize) -> Self {
-        (*self as f64 * (rhs as f64)).ceil() as u64
+        (*self as f64 * (rhs as f64)).ceil() as i64
     }
 
     fn divide(&self, rhs: usize) -> Self {
-        (*self as f64 / (rhs as f64)).ceil() as u64
+        (*self as f64 / (rhs as f64)).ceil() as i64
     }
 }
 
@@ -75,21 +75,21 @@ mod tests {
     }
 
     #[test]
-    fn binnable_u64() {
-        assert_eq!(0u64.multiply(0), 0);
-        assert_eq!(1u64.multiply(0), 0);
-        assert_eq!(2u64.multiply(0), 0);
+    fn binnable_i64() {
+        assert_eq!(0i64.multiply(0), 0);
+        assert_eq!(1i64.multiply(0), 0);
+        assert_eq!(2i64.multiply(0), 0);
 
-        assert_eq!(0u64.multiply(1), 0);
-        assert_eq!(1u64.multiply(1), 1);
-        assert_eq!(2u64.multiply(1), 2);
+        assert_eq!(0i64.multiply(1), 0);
+        assert_eq!(1i64.multiply(1), 1);
+        assert_eq!(2i64.multiply(1), 2);
 
-        assert_eq!(0u64.divide(1), 0);
-        assert_eq!(1u64.divide(1), 1);
-        assert_eq!(2u64.divide(1), 2);
+        assert_eq!(0i64.divide(1), 0);
+        assert_eq!(1i64.divide(1), 1);
+        assert_eq!(2i64.divide(1), 2);
 
-        assert_eq!(0u64.divide(2), 0);
-        assert_eq!(1u64.divide(2), 1);
-        assert_eq!(2u64.divide(2), 1);
+        assert_eq!(0i64.divide(2), 0);
+        assert_eq!(1i64.divide(2), 1);
+        assert_eq!(2i64.divide(2), 1);
     }
 }
