@@ -484,14 +484,15 @@ impl Grid {
 /// use flat::*;
 ///
 /// let schema = Schemas::one("Animal");
-/// let builder = Dataset::builder(schema)
+/// let dataset = Dataset::builder(schema)
 ///     .add(("whale".to_string(), ))
 ///     .add(("shark".to_string(), ))
 ///     .add(("shark".to_string(), ))
 ///     .add(("tiger".to_string(), ))
 ///     .add(("tiger".to_string(), ))
-///     .add(("tiger".to_string(), ));
-/// let view = builder.counting_view();
+///     .add(("tiger".to_string(), ))
+///     .build();
+/// let view = dataset.counting_view();
 /// let flat = BarChart::new(&view).render(Render::default());
 /// assert_eq!(
 ///     format!("\n{}", flat.to_string()),

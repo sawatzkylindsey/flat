@@ -3,14 +3,15 @@ use flat::{BarChart, Dataset, Histogram, Render, Schemas};
 #[test]
 fn abbreviate_barchart_breakdown_hint1() {
     let schema = Schemas::two("animal", "dinosaur");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
-        .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.breakdown_2nd();
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .build();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -30,14 +31,15 @@ whale   |              |"#
 #[test]
 fn abbreviate_barchart_breakdown_hint15() {
     let schema = Schemas::two("animal", "dinosaur");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
-        .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.breakdown_2nd();
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .build();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 15,
         abbreviate_breakdown: true,
@@ -57,14 +59,15 @@ whale   |              |"#
 #[test]
 fn abbreviate_barchart_breakdown_hint30() {
     let schema = Schemas::two("animal", "dinosaur");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
-        .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.breakdown_2nd();
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .build();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 30,
         abbreviate_breakdown: true,
@@ -84,14 +87,15 @@ whale   |                *   |"#
 #[test]
 fn abbreviate_barchart_breakdown_hint180() {
     let schema = Schemas::two("animal", "dinosaur");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
-        .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.breakdown_2nd();
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .build();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 180,
         abbreviate_breakdown: true,
@@ -111,7 +115,7 @@ whale   |                               *      |"#
 #[test]
 fn barchart_3d_breakdown2_abbreviate() {
     let schema = Schemas::three("animal", "length", "stable");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true))
         .add(("shark".to_string(), 4u32, false))
         .add(("shark".to_string(), 1u32, true))
@@ -123,8 +127,9 @@ fn barchart_3d_breakdown2_abbreviate() {
         .add(("tiger".to_string(), 5u32, true))
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false))
-        .add(("tiger".to_string(), 1u32, false));
-    let view = builder.breakdown_2nd();
+        .add(("tiger".to_string(), 1u32, false))
+        .build();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -145,7 +150,7 @@ true    - whale   |     *     |"#
 #[test]
 fn barchart_3d_breakdown3_abbreviate() {
     let schema = Schemas::three("animal", "length", "stable");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true))
         .add(("shark".to_string(), 4u32, false))
         .add(("shark".to_string(), 1u32, true))
@@ -157,8 +162,9 @@ fn barchart_3d_breakdown3_abbreviate() {
         .add(("tiger".to_string(), 5u32, true))
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false))
-        .add(("tiger".to_string(), 1u32, false));
-    let view = builder.breakdown_3rd();
+        .add(("tiger".to_string(), 1u32, false))
+        .build();
+    let view = dataset.breakdown_3rd();
     let flat = BarChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -189,7 +195,8 @@ fn histogram_breakdown_abbreviate() {
         }
     }
 
-    let view = builder.breakdown_2nd();
+    let dataset = builder.build();
+    let view = dataset.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -219,7 +226,8 @@ fn histogram_breakdown_abbreviate_hint1() {
         }
     }
 
-    let view = builder.breakdown_2nd();
+    let dataset = builder.build();
+    let view = dataset.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -250,7 +258,8 @@ fn histogram_breakdown_abbreviate_hint15() {
         }
     }
 
-    let view = builder.breakdown_2nd();
+    let dataset = builder.build();
+    let view = dataset.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 15,
         abbreviate_breakdown: true,
@@ -281,7 +290,8 @@ fn histogram_breakdown_abbreviate_hint30() {
         }
     }
 
-    let view = builder.breakdown_2nd();
+    let dataset = builder.build();
+    let view = dataset.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 30,
         abbreviate_breakdown: true,
@@ -303,14 +313,15 @@ length                    |k.. o.. r..|
 #[test]
 fn abbreviate_barchart_breakdown_separation() {
     let schema = Schemas::two("pterodactyl", "dinosaur");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("triceratops".to_string(), "tyrannosaurs".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("shark".to_string(), "triceratops".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
-        .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.breakdown_2nd();
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .build();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,

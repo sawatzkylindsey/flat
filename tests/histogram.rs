@@ -12,7 +12,8 @@ fn histogram() {
         }
     }
 
-    let view = builder.reflective_view();
+    let dataset = builder.build();
+    let view = dataset.reflective_view();
     let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -37,7 +38,8 @@ fn histogram_u64() {
         }
     }
 
-    let view = builder.reflective_view();
+    let dataset = builder.build();
+    let view = dataset.reflective_view();
     let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -67,7 +69,8 @@ fn histogram_squish(#[case] width_hint: usize) {
         }
     }
 
-    let view = builder.reflective_view();
+    let dataset = builder.build();
+    let view = dataset.reflective_view();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint,
         ..Render::default()
@@ -95,7 +98,8 @@ fn histogram_show_sum() {
         }
     }
 
-    let view = builder.reflective_view();
+    let dataset = builder.build();
+    let view = dataset.reflective_view();
     let flat = Histogram::new(&view, 5).render(Render {
         show_aggregate: true,
         ..Render::default()
@@ -123,7 +127,8 @@ fn histogram_show_average() {
         }
     }
 
-    let view = builder.reflective_view();
+    let dataset = builder.build();
+    let view = dataset.reflective_view();
     let flat = Histogram::new(&view, 5).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -157,7 +162,8 @@ fn histogram_show_sum_squish(#[case] width_hint: usize) {
         }
     }
 
-    let view = builder.reflective_view();
+    let dataset = builder.build();
+    let view = dataset.reflective_view();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint,
         show_aggregate: true,
@@ -194,7 +200,8 @@ fn histogram_show_average_squish(#[case] width_hint: usize) {
         }
     }
 
-    let view = builder.reflective_view();
+    let dataset = builder.build();
+    let view = dataset.reflective_view();
     let flat = Histogram::new(&view, 5).render(Render {
         aggregate: Aggregate::Average,
         width_hint,
@@ -225,7 +232,8 @@ fn histogram_breakdown() {
         }
     }
 
-    let view = builder.breakdown_2nd();
+    let dataset = builder.build();
+    let view = dataset.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),

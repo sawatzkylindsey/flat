@@ -27,11 +27,12 @@ impl Schemas {
     /// // The inventory of animals in a zoo.
     /// // This dataset has 2 bears, and 1 tiger.
     /// let schema = Schemas::one("Animals");
-    /// let builder = Dataset::builder(schema)
+    /// let dataset = Dataset::builder(schema)
     ///     //   (Animal,)
     ///     .add(("Bear",))
     ///     .add(("Bear",))
-    ///     .add(("Tiger",));
+    ///     .add(("Tiger",))
+    ///     .build();
     /// ```
     pub fn one<T>(dimension_0: impl Into<String>) -> Schema1<T> {
         Schema1 {
@@ -51,11 +52,12 @@ impl Schemas {
     /// // This dataset has a bear which measures height "10", and another which measures height "11".
     /// // There is also a tiger which measures height "5".
     /// let schema = Schemas::two("Animal", "Height");
-    /// let builder = Dataset::builder(schema)
+    /// let dataset = Dataset::builder(schema)
     ///     //   (Animal, Height)
     ///     .add(("Bear", 10))
     ///     .add(("Bear", 11))
-    ///     .add(("Tiger", 5));
+    ///     .add(("Tiger", 5))
+    ///     .build();
     /// ```
     pub fn two<T, U>(
         dimension_0: impl Into<String>,
@@ -81,11 +83,12 @@ impl Schemas {
     /// // There is also a tiger which measures height "5".
     /// // The bears live in Pen01, while the tiger lives in Pen02.
     /// let schema = Schemas::three("Animals", "Height", "Enclosure");
-    /// let builder = Dataset::builder(schema)
+    /// let dataset = Dataset::builder(schema)
     ///     //   (Animal, Height, Enclosure)
     ///     .add(("Bear", 10, "Pen01"))
     ///     .add(("Bear", 11, "Pen01"))
-    ///     .add(("Tiger", 5, "Pen02"));
+    ///     .add(("Tiger", 5, "Pen02"))
+    ///     .build();
     /// ```
     pub fn three<T, U, V>(
         dimension_0: impl Into<String>,

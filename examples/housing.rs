@@ -10,7 +10,8 @@ fn main() {
         builder.update((house.0, house.1, house.2));
     }
 
-    let view = builder.breakdown_3rd();
+    let dataset = builder.build();
+    let view = dataset.breakdown_3rd();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: parameters.verbose,
         widget_config: BarChartConfig {

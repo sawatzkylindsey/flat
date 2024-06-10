@@ -7,9 +7,29 @@ use ordered_float::OrderedFloat;
 
 /// A dataset in `flat`.
 /// The same dataset may be observed through multiple views.
+///
+/// ```
+/// # use flat::*;
+/// // Note, explicit type annotation included for clarity.
+/// // We encourage consumers to allow the compiler to infer the type implicitly.
+/// let builder: Dataset<Schema1<f64>> = Dataset::builder(Schemas::one("dim1")).build();
+/// ```
 pub struct Dataset<S: Schema> {
     pub(crate) schema: S,
     pub(crate) data: Vec<S::Dimensions>,
+}
+
+/// Builder for a dataset in `flat`.
+///
+/// ```
+/// # use flat::*;
+/// // Note, explicit type annotation included for clarity.
+/// // We encourage consumers to allow the compiler to infer the type implicitly.
+/// let builder: DatasetBuilder<Schema1<f64>> = Dataset::builder(Schemas::one("dim1"));
+/// ```
+pub struct DatasetBuilder<S: Schema> {
+    schema: S,
+    data: Vec<S::Dimensions>,
 }
 
 impl<'a, S: Schema> Dataset<S> {
@@ -32,10 +52,11 @@ impl<'a, S: Schema> Dataset<S> {
 
 impl Dataset<Schema1<f64>> {
     /// Take a reflective view of this 1-dimensional dataset.
-    /// Views are rendered via different widgets, but ty
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, )     | aggregate(dim1)"#
@@ -53,9 +74,11 @@ impl Dataset<Schema1<f64>> {
 
 impl Dataset<Schema1<i64>> {
     /// Take a reflective view of this 1-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, )     | aggregate(dim1)"#
@@ -74,9 +97,11 @@ impl Dataset<Schema1<i64>> {
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
 impl Dataset<Schema1<OrderedFloat<f64>>> {
     /// Take a reflective view of this 1-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, )     | aggregate(dim1)"#
@@ -94,9 +119,11 @@ impl Dataset<Schema1<OrderedFloat<f64>>> {
 
 impl<T> Dataset<Schema1<T>> {
     /// Take a counting view of this 1-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'counting' refers to the fact that we count the occurrences of each dimensional vector.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, )     | aggregate(count())"#
@@ -113,9 +140,11 @@ impl<T> Dataset<Schema1<T>> {
 
 impl<T> Dataset<Schema2<T, f64>> {
     /// Take a reflective view of this 2-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, dim2) | aggregate(dim2)"#
@@ -131,9 +160,11 @@ impl<T> Dataset<Schema2<T, f64>> {
     }
 
     /// Take a regular view of this 2-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, )     | aggregate(dim2)"#
@@ -151,9 +182,11 @@ impl<T> Dataset<Schema2<T, f64>> {
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
 impl<T> Dataset<Schema2<T, OrderedFloat<f64>>> {
     /// Take a reflective view of this 2-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, dim2) | aggregate(dim2)"#
@@ -169,9 +202,11 @@ impl<T> Dataset<Schema2<T, OrderedFloat<f64>>> {
     }
 
     /// Take a regular view of this 2-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, )     | aggregate(dim2)"#
@@ -188,9 +223,11 @@ impl<T> Dataset<Schema2<T, OrderedFloat<f64>>> {
 
 impl<T> Dataset<Schema2<T, i64>> {
     /// Take a reflective view of this 2-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, dim2) | aggregate(dim2)"#
@@ -206,9 +243,11 @@ impl<T> Dataset<Schema2<T, i64>> {
     }
 
     /// Take a regular view of this 2-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, )     | aggregate(dim2)"#
@@ -225,9 +264,11 @@ impl<T> Dataset<Schema2<T, i64>> {
 
 impl<T, U> Dataset<Schema2<T, U>> {
     /// Take a counting view of this 2-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'counting' refers to the fact that we count the occurrences of each dimensional vector.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, dim2) | aggregate(count())"#
@@ -243,10 +284,12 @@ impl<T, U> Dataset<Schema2<T, U>> {
     }
 
     /// Take a view of this 2-dimensional dataset breaking down the 2nd column.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the breakdown of the final dimension, and use the other dimensions in the dimensional aspect of the widget.
     /// Notice, a breakdown always 'counts' the values.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Breakdown Rendering.. |
     /// (dim1, )     | aggregate(count())    |"#
@@ -258,9 +301,11 @@ impl<T, U> Dataset<Schema2<T, U>> {
 
 impl<T, U> Dataset<Schema3<T, U, f64>> {
     /// Take a reflective view of this 3-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions..       | Rendering
     /// (dim1, dim2, dim3) | aggregate(dim3)"#
@@ -276,9 +321,11 @@ impl<T, U> Dataset<Schema3<T, U, f64>> {
     }
 
     /// Take a regular view of this 3-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, dim2) | aggregate(dim3)"#
@@ -296,9 +343,11 @@ impl<T, U> Dataset<Schema3<T, U, f64>> {
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
 impl<T, U> Dataset<Schema3<T, U, OrderedFloat<f64>>> {
     /// Take a reflective view of this 3-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions..       | Rendering
     /// (dim1, dim2, dim3) | aggregate(dim3)"#
@@ -315,9 +364,11 @@ impl<T, U> Dataset<Schema3<T, U, OrderedFloat<f64>>> {
     }
 
     /// Take a regular view of this 3-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, dim2) | aggregate(dim3)"#
@@ -334,7 +385,12 @@ impl<T, U> Dataset<Schema3<T, U, OrderedFloat<f64>>> {
 }
 
 impl<T, U> Dataset<Schema3<T, U, i64>> {
-    /// ```ignore
+    /// Take a reflective view of this 3-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
+    ///
+    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+    /// ```text
     /// r#"
     /// Dimensions..       | Rendering
     /// (dim1, dim2, dim3) | aggregate(dim3)"#
@@ -350,9 +406,11 @@ impl<T, U> Dataset<Schema3<T, U, i64>> {
     }
 
     /// Take a regular view of this 3-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Rendering
     /// (dim1, dim2) | aggregate(dim3)"#
@@ -369,9 +427,11 @@ impl<T, U> Dataset<Schema3<T, U, i64>> {
 
 impl<T, U, V> Dataset<Schema3<T, U, V>> {
     /// Take a counting view of this 1-dimensional dataset.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// The term 'counting' refers to the fact that we count the occurrences of each dimensional vector.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions..       | Rendering
     /// (dim1, dim2, dim3) | aggregate(count())"#
@@ -387,10 +447,12 @@ impl<T, U, V> Dataset<Schema3<T, U, V>> {
     }
 
     /// Take a view of this 3-dimensional dataset breaking down the 2nd column.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the breakdown of the final dimension, and use the other dimensions in the dimensional aspect of the widget.
     /// Notice, a breakdown always 'counts' the values.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Breakdown Rendering.. |
     /// (dim1, dim3) | aggregate(count())    |"#
@@ -400,10 +462,12 @@ impl<T, U, V> Dataset<Schema3<T, U, V>> {
     }
 
     /// Take a view of this 2-dimensional dataset breaking down the 3rd column.
+    /// Views are rendered differently by different widgets, but
+    /// always have a dimensional component on the left and a rendering component on the right.
     ///
     /// This view will render the breakdown of the final dimension, and use the other dimensions in the dimensional aspect of the widget.
     /// Notice, a breakdown always 'counts' the values.
-    /// ```ignore
+    /// ```text
     /// r#"
     /// Dimensions.. | Breakdown Rendering.. |
     /// (dim1, dim2) | aggregate(count())    |"#
@@ -415,17 +479,19 @@ impl<T, U, V> Dataset<Schema3<T, U, V>> {
 
 impl<S: Schema> Dataset<S> {
     /// Build a dataset based for the provided schema.
-    pub fn builder(schema: S) -> Self {
-        Self {
+    pub fn builder(schema: S) -> DatasetBuilder<S> {
+        DatasetBuilder {
             schema,
             data: Vec::default(),
         }
     }
+}
 
+impl<S: Schema> DatasetBuilder<S> {
     /// Update this dataset with a data point `vector`.
     /// Use this method to add data via mutation.
     ///
-    /// See also: [`Dataset::add`].
+    /// See also: [`DatasetBuilder::add`].
     ///
     /// ### Example
     /// ```
@@ -436,7 +502,8 @@ impl<S: Schema> Dataset<S> {
     /// builder.update((0, ));
     /// builder.update((0, ));
     /// builder.update((1, ));
-    /// let view = builder.counting_view();
+    /// let dataset = builder.build();
+    /// let view = dataset.counting_view();
     ///
     /// let flat = BarChart::new(&view)
     ///     .render(Render::default());
@@ -463,18 +530,19 @@ impl<S: Schema> Dataset<S> {
     /// Add a data point `vector` to this dataset.
     /// Use this method to add via method chaining.
     ///
-    /// See also: [`Dataset::update`].
+    /// See also: [`DatasetBuilder::update`].
     ///
     /// ### Example
     /// ```
     /// use flat::*;
     ///
     /// let schema = Schemas::one("Things");
-    /// let builder = Dataset::builder(schema)
+    /// let dataset = Dataset::builder(schema)
     ///     .add((0, ))
     ///     .add((0, ))
-    ///     .add((1, ));
-    /// let view = builder.counting_view();
+    ///     .add((1, ))
+    ///     .build();
+    /// let view = dataset.counting_view();
     ///
     /// let flat = BarChart::new(&view)
     ///     .render(Render::default());
@@ -497,6 +565,11 @@ impl<S: Schema> Dataset<S> {
     pub fn add(mut self, vector: S::Dimensions) -> Self {
         self.update(vector);
         self
+    }
+
+    pub fn build(self) -> Dataset<S> {
+        let DatasetBuilder { schema, data } = self;
+        Dataset { schema, data }
     }
 }
 
@@ -525,7 +598,11 @@ mod tests {
     #[test]
     fn dataset_cast() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema).add((1,)).add((2,)).add((3,));
+        let dataset = Dataset::builder(schema)
+            .add((1,))
+            .add((2,))
+            .add((3,))
+            .build();
         let dataset_2d: Dataset<Schema2<i64, bool>> =
             dataset.recast(Schemas::two("abc", "is_even"), |i| (i.0, i.0 % 2 == 0));
         assert_eq!(dataset.data.len(), 3);

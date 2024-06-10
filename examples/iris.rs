@@ -6,12 +6,13 @@ use serde::Deserialize;
 fn main() {
     let parameters = Parameters::blarg_parse();
     let json_data: Vec<FlowerJson> = serde_json::from_str(IRIS_JSON).unwrap();
-    let mut dataset = Dataset::builder(FlowerSchema);
+    let mut builder = Dataset::builder(FlowerSchema);
 
     for flower in &json_data {
-        dataset.update(flower.into());
+        builder.update(flower.into());
     }
 
+    let dataset = builder.build();
     bar_chart(&parameters, &dataset);
 
     // match parameters.widget {

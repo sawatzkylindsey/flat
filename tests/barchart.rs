@@ -10,6 +10,7 @@ fn dataset_1d() -> Dataset<Schema1<String>> {
         .add(("tiger".to_string(),))
         .add(("tiger".to_string(),))
         .add(("tiger".to_string(),))
+        .build()
 }
 
 #[test]
@@ -42,6 +43,7 @@ fn dataset_2d() -> Dataset<Schema2<String, u32>> {
         .add(("tiger".to_string(), 1u32))
         .add(("tiger".to_string(), 1u32))
         .add(("tiger".to_string(), 1u32))
+        .build()
 }
 
 #[test]
@@ -276,6 +278,7 @@ fn dataset_3d() -> Dataset<Schema3<String, u32, bool>> {
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false))
+        .build()
 }
 
 #[test]
@@ -680,11 +683,12 @@ length    animal  |false   true |
 #[test]
 fn abbreviate_barchart_1d() {
     let schema = Schemas::one("animal");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add(("whalewhalewhalewhale".to_string(),))
         .add(("sharksharksharkshark".to_string(),))
-        .add(("tigertigertigertiger".to_string(),));
-    let view = builder.counting_view();
+        .add(("tigertigertigertiger".to_string(),))
+        .build();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         widget_config: BarChartConfig {
@@ -706,7 +710,7 @@ whal..  |*"#
 #[test]
 fn abbreviate_barchart_2d() {
     let schema = Schemas::two("animal", "laminaanimal");
-    let builder = Dataset::builder(schema)
+    let dataset = Dataset::builder(schema)
         .add((
             "whalewhalewhalewhale".to_string(),
             "whalewhalewhalewhale".to_string(),
@@ -718,8 +722,9 @@ fn abbreviate_barchart_2d() {
         .add((
             "tigertigertigertiger".to_string(),
             "whalewhalewhalewhale".to_string(),
-        ));
-    let view = builder.counting_view();
+        ))
+        .build();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         widget_config: BarChartConfig {

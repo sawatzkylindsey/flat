@@ -13,11 +13,12 @@ use std::ops::{Add, Sub};
 /// use flat::*;
 ///
 /// let schema = Schemas::one("Things");
-/// let builder = Dataset::builder(schema)
+/// let dataset = Dataset::builder(schema)
 ///     .add((0,))
 ///     .add((0,))
-///     .add((1,));
-/// let view = builder.counting_view();
+///     .add((1,))
+///     .build();
+/// let view = dataset.counting_view();
 /// let flat = Histogram::new(&view, 2)
 ///     .render(Render::default());
 /// assert_eq!(
@@ -378,8 +379,8 @@ mod tests {
     #[test]
     fn empty() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let builder = Dataset::builder(schema);
-        let view = builder.reflective_view();
+        let dataset = Dataset::builder(schema).build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 0);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -392,8 +393,12 @@ abc  |Sum(abc)"#
     #[test]
     fn zero_buckets() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let builder = Dataset::builder(schema).add((1,)).add((2,)).add((3,));
-        let view = builder.reflective_view();
+        let dataset = Dataset::builder(schema)
+            .add((1,))
+            .add((2,))
+            .add((3,))
+            .build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 0);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -407,8 +412,12 @@ abc     |Sum(abc)
     #[test]
     fn one_bucket() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let builder = Dataset::builder(schema).add((1,)).add((2,)).add((3,));
-        let view = builder.reflective_view();
+        let dataset = Dataset::builder(schema)
+            .add((1,))
+            .add((2,))
+            .add((3,))
+            .build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -422,9 +431,8 @@ abc     |Sum(abc)
     #[test]
     fn extra_buckets() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let mut builder = Dataset::builder(schema);
-        builder.update((1,));
-        let view = builder.reflective_view();
+        let dataset = Dataset::builder(schema).add((1,)).build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 2);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -438,9 +446,8 @@ abc     |Sum(abc)
     #[test]
     fn zero() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let mut builder = Dataset::builder(schema);
-        builder.update((0,));
-        let view = builder.reflective_view();
+        let dataset = Dataset::builder(schema).add((0,)).build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -454,8 +461,12 @@ abc     |Sum(abc)
     #[test]
     fn negative_and_positive() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let builder = Dataset::builder(schema).add((-1,)).add((0,)).add((1,));
-        let view = builder.reflective_view();
+        let dataset = Dataset::builder(schema)
+            .add((-1,))
+            .add((0,))
+            .add((1,))
+            .build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -477,7 +488,8 @@ abc      |Sum(abc)
             builder.update((1,));
         }
 
-        let view = builder.reflective_view();
+        let dataset = builder.build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -497,7 +509,8 @@ abc     |Sum(abc)
             builder.update((-1,));
         }
 
-        let view = builder.reflective_view();
+        let dataset = builder.build();
+        let view = dataset.reflective_view();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -511,11 +524,12 @@ abc       |Sum(abc)
     #[test]
     fn view2() {
         let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
-        let builder = Dataset::builder(schema)
+        let dataset = Dataset::builder(schema)
             .add((1, OrderedFloat(0.1)))
             .add((2, OrderedFloat(0.2)))
-            .add((3, OrderedFloat(0.3)));
-        let view = builder.view_2nd();
+            .add((3, OrderedFloat(0.3)))
+            .build();
+        let view = dataset.view_2nd();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -525,7 +539,7 @@ abc     |Sum(def)
 [1, 3]  |*"#
         );
 
-        let view = builder.counting_view();
+        let view = dataset.counting_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -535,7 +549,7 @@ abc     |Sum(Count)
 [1, 3]  |***"#
         );
 
-        let view = builder.breakdown_2nd();
+        let view = dataset.breakdown_2nd();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -550,8 +564,12 @@ abc     |0.1 0.2 0.3|
     #[test]
     fn breakdown() {
         let schema = Schemas::two("abc", "something long");
-        let builder = Dataset::builder(schema).add((1, 2)).add((2, 3)).add((3, 4));
-        let view = builder.breakdown_2nd();
+        let dataset = Dataset::builder(schema)
+            .add((1, 2))
+            .add((2, 3))
+            .add((3, 4))
+            .build();
+        let view = dataset.breakdown_2nd();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
