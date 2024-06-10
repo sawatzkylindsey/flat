@@ -10,7 +10,7 @@ fn abbreviate_barchart_breakdown_hint1() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -37,7 +37,7 @@ fn abbreviate_barchart_breakdown_hint15() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 15,
         abbreviate_breakdown: true,
@@ -64,7 +64,7 @@ fn abbreviate_barchart_breakdown_hint30() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 30,
         abbreviate_breakdown: true,
@@ -91,7 +91,7 @@ fn abbreviate_barchart_breakdown_hint180() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 180,
         abbreviate_breakdown: true,
@@ -124,7 +124,7 @@ fn barchart_3d_breakdown2_abbreviate() {
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false));
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -158,7 +158,7 @@ fn barchart_3d_breakdown3_abbreviate() {
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false));
-    let view = builder.view_breakdown3();
+    let view = builder.breakdown_3rd();
     let flat = BarChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -189,7 +189,7 @@ fn histogram_breakdown_abbreviate() {
         }
     }
 
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -219,7 +219,7 @@ fn histogram_breakdown_abbreviate_hint1() {
         }
     }
 
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -250,7 +250,7 @@ fn histogram_breakdown_abbreviate_hint15() {
         }
     }
 
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 15,
         abbreviate_breakdown: true,
@@ -281,7 +281,7 @@ fn histogram_breakdown_abbreviate_hint30() {
         }
     }
 
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 30,
         abbreviate_breakdown: true,
@@ -310,7 +310,7 @@ fn abbreviate_barchart_breakdown_separation() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()));
-    let view = builder.view_breakdown2();
+    let view = builder.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,

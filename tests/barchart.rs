@@ -15,7 +15,7 @@ fn dataset_1d() -> Dataset<Schema1<String>> {
 #[test]
 fn barchart_1d() {
     let dataset = dataset_1d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -47,7 +47,7 @@ fn dataset_2d() -> Dataset<Schema2<String, u32>> {
 #[test]
 fn barchart_2d() {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -71,7 +71,7 @@ length    animal  |Sum(Count)
 // #[case(22)]
 fn barchart_2d_squish(#[case] width_hint: usize) {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         width_hint,
         ..Render::default()
@@ -92,7 +92,7 @@ length    animal  |Sum(Count)
 #[test]
 fn barchart_2d_show_sum() {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         ..Render::default()
@@ -113,7 +113,7 @@ length    animal Sum  |Sum(Count)
 #[test]
 fn barchart_2d_show_sum_widget() {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         widget_config: {
             BarChartConfig {
@@ -139,7 +139,7 @@ length Sum   animal  |Sum(Count)
 #[test]
 fn barchart_2d_show_sum_both() {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         widget_config: {
@@ -166,7 +166,7 @@ length Sum   animal Sum  |Sum(Count)
 #[test]
 fn barchart_2d_show_average() {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -188,7 +188,7 @@ length    animal Average  |Average(Count)
 #[test]
 fn barchart_2d_show_average_widget() {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         widget_config: {
@@ -215,7 +215,7 @@ length Average   animal  |Average(Count)
 #[test]
 fn barchart_2d_show_average_both() {
     let dataset = dataset_2d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -243,7 +243,7 @@ length Average   animal Average  |Average(Count)
 #[test]
 fn barchart_2d_breakdown() {
     let dataset = dataset_2d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -281,7 +281,7 @@ fn dataset_3d() -> Dataset<Schema3<String, u32, bool>> {
 #[test]
 fn barchart_3d() {
     let dataset = dataset_3d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -300,7 +300,7 @@ true    - 4       - whale   |*"#
 #[test]
 fn barchart_3d_show_sum() {
     let dataset = dataset_3d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         ..Render::default()
@@ -322,7 +322,7 @@ true    - 4       - whale  [ 1]  |*"#
 #[test]
 fn barchart_3d_show_sum_widget() {
     let dataset = dataset_3d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         widget_config: {
             BarChartConfig {
@@ -349,7 +349,7 @@ true   [1] - 4      [1] - whale   |*"#
 #[test]
 fn barchart_3d_show_sum_both() {
     let dataset = dataset_3d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         widget_config: {
@@ -377,7 +377,7 @@ true   [1] - 4      [1] - whale  [ 1]  |*"#
 #[test]
 fn barchart_3d_show_average() {
     let dataset = dataset_3d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -400,7 +400,7 @@ true    - 4       - whale  [1]      |*"#
 #[test]
 fn barchart_3d_show_average_widget() {
     let dataset = dataset_3d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         widget_config: {
@@ -428,7 +428,7 @@ true   [1]     - 4      [1]     - whale   |*"#
 #[test]
 fn barchart_3d_show_average_both() {
     let dataset = dataset_3d();
-    let view = dataset.view_count();
+    let view = dataset.counting_view();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -457,7 +457,7 @@ true   [1]     - 4      [1]     - whale  [1]      |*"#
 #[test]
 fn barchart_3d_breakdown2() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -489,7 +489,7 @@ true    - whale   |         *          |"#
 // #[case(31)]
 fn barchart_3d_breakdown2_squish(#[case] width_hint: usize) {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint,
         ..Render::default()
@@ -510,7 +510,7 @@ true    - whale   |        |"#
 #[test]
 fn barchart_3d_breakdown2_show_sum() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         ..Render::default()
@@ -531,7 +531,7 @@ true    - whale  [ 1]  |         *          |"#
 #[test]
 fn barchart_3d_breakdown2_show_sum_widget() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         widget_config: {
             BarChartConfig {
@@ -557,7 +557,7 @@ true   [1] - whale   |         *          |"#
 #[test]
 fn barchart_3d_breakdown2_show_sum_both() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: true,
         widget_config: {
@@ -584,7 +584,7 @@ true   [1] - whale  [ 1]  |         *          |"#
 #[test]
 fn barchart_3d_breakdown2_show_average() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -606,7 +606,7 @@ true    - whale  [0.3]    |  *  |"#
 #[test]
 fn barchart_3d_breakdown2_show_average_widget() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         widget_config: {
@@ -633,7 +633,7 @@ true   [1]     - whale   |  *  |"#
 #[test]
 fn barchart_3d_breakdown2_show_average_both() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown2();
+    let view = dataset.breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -661,7 +661,7 @@ true   [1]     - whale  [0.3]    |  *  |"#
 #[test]
 fn barchart_3d_breakdown3() {
     let dataset = dataset_3d();
-    let view = dataset.view_breakdown3();
+    let view = dataset.breakdown_3rd();
     let flat = BarChart::new(&view).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -684,7 +684,7 @@ fn abbreviate_barchart_1d() {
         .add(("whalewhalewhalewhale".to_string(),))
         .add(("sharksharksharkshark".to_string(),))
         .add(("tigertigertigertiger".to_string(),));
-    let view = builder.view_count();
+    let view = builder.counting_view();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         widget_config: BarChartConfig {
@@ -719,7 +719,7 @@ fn abbreviate_barchart_2d() {
             "tigertigertigertiger".to_string(),
             "whalewhalewhalewhale".to_string(),
         ));
-    let view = builder.view_count();
+    let view = builder.counting_view();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         widget_config: BarChartConfig {

@@ -3,14 +3,14 @@ use flat::{BarChart, BarChartConfig, Dataset, Render, Schemas};
 
 fn main() {
     let parameters = Parameters::blarg_parse();
-    let schema = Schemas::three("City", "Quadrant", "Green Rating", "moot");
+    let schema = Schemas::three("City", "Quadrant", "Green Rating");
     let mut builder = Dataset::builder(schema);
 
     for house in generate_dataset() {
-        builder.update((house.0, house.1, house.2), 1);
+        builder.update((house.0, house.1, house.2));
     }
 
-    let view = builder.view_breakdown3();
+    let view = builder.breakdown_3rd();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: parameters.verbose,
         widget_config: BarChartConfig {

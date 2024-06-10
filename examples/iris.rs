@@ -1,4 +1,4 @@
-use blarg::{derive::*, prelude::*, CommandLineParser, Parameter, Scalar, Switch};
+use blarg::{derive::*, prelude::*, CommandLineParser, Parameter, Switch};
 use flat::*;
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
@@ -33,6 +33,7 @@ fn main() {
 }
 
 fn bar_chart(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
+    // dataset.cast(Schemas::two("Species", "Sepal Length"), |flower| (flower.species.clone(), flower.sepal_length.clone()));
     // let ds: &Dataset<Schema2<Species, SepalLength>> = dataset.downcast_2d();
     // let view = View2::new(
     //     ds,
@@ -40,12 +41,16 @@ fn bar_chart(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
     //     // Box::new(|flower: &Flower| flower.sepal_length.0 .0),
     // );
     // let view = SepalViewX { dataset };
-    let view = FlowerView2D {
-        dataset,
-        extractor: Box::new(|flower| flower.sepal_length.0 .0),
-        t: Box::new(|flower| flower.species.0),
-        u: Box::new(|flower| flower.sepal_width.0 .0),
-    };
+    // let view = FlowerView2D {
+    //     dataset,
+    //     extractor: Box::new(|flower| flower.sepal_length.0 .0),
+    //     t: Box::new(|flower| flower.species.0),
+    //     u: Box::new(|flower| flower.sepal_width.0 .0),
+    // };
+    let ds = dataset.recast(Schemas::two("Species", "Sepal Length"), |flower| {
+        (flower.species.clone(), flower.sepal_length.0 .0)
+    });
+    let view = ds.view_2nd();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: parameters.verbose,
@@ -184,196 +189,196 @@ impl Schema for FlowerSchema {
     type Dimensions = Flower;
 }
 
-struct SpeciesView<'a> {
-    dataset: &'a Dataset<FlowerSchema>,
-}
-
-impl<'a> View<FlowerSchema> for SpeciesView<'a> {
-    type Dimensions = Flower;
-    type PrimaryDimension = Species;
-    type BreakdownDimension = Nothing;
-    type SortDimensions = Species;
-
-    fn dataset(&self) -> &Dataset<FlowerSchema> {
-        &self.dataset
-    }
-
-    fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-        1f64
-    }
-
-    fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-        dims.species.clone()
-    }
-
-    fn breakdown_dim(
-        &self,
-        dims: &<FlowerSchema as Schema>::Dimensions,
-    ) -> Self::BreakdownDimension {
-        Nothing
-    }
-
-    fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-        dims.species.clone()
-    }
-
-    fn headers(&self) -> Vec<String> {
-        vec!["Species".to_string()]
-    }
-
-    fn value_header(&self) -> String {
-        "dooo".to_string()
-    }
-
-    fn is_breakdown(&self) -> bool {
-        false
-    }
-}
-
-struct SepalView<'a> {
-    dataset: &'a Dataset<FlowerSchema>,
-}
-
-impl<'a> View<FlowerSchema> for SepalView<'a> {
-    type Dimensions = Flower;
-    type PrimaryDimension = Species;
-    type BreakdownDimension = Nothing;
-    type SortDimensions = (Species, SepalWidth);
-
-    fn dataset(&self) -> &Dataset<FlowerSchema> {
-        &self.dataset
-    }
-
-    fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-        dims.sepal_length.0 .0
-    }
-
-    fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-        dims.species.clone()
-        // (dims.sepal_length.clone(), dims.sepal_width.clone())
-    }
-
-    fn breakdown_dim(
-        &self,
-        dims: &<FlowerSchema as Schema>::Dimensions,
-    ) -> Self::BreakdownDimension {
-        Nothing
-    }
-
-    fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-        (dims.species.clone(), dims.sepal_width.clone())
-    }
-
-    fn headers(&self) -> Vec<String> {
-        vec!["Species".to_string(), "Sepal Width".to_string()]
-    }
-
-    fn value_header(&self) -> String {
-        "Sepal Length".to_string()
-    }
-
-    fn is_breakdown(&self) -> bool {
-        false
-    }
-}
-
-struct SepalViewX<'a> {
-    dataset: &'a Dataset<FlowerSchema>,
-}
-
-impl<'a> View<FlowerSchema> for SepalViewX<'a> {
-    type Dimensions = Flower;
-    type PrimaryDimension = Species;
-    type BreakdownDimension = Nothing;
-    type SortDimensions = Species;
-
-    fn dataset(&self) -> &Dataset<FlowerSchema> {
-        &self.dataset
-    }
-
-    fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-        dims.sepal_length.0 .0
-    }
-
-    fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-        dims.species.clone()
-        // (dims.sepal_length.clone(), dims.sepal_width.clone())
-    }
-
-    fn breakdown_dim(
-        &self,
-        dims: &<FlowerSchema as Schema>::Dimensions,
-    ) -> Self::BreakdownDimension {
-        Nothing
-    }
-
-    fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-        dims.species.clone()
-    }
-
-    fn headers(&self) -> Vec<String> {
-        vec!["Species".to_string()]
-    }
-
-    fn value_header(&self) -> String {
-        "Sepal Length".to_string()
-    }
-
-    fn is_breakdown(&self) -> bool {
-        false
-    }
-}
-
-struct FlowerView2D<'a, T, U> {
-    dataset: &'a Dataset<FlowerSchema>,
-    extractor: Box<dyn Fn(&Flower) -> f64>,
-    t: Box<dyn Fn(&Flower) -> T>,
-    u: Box<dyn Fn(&Flower) -> U>,
-}
-
-impl<'a, T, U> View<FlowerSchema> for FlowerView2D<'a, T, U> {
-    type Dimensions = Flower;
-    type PrimaryDimension = T;
-    type BreakdownDimension = Nothing;
-    type SortDimensions = (T, U);
-
-    fn dataset(&self) -> &Dataset<FlowerSchema> {
-        &self.dataset
-    }
-
-    fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-        (self.extractor)(dims)
-    }
-
-    fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-        (self.t)(dims)
-        // dims.species.clone()
-        // (dims.sepal_length.clone(), dims.sepal_width.clone())
-    }
-
-    fn breakdown_dim(
-        &self,
-        dims: &<FlowerSchema as Schema>::Dimensions,
-    ) -> Self::BreakdownDimension {
-        Nothing
-    }
-
-    fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-        ((self.t)(dims), (self.u)(dims))
-    }
-
-    fn headers(&self) -> Vec<String> {
-        vec!["t".to_string(), "u".to_string()]
-    }
-
-    fn value_header(&self) -> String {
-        "xyz".to_string()
-    }
-
-    fn is_breakdown(&self) -> bool {
-        false
-    }
-}
+// struct SpeciesView<'a> {
+//     dataset: &'a Dataset<FlowerSchema>,
+// }
+//
+// impl<'a> View<FlowerSchema> for SpeciesView<'a> {
+//     type Dimensions = Flower;
+//     type PrimaryDimension = Species;
+//     type BreakdownDimension = Nothing;
+//     type SortDimensions = Species;
+//
+//     fn data(&self) -> &Dataset<FlowerSchema> {
+//         &self.dataset
+//     }
+//
+//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
+//         1f64
+//     }
+//
+//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
+//         dims.species.clone()
+//     }
+//
+//     fn breakdown_dim(
+//         &self,
+//         dims: &<FlowerSchema as Schema>::Dimensions,
+//     ) -> Self::BreakdownDimension {
+//         Nothing
+//     }
+//
+//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
+//         dims.species.clone()
+//     }
+//
+//     fn headers(&self) -> Vec<String> {
+//         vec!["Species".to_string()]
+//     }
+//
+//     fn value_header(&self) -> String {
+//         "dooo".to_string()
+//     }
+//
+//     fn is_breakdown(&self) -> bool {
+//         false
+//     }
+// }
+//
+// struct SepalView<'a> {
+//     dataset: &'a Dataset<FlowerSchema>,
+// }
+//
+// impl<'a> View<FlowerSchema> for SepalView<'a> {
+//     type Dimensions = Flower;
+//     type PrimaryDimension = Species;
+//     type BreakdownDimension = Nothing;
+//     type SortDimensions = (Species, SepalWidth);
+//
+//     fn data(&self) -> &Dataset<FlowerSchema> {
+//         &self.dataset
+//     }
+//
+//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
+//         dims.sepal_length.0 .0
+//     }
+//
+//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
+//         dims.species.clone()
+//         // (dims.sepal_length.clone(), dims.sepal_width.clone())
+//     }
+//
+//     fn breakdown_dim(
+//         &self,
+//         dims: &<FlowerSchema as Schema>::Dimensions,
+//     ) -> Self::BreakdownDimension {
+//         Nothing
+//     }
+//
+//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
+//         (dims.species.clone(), dims.sepal_width.clone())
+//     }
+//
+//     fn headers(&self) -> Vec<String> {
+//         vec!["Species".to_string(), "Sepal Width".to_string()]
+//     }
+//
+//     fn value_header(&self) -> String {
+//         "Sepal Length".to_string()
+//     }
+//
+//     fn is_breakdown(&self) -> bool {
+//         false
+//     }
+// }
+//
+// struct SepalViewX<'a> {
+//     dataset: &'a Dataset<FlowerSchema>,
+// }
+//
+// impl<'a> View<FlowerSchema> for SepalViewX<'a> {
+//     type Dimensions = Flower;
+//     type PrimaryDimension = Species;
+//     type BreakdownDimension = Nothing;
+//     type SortDimensions = Species;
+//
+//     fn data(&self) -> &Dataset<FlowerSchema> {
+//         &self.dataset
+//     }
+//
+//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
+//         dims.sepal_length.0 .0
+//     }
+//
+//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
+//         dims.species.clone()
+//         // (dims.sepal_length.clone(), dims.sepal_width.clone())
+//     }
+//
+//     fn breakdown_dim(
+//         &self,
+//         dims: &<FlowerSchema as Schema>::Dimensions,
+//     ) -> Self::BreakdownDimension {
+//         Nothing
+//     }
+//
+//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
+//         dims.species.clone()
+//     }
+//
+//     fn headers(&self) -> Vec<String> {
+//         vec!["Species".to_string()]
+//     }
+//
+//     fn value_header(&self) -> String {
+//         "Sepal Length".to_string()
+//     }
+//
+//     fn is_breakdown(&self) -> bool {
+//         false
+//     }
+// }
+//
+// struct FlowerView2D<'a, T, U> {
+//     dataset: &'a Dataset<FlowerSchema>,
+//     extractor: Box<dyn Fn(&Flower) -> f64>,
+//     t: Box<dyn Fn(&Flower) -> T>,
+//     u: Box<dyn Fn(&Flower) -> U>,
+// }
+//
+// impl<'a, T, U> View<FlowerSchema> for FlowerView2D<'a, T, U> {
+//     type Dimensions = Flower;
+//     type PrimaryDimension = T;
+//     type BreakdownDimension = Nothing;
+//     type SortDimensions = (T, U);
+//
+//     fn data(&self) -> &Dataset<FlowerSchema> {
+//         &self.dataset
+//     }
+//
+//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
+//         (self.extractor)(dims)
+//     }
+//
+//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
+//         (self.t)(dims)
+//         // dims.species.clone()
+//         // (dims.sepal_length.clone(), dims.sepal_width.clone())
+//     }
+//
+//     fn breakdown_dim(
+//         &self,
+//         dims: &<FlowerSchema as Schema>::Dimensions,
+//     ) -> Self::BreakdownDimension {
+//         Nothing
+//     }
+//
+//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
+//         ((self.t)(dims), (self.u)(dims))
+//     }
+//
+//     fn headers(&self) -> Vec<String> {
+//         vec!["t".to_string(), "u".to_string()]
+//     }
+//
+//     fn value_header(&self) -> String {
+//         "xyz".to_string()
+//     }
+//
+//     fn is_breakdown(&self) -> bool {
+//         false
+//     }
+// }
 
 #[derive(Debug, Deserialize)]
 struct FlowerJson {

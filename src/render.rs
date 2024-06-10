@@ -36,16 +36,18 @@ pub struct Render<C> {
     pub width_hint: usize,
     /// Whether to show the aggregated result for the *primary* dimension of the dataset.
     /// While the *rendered* data in `flat` uses a relative representation, this option extends the widget to show the absolute values of the data.
-    ///
-    /// | Show Aggregate | Rendering of Aggregate |
-    /// |-|-|
-    /// | aggregate([1, 2, 3, 4]) | aggregate([1, 2, 3, 4]) |
+    /// ```ignore
+    /// r#"
+    /// Show Aggregate          | Rendering of Aggregate
+    /// aggregate([1, 2, 3, 4]) | aggregate([1, 2, 3, 4])"#
+    /// ```
     ///
     /// In the case of a breakdown, this represents the aggregate applied to the breakdown aggregates.
-    ///
-    /// | Show Aggregate | Rendering of Aggregate of A | Rendering of Aggregate of B |
-    /// |-|-|-|
-    /// | aggregate([aggregate([1, 2, 3]), aggregate(\[4\])]) | aggregate([1, 2, 3]) | aggregate(\[4\]) |
+    /// ```ignore
+    /// r#"
+    /// Show Aggregate                                      | Rendering of Aggregate of A | Rendering of Aggregate of B |
+    /// aggregate([aggregate([1, 2, 3]), aggregate(\[4\])]) | aggregate([1, 2, 3])        | aggregate(\[4\])            |"#
+    /// ```
     ///
     /// Default: `false`.
     pub show_aggregate: bool,
@@ -489,7 +491,7 @@ impl Grid {
 ///     .add(("tiger".to_string(), ))
 ///     .add(("tiger".to_string(), ))
 ///     .add(("tiger".to_string(), ));
-/// let view = builder.view_count();
+/// let view = builder.counting_view();
 /// let flat = BarChart::new(&view).render(Render::default());
 /// assert_eq!(
 ///     format!("\n{}", flat.to_string()),

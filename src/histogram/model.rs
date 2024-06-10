@@ -17,7 +17,7 @@ use std::ops::{Add, Sub};
 ///     .add((0,))
 ///     .add((0,))
 ///     .add((1,));
-/// let view = builder.view_count();
+/// let view = builder.counting_view();
 /// let flat = Histogram::new(&view, 2)
 ///     .render(Render::default());
 /// assert_eq!(
@@ -73,13 +73,13 @@ where
 
     /// Generate the flat rendering for this histogram.
     pub fn render(self, config: Render<HistogramConfig>) -> Flat {
-        let bin_ranges: Vec<Bounds<V::PrimaryDimension>> = if self.view.dataset().data.is_empty() {
+        let bin_ranges: Vec<Bounds<V::PrimaryDimension>> = if self.view.data().is_empty() {
             Vec::default()
         } else {
             let mut min = None;
             let mut max = None;
 
-            for dims in self.view.dataset().data.iter() {
+            for dims in self.view.data() {
                 let primary_dim = self.view.primary_dim(dims);
 
                 let update_min = match &min {
@@ -134,7 +134,7 @@ where
             (0..self.bins).map(|_| HashMap::default()).collect();
         let mut sort_breakdowns: Vec<V::BreakdownDimension> = Vec::default();
 
-        for dims in self.view.dataset().data.iter() {
+        for dims in self.view.data() {
             let value = self.view.value(dims);
             let primary_dim = self.view.primary_dim(&dims);
             let breakdown_dim = self.view.breakdown_dim(&dims);
@@ -373,12 +373,13 @@ impl<T: PartialOrd> Bound<T> {
 mod tests {
     use super::*;
     use crate::{Dataset, Histogram, Schema1, Schema2, Schemas};
+    use ordered_float::OrderedFloat;
 
     #[test]
     fn empty() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let builder = Dataset::builder(schema);
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 0);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -392,7 +393,7 @@ abc  |Sum(abc)"#
     fn zero_buckets() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let builder = Dataset::builder(schema).add((1,)).add((2,)).add((3,));
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 0);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -407,7 +408,7 @@ abc     |Sum(abc)
     fn one_bucket() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let builder = Dataset::builder(schema).add((1,)).add((2,)).add((3,));
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -423,7 +424,7 @@ abc     |Sum(abc)
         let schema: Schema1<i64> = Schemas::one("abc");
         let mut builder = Dataset::builder(schema);
         builder.update((1,));
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 2);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -439,7 +440,7 @@ abc     |Sum(abc)
         let schema: Schema1<i64> = Schemas::one("abc");
         let mut builder = Dataset::builder(schema);
         builder.update((0,));
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -454,7 +455,7 @@ abc     |Sum(abc)
     fn negative_and_positive() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let builder = Dataset::builder(schema).add((-1,)).add((0,)).add((1,));
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -476,7 +477,7 @@ abc      |Sum(abc)
             builder.update((1,));
         }
 
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -496,7 +497,7 @@ abc     |Sum(abc)
             builder.update((-1,));
         }
 
-        let view = builder.view();
+        let view = builder.reflective_view();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -509,12 +510,12 @@ abc       |Sum(abc)
 
     #[test]
     fn view2() {
-        let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
+        let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
         let builder = Dataset::builder(schema)
-            .add((1, 0.1))
-            .add((2, 0.2))
-            .add((3, 0.3));
-        let view = builder.view();
+            .add((1, OrderedFloat(0.1)))
+            .add((2, OrderedFloat(0.2)))
+            .add((3, OrderedFloat(0.3)));
+        let view = builder.view_2nd();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -524,14 +525,25 @@ abc     |Sum(def)
 [1, 3]  |*"#
         );
 
-        let view = builder.reverse_view();
+        let view = builder.counting_view();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-def         |Sum(abc)
-[0.1, 0.3]  |******"#
+abc     |Sum(Count)
+[1, 3]  |***"#
+        );
+
+        let view = builder.breakdown_2nd();
+        let histogram = Histogram::new(&view, 1);
+        let flat = histogram.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+         Sum(Breakdown(def))
+abc     |0.1 0.2 0.3|
+[1, 3]  | *   *   * |"#
         );
     }
 
@@ -539,7 +551,7 @@ def         |Sum(abc)
     fn breakdown() {
         let schema = Schemas::two("abc", "something long");
         let builder = Dataset::builder(schema).add((1, 2)).add((2, 3)).add((3, 4));
-        let view = builder.view_breakdown2();
+        let view = builder.breakdown_2nd();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
