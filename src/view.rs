@@ -1,6 +1,9 @@
 use crate::{Dataset, Dimensions, Nothing, Schema, Schema1, Schema2, Schema3};
 use std::fmt::Display;
 use std::hash::Hash;
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use crate::Render;
 
 /// Trait which defines how to render a [`Dataset`] across different [`Schema`]s.
 /// Consumers may choose to implement this trait to provide custom views over datasets.

@@ -29,7 +29,7 @@ length                    |Sum(length)
 
 #[test]
 fn histogram_u64() {
-    let schema = Schemas::one("length");
+    let schema: Schema1<i64> = Schemas::one("length");
     let mut builder = Dataset::builder(schema);
 
     for i in 0..10 {

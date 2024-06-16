@@ -31,25 +31,47 @@ pub trait Binnable: PartialEq + PartialOrd + Add + Sub + Sized {
     fn divide(&self, rhs: usize) -> Self;
 }
 
-impl Binnable for f64 {
-    fn multiply(&self, rhs: usize) -> Self {
-        self * (rhs as f64)
-    }
+macro_rules! impl_binnable {
+    ($T:ty) => {
+        impl Binnable for $T {
+            fn multiply(&self, rhs: usize) -> Self {
+                self * (rhs as $T)
+            }
 
-    fn divide(&self, rhs: usize) -> Self {
-        self / (rhs as f64)
-    }
+            fn divide(&self, rhs: usize) -> Self {
+                self / (rhs as $T)
+            }
+        }
+    };
 }
 
-impl Binnable for i64 {
-    fn multiply(&self, rhs: usize) -> Self {
-        (*self as f64 * (rhs as f64)).ceil() as i64
-    }
+impl_binnable!(f64);
+impl_binnable!(f32);
 
-    fn divide(&self, rhs: usize) -> Self {
-        (*self as f64 / (rhs as f64)).ceil() as i64
-    }
+macro_rules! impl_ceil_binnable {
+    ($T:ty) => {
+        impl Binnable for $T {
+            fn multiply(&self, rhs: usize) -> Self {
+                (*self as f64 * (rhs as f64)).ceil() as $T
+            }
+
+            fn divide(&self, rhs: usize) -> Self {
+                (*self as f64 / (rhs as f64)).ceil() as $T
+            }
+        }
+    };
 }
+
+impl_ceil_binnable!(isize);
+impl_ceil_binnable!(i64);
+impl_ceil_binnable!(i32);
+impl_ceil_binnable!(i16);
+impl_ceil_binnable!(i8);
+impl_ceil_binnable!(usize);
+impl_ceil_binnable!(u64);
+impl_ceil_binnable!(u32);
+impl_ceil_binnable!(u16);
+impl_ceil_binnable!(u8);
 
 #[cfg(test)]
 mod tests {

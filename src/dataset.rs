@@ -2,6 +2,9 @@ use crate::{
     Schema, Schema1, Schema2, Schema3, View1Full, View2Breakdown2, View2Full, View2Regular,
     View3Breakdown2, View3Breakdown3, View3Full, View3Regular,
 };
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::View;
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
 use ordered_float::OrderedFloat;
 
@@ -61,72 +64,73 @@ impl<'a, S: Schema> Dataset<S> {
 // impl<T: Deref<Target = f64>> Dataset<Schema1<T>> {
 // impl<T: Into<f64> + Clone> Dataset<Schema1<T>> {
 
-impl Dataset<Schema1<f64>> {
-    /// Take a reflective view of this 1-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, )     | aggregate(dim1)"#
-    /// ```
-    pub fn reflective_view(&self) -> View1Full<Schema1<f64>> {
-        let extractor: Box<dyn Fn(&<Schema1<f64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.0);
-        View1Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_0.clone(),
+macro_rules! impl_schema1_view {
+    ($T:ty, $attrs:meta) => {
+        #[$attrs]
+        #[allow(rustdoc::broken_intra_doc_links)]
+        impl Dataset<Schema1<$T>> {
+            /// Take a reflective view of this 1-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a dimensional component on the left and a rendering component on the right.
+            ///
+            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+            /// ```text
+            /// r#"
+            /// Dimensions.. | Rendering
+            /// (dim1, )     | aggregate(dim1)"#
+            /// ```
+            ///
+            /// Note, implemented for all numeric primitives.
+            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
+            pub fn reflective_view(&self) -> View1Full<Schema1<$T>> {
+                let extractor: Box<dyn Fn(&<Schema1<$T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.0 as f64);
+                View1Full {
+                    dataset: &self,
+                    extractor,
+                    value_header: self.schema.dimension_0.clone(),
+                }
+            }
         }
-    }
+    };
 }
 
-impl Dataset<Schema1<i64>> {
-    /// Take a reflective view of this 1-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, )     | aggregate(dim1)"#
-    /// ```
-    pub fn reflective_view(&self) -> View1Full<Schema1<i64>> {
-        let extractor: Box<dyn Fn(&<Schema1<i64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.0 as f64);
-        View1Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_0.clone(),
+impl_schema1_view!(f64, doc());
+impl_schema1_view!(f32, doc(hidden));
+impl_schema1_view!(isize, doc(hidden));
+impl_schema1_view!(i128, doc(hidden));
+impl_schema1_view!(i64, doc(hidden));
+impl_schema1_view!(i32, doc(hidden));
+impl_schema1_view!(i16, doc(hidden));
+impl_schema1_view!(i8, doc(hidden));
+impl_schema1_view!(usize, doc(hidden));
+impl_schema1_view!(u128, doc(hidden));
+impl_schema1_view!(u64, doc(hidden));
+impl_schema1_view!(u32, doc(hidden));
+impl_schema1_view!(u16, doc(hidden));
+impl_schema1_view!(u8, doc(hidden));
+
+#[cfg(any(feature = "impls_ordered_float", feature = "all"))]
+macro_rules! impl_schema1_view_smart_pointer {
+    ($T:ty) => {
+        impl Dataset<Schema1<$T>> {
+            pub fn reflective_view(&self) -> View1Full<Schema1<$T>> {
+                let extractor: Box<dyn Fn(&<Schema1<$T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| (*d.0) as f64);
+                View1Full {
+                    dataset: &self,
+                    extractor,
+                    value_header: self.schema.dimension_0.clone(),
+                }
+            }
         }
-    }
+    };
 }
 
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
-impl Dataset<Schema1<OrderedFloat<f64>>> {
-    /// Take a reflective view of this 1-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, )     | aggregate(dim1)"#
-    /// ```
-    pub fn reflective_view(&self) -> View1Full<Schema1<OrderedFloat<f64>>> {
-        let extractor: Box<dyn Fn(&<Schema1<OrderedFloat<f64>> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| *d.0);
-        View1Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_0.clone(),
-        }
-    }
-}
+impl_schema1_view_smart_pointer!(OrderedFloat<f64>);
+#[cfg(any(feature = "impls_ordered_float", feature = "all"))]
+impl_schema1_view_smart_pointer!(OrderedFloat<f32>);
 
 impl<T> Dataset<Schema1<T>> {
     /// Take a counting view of this 1-dimensional dataset.
@@ -149,129 +153,130 @@ impl<T> Dataset<Schema1<T>> {
     }
 }
 
-impl<T> Dataset<Schema2<T, f64>> {
-    /// Take a reflective view of this 2-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, dim2) | aggregate(dim2)"#
-    /// ```
-    pub fn reflective_view(&self) -> View2Full<Schema2<T, f64>> {
-        let extractor: Box<dyn Fn(&<Schema2<T, f64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.1);
-        View2Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_1.clone(),
-        }
-    }
+macro_rules! impl_schema2_view {
+    ($T:ty, $attrs:meta) => {
+        #[$attrs]
+        #[allow(rustdoc::broken_intra_doc_links)]
+        impl<T> Dataset<Schema2<T, $T>> {
+            /// Take a reflective view of this 2-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a dimensional component on the left and a rendering component on the right.
+            ///
+            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+            /// ```text
+            /// r#"
+            /// Dimensions.. | Rendering
+            /// (dim1, dim2) | aggregate(dim2)"#
+            /// ```
+            ///
+            /// Note, implemented for all numeric primitives.
+            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
+            pub fn reflective_view(&self) -> View2Full<Schema2<T, $T>> {
+                let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.1 as f64);
+                View2Full {
+                    dataset: &self,
+                    extractor,
+                    value_header: self.schema.dimension_1.clone(),
+                }
+            }
 
-    /// Take a regular view of this 2-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, )     | aggregate(dim2)"#
-    /// ```
-    pub fn view_2nd(&self) -> View2Regular<Schema2<T, f64>> {
-        let extractor: Box<dyn Fn(&<Schema2<T, f64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.1);
-        View2Regular {
-            dataset: &self,
-            extractor,
+            /// Take a regular view of this 2-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a dimensional component on the left and a rendering component on the right.
+            ///
+            /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
+            /// ```text
+            /// r#"
+            /// Dimensions.. | Rendering
+            /// (dim1, )     | aggregate(dim2)"#
+            /// ```
+            ///
+            /// Note, implemented for all numeric primitives.
+            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
+            pub fn view_2nd(&self) -> View2Regular<Schema2<T, $T>> {
+                let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.1 as f64);
+                View2Regular {
+                    dataset: &self,
+                    extractor,
+                }
+            }
         }
-    }
+    };
+}
+
+impl_schema2_view!(f64, doc());
+impl_schema2_view!(f32, doc(hidden));
+impl_schema2_view!(isize, doc(hidden));
+impl_schema2_view!(i128, doc(hidden));
+impl_schema2_view!(i64, doc(hidden));
+impl_schema2_view!(i32, doc(hidden));
+impl_schema2_view!(i16, doc(hidden));
+impl_schema2_view!(i8, doc(hidden));
+impl_schema2_view!(usize, doc(hidden));
+impl_schema2_view!(u128, doc(hidden));
+impl_schema2_view!(u64, doc(hidden));
+impl_schema2_view!(u32, doc(hidden));
+impl_schema2_view!(u16, doc(hidden));
+impl_schema2_view!(u8, doc(hidden));
+
+#[cfg(any(feature = "impls_ordered_float", feature = "all"))]
+macro_rules! impl_schema2_view_smart_pointer {
+    ($T:ty) => {
+        impl<T> Dataset<Schema2<T, $T>> {
+            /// Take a reflective view of this 2-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a dimensional component on the left and a rendering component on the right.
+            ///
+            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+            /// ```text
+            /// r#"
+            /// Dimensions.. | Rendering
+            /// (dim1, dim2) | aggregate(dim2)"#
+            /// ```
+            ///
+            /// Note, implemented for all numeric primitives.
+            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
+            pub fn reflective_view(&self) -> View2Full<Schema2<T, $T>> {
+                let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| (*d.1) as f64);
+                View2Full {
+                    dataset: &self,
+                    extractor,
+                    value_header: self.schema.dimension_0.clone(),
+                }
+            }
+
+            /// Take a regular view of this 2-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a dimensional component on the left and a rendering component on the right.
+            ///
+            /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
+            /// ```text
+            /// r#"
+            /// Dimensions.. | Rendering
+            /// (dim1, )     | aggregate(dim2)"#
+            /// ```
+            ///
+            /// Note, implemented for all numeric primitives.
+            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
+            pub fn view_2nd(&self) -> View2Regular<Schema2<T, $T>> {
+                let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| (*d.1) as f64);
+                View2Regular {
+                    dataset: &self,
+                    extractor,
+                }
+            }
+        }
+    };
 }
 
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
-impl<T> Dataset<Schema2<T, OrderedFloat<f64>>> {
-    /// Take a reflective view of this 2-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, dim2) | aggregate(dim2)"#
-    /// ```
-    pub fn reflective_view(&self) -> View2Full<Schema2<T, OrderedFloat<f64>>> {
-        let extractor: Box<dyn Fn(&<Schema2<T, OrderedFloat<f64>> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| *d.1);
-        View2Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_0.clone(),
-        }
-    }
-
-    /// Take a regular view of this 2-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, )     | aggregate(dim2)"#
-    /// ```
-    pub fn view_2nd(&self) -> View2Regular<Schema2<T, OrderedFloat<f64>>> {
-        let extractor: Box<dyn Fn(&<Schema2<T, OrderedFloat<f64>> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| *d.1);
-        View2Regular {
-            dataset: &self,
-            extractor,
-        }
-    }
-}
-
-impl<T> Dataset<Schema2<T, i64>> {
-    /// Take a reflective view of this 2-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, dim2) | aggregate(dim2)"#
-    /// ```
-    pub fn reflective_view(&self) -> View2Full<Schema2<T, i64>> {
-        let extractor: Box<dyn Fn(&<Schema2<T, i64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.1 as f64);
-        View2Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_0.clone(),
-        }
-    }
-
-    /// Take a regular view of this 2-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, )     | aggregate(dim2)"#
-    /// ```
-    pub fn view_2nd(&self) -> View2Regular<Schema2<T, i64>> {
-        let extractor: Box<dyn Fn(&<Schema2<T, i64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.1 as f64);
-        View2Regular {
-            dataset: &self,
-            extractor,
-        }
-    }
-}
+impl_schema2_view_smart_pointer!(OrderedFloat<f64>);
+#[cfg(any(feature = "impls_ordered_float", feature = "all"))]
+impl_schema2_view_smart_pointer!(OrderedFloat<f32>);
 
 impl<T, U> Dataset<Schema2<T, U>> {
     /// Take a counting view of this 2-dimensional dataset.
@@ -310,131 +315,104 @@ impl<T, U> Dataset<Schema2<T, U>> {
     }
 }
 
-impl<T, U> Dataset<Schema3<T, U, f64>> {
-    /// Take a reflective view of this 3-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions..       | Rendering
-    /// (dim1, dim2, dim3) | aggregate(dim3)"#
-    /// ```
-    pub fn reflective_view(&self) -> View3Full<Schema3<T, U, f64>> {
-        let extractor: Box<dyn Fn(&<Schema3<T, U, f64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.2);
-        View3Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_2.to_string(),
-        }
-    }
+macro_rules! impl_schema3_view {
+    ($T:ty, $attrs:meta) => {
+        #[$attrs]
+        #[allow(rustdoc::broken_intra_doc_links)]
+        impl<T, U> Dataset<Schema3<T, U, $T>> {
+            /// Take a reflective view of this 3-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a dimensional component on the left and a rendering component on the right.
+            ///
+            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+            /// ```text
+            /// r#"
+            /// Dimensions..       | Rendering
+            /// (dim1, dim2, dim3) | aggregate(dim3)"#
+            /// ```
+            ///
+            /// Note, implemented for all numeric primitives.
+            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
+            pub fn reflective_view(&self) -> View3Full<Schema3<T, U, $T>> {
+                let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.2 as f64);
+                View3Full {
+                    dataset: &self,
+                    extractor,
+                    value_header: self.schema.dimension_2.to_string(),
+                }
+            }
 
-    /// Take a regular view of this 3-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, dim2) | aggregate(dim3)"#
-    /// ```
-    pub fn view_3rd(&self) -> View3Regular<Schema3<T, U, f64>> {
-        let extractor: Box<dyn Fn(&<Schema3<T, U, f64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.2);
-        View3Regular {
-            dataset: &self,
-            extractor,
+            /// Take a regular view of this 3-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a dimensional component on the left and a rendering component on the right.
+            ///
+            /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
+            /// ```text
+            /// r#"
+            /// Dimensions.. | Rendering
+            /// (dim1, dim2) | aggregate(dim3)"#
+            /// ```
+            ///
+            /// Note, implemented for all numeric primitives.
+            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
+            pub fn view_3rd(&self) -> View3Regular<Schema3<T, U, $T>> {
+                let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.2 as f64);
+                View3Regular {
+                    dataset: &self,
+                    extractor,
+                }
+            }
         }
-    }
+    };
+}
+
+impl_schema3_view!(f64, doc());
+impl_schema3_view!(f32, doc(hidden));
+impl_schema3_view!(isize, doc(hidden));
+impl_schema3_view!(i128, doc(hidden));
+impl_schema3_view!(i64, doc(hidden));
+impl_schema3_view!(i32, doc(hidden));
+impl_schema3_view!(i16, doc(hidden));
+impl_schema3_view!(i8, doc(hidden));
+impl_schema3_view!(usize, doc(hidden));
+impl_schema3_view!(u128, doc(hidden));
+impl_schema3_view!(u64, doc(hidden));
+impl_schema3_view!(u32, doc(hidden));
+impl_schema3_view!(u16, doc(hidden));
+impl_schema3_view!(u8, doc(hidden));
+
+#[cfg(any(feature = "impls_ordered_float", feature = "all"))]
+macro_rules! impl_schema3_view_smart_pointer {
+    ($T:ty) => {
+        impl<T, U> Dataset<Schema3<T, U, $T>> {
+            pub fn reflective_view(&self) -> View3Full<Schema3<T, U, $T>> {
+                let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| (*d.2) as f64);
+                View3Full {
+                    dataset: &self,
+                    extractor,
+                    value_header: self.schema.dimension_2.to_string(),
+                }
+            }
+
+            pub fn view_3rd(&self) -> View3Regular<Schema3<T, U, $T>> {
+                let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| (*d.2) as f64);
+                View3Regular {
+                    dataset: &self,
+                    extractor,
+                }
+            }
+        }
+    };
 }
 
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
-impl<T, U> Dataset<Schema3<T, U, OrderedFloat<f64>>> {
-    /// Take a reflective view of this 3-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions..       | Rendering
-    /// (dim1, dim2, dim3) | aggregate(dim3)"#
-    /// ```
-    pub fn reflective_view(&self) -> View3Full<Schema3<T, U, OrderedFloat<f64>>> {
-        let extractor: Box<
-            dyn Fn(&<Schema3<T, U, OrderedFloat<f64>> as Schema>::Dimensions) -> f64,
-        > = Box::new(|d| *d.2);
-        View3Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_2.to_string(),
-        }
-    }
-
-    /// Take a regular view of this 3-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, dim2) | aggregate(dim3)"#
-    /// ```
-    pub fn view_3rd(&self) -> View3Regular<Schema3<T, U, OrderedFloat<f64>>> {
-        let extractor: Box<
-            dyn Fn(&<Schema3<T, U, OrderedFloat<f64>> as Schema>::Dimensions) -> f64,
-        > = Box::new(|d| *d.2);
-        View3Regular {
-            dataset: &self,
-            extractor,
-        }
-    }
-}
-
-impl<T, U> Dataset<Schema3<T, U, i64>> {
-    /// Take a reflective view of this 3-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions..       | Rendering
-    /// (dim1, dim2, dim3) | aggregate(dim3)"#
-    /// ```
-    pub fn reflective_view(&self) -> View3Full<Schema3<T, U, i64>> {
-        let extractor: Box<dyn Fn(&<Schema3<T, U, i64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.2 as f64);
-        View3Full {
-            dataset: &self,
-            extractor,
-            value_header: self.schema.dimension_2.to_string(),
-        }
-    }
-
-    /// Take a regular view of this 3-dimensional dataset.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, dim2) | aggregate(dim3)"#
-    /// ```
-    pub fn view_3rd(&self) -> View3Regular<Schema3<T, U, i64>> {
-        let extractor: Box<dyn Fn(&<Schema3<T, U, i64> as Schema>::Dimensions) -> f64> =
-            Box::new(|d| d.2 as f64);
-        View3Regular {
-            dataset: &self,
-            extractor,
-        }
-    }
-}
+impl_schema3_view_smart_pointer!(OrderedFloat<f64>);
+#[cfg(any(feature = "impls_ordered_float", feature = "all"))]
+impl_schema3_view_smart_pointer!(OrderedFloat<f32>);
 
 impl<T, U, V> Dataset<Schema3<T, U, V>> {
     /// Take a counting view of this 1-dimensional dataset.

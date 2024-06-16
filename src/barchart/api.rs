@@ -4,6 +4,9 @@ use super::super::Aggregate;
 // We use this in the doc strings.
 #[allow(unused_imports)]
 use super::super::Render;
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::BarChart;
 
 /// Render configuration specific to [`BarChart`]s.
 ///

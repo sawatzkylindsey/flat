@@ -1,3 +1,7 @@
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::PathChart;
+
 /// Render configuration specific to [`PathChart`]s.
 ///
 /// ### Example
