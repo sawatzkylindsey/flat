@@ -1,7 +1,8 @@
-use blarg::{derive::*, prelude::*, CommandLineParser, Parameter, Switch};
+use blarg::{derive::*, prelude::*, CommandLineParser, Parameter, Scalar, Switch};
 use flat::*;
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
+use std::ops::{Add, Div, Mul, Sub};
 
 fn main() {
     let parameters = Parameters::blarg_parse();
@@ -13,45 +14,20 @@ fn main() {
     }
 
     let dataset = builder.build();
-    bar_chart(&parameters, &dataset);
+    barchart_impl_view(&parameters, &dataset);
+    barchart_recast(&parameters, &dataset);
+    barchart_breakdown_recast(&parameters, &dataset);
 
-    // match parameters.widget {
-    //     Widget::BarChart => {
-    //         if parameters.breakdown {
-    //             bar_chart_breakdown(&parameters, dataset);
-    //         } else {
-    //             bar_chart(&parameters, dataset);
-    //         }
-    //     }
-    //     Widget::Histogram => {
-    //         if parameters.breakdown {
-    //             histogram_breakdown(&parameters, dataset);
-    //         } else {
-    //             histogram(&parameters, dataset);
-    //         }
-    //     }
-    // }
+    histogram_impl_view(&parameters, &dataset);
+    histogram_recast(&parameters, &dataset);
+    histogram_breakdown_recast(&parameters, &dataset);
 }
 
-fn bar_chart(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
-    // dataset.cast(Schemas::two("Species", "Sepal Length"), |flower| (flower.species.clone(), flower.sepal_length.clone()));
-    // let ds: &Dataset<Schema2<Species, SepalLength>> = dataset.downcast_2d();
-    // let view = View2::new(
-    //     ds,
-    //     Box::new(|(a, b)| *b.0),
-    //     // Box::new(|flower: &Flower| flower.sepal_length.0 .0),
-    // );
-    // let view = SepalViewX { dataset };
-    // let view = FlowerView2D {
-    //     dataset,
-    //     extractor: Box::new(|flower| flower.sepal_length.0 .0),
-    //     t: Box::new(|flower| flower.species.0),
-    //     u: Box::new(|flower| flower.sepal_width.0 .0),
-    // };
-    let ds = dataset.recast(Schemas::two("Species", "Sepal Length"), |flower| {
-        (flower.species.clone(), flower.sepal_length.0 .0)
-    });
-    let view = ds.view_2nd();
+fn barchart_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
+    let view = AttributeView {
+        data: dataset.data(),
+        field: parameters.field.clone(),
+    };
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: parameters.verbose,
@@ -63,125 +39,157 @@ fn bar_chart(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
         },
         ..Render::default()
     });
-    println!("Shows the relative lengths of flowers in the dataset, based off their species.");
+    println!(
+        "Shows the '{}' of flowers based off their species.",
+        parameters.field
+    );
+    println!("Produced via custom implementation of a `flat::View`.");
     println!();
     println!("{flat}");
-}
-//
-// fn bar_chart_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
-//     let schema = Schemas::two("Attribute", "Species", "moot");
-//     let mut builder = Dataset::builder(schema);
-//
-//     for flower in dataset {
-//         builder.update(
-//             ("sepal_length", flower.species.clone()),
-//             flower.sepal_length,
-//         );
-//         builder.update(("sepal_width", flower.species.clone()), flower.sepal_width);
-//         builder.update(
-//             ("petal_length", flower.species.clone()),
-//             flower.petal_length,
-//         );
-//         builder.update(("petal_width", flower.species.clone()), flower.petal_width);
-//     }
-//
-//     let view = builder.view_breakdown2();
-//     let flat = BarChart::new(&view).render(Render {
-//         aggregate: Aggregate::Average,
-//         show_aggregate: parameters.verbose,
-//         widget_config: {
-//             BarChartConfig {
-//                 show_aggregate: parameters.verbose,
-//                 ..BarChartConfig::default()
-//             }
-//         },
-//         ..Render::default()
-//     });
-//     println!("Shows the relative attribute values of flowers in the dataset, broken down by their species.");
-//     println!();
-//     println!("{flat}");
-// }
-//
-// fn histogram(parameters: &Parameters, dataset: Vec<Flower>) {
-//     let schema = Schemas::one("Petal Length", "Flower Count");
-//     let mut builder = Dataset::builder(schema);
-//
-//     for flower in dataset {
-//         builder.update((flower.petal_length,), 1);
-//     }
-//
-//     let view = builder.view();
-//     let flat = Histogram::new(&view, 10).render(Render {
-//         aggregate: Aggregate::Sum,
-//         show_aggregate: parameters.verbose,
-//         ..Render::default()
-//     });
-//     println!("Shows the relative count of flowers in the dataset, organized into bins based off their petal length.");
-//     println!();
-//     println!("{flat}");
-// }
-//
-// fn histogram_breakdown(parameters: &Parameters, dataset: Vec<Flower>) {
-//     let schema = Schemas::two("Petal Length", "Petal Widths", "moot");
-//     let mut builder = Dataset::builder(schema);
-//
-//     for flower in dataset {
-//         builder.update((flower.petal_length, OrderedFloat(flower.petal_width)), 1);
-//     }
-//
-//     let view = builder.view_breakdown2();
-//     let flat = Histogram::new(&view, 10).render(Render {
-//         aggregate: Aggregate::Sum,
-//         show_aggregate: parameters.verbose,
-//         ..Render::default()
-//     });
-//     println!("Shows the relative count of flowers in the dataset, broken down by their petal widths, organized into bins based off their petal length.");
-//     println!();
-//     println!("{flat}");
-// }
-
-#[derive(BlargChoices, PartialEq)]
-enum Widget {
-    #[blarg(help = "Use the BarChart widget.")]
-    BarChart,
-    #[blarg(help = "Use the Histogram widget.")]
-    Histogram,
+    println!();
 }
 
-impl Default for Widget {
-    fn default() -> Self {
-        Widget::BarChart
-    }
+fn barchart_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
+    let new_dataset = dataset.recast(
+        Schemas::two("Species", parameters.field.to_string()),
+        |flower| (flower.species.clone(), flower.value(&parameters.field)),
+    );
+    let view = new_dataset.view_2nd();
+    let flat = BarChart::new(&view).render(Render {
+        aggregate: Aggregate::Average,
+        show_aggregate: parameters.verbose,
+        widget_config: {
+            BarChartConfig {
+                show_aggregate: parameters.verbose,
+                ..BarChartConfig::default()
+            }
+        },
+        ..Render::default()
+    });
+    println!(
+        "Shows the '{}' of flowers based off their species.",
+        parameters.field
+    );
+    println!("Produced via `Dataset::recast`.");
+    println!();
+    println!("{flat}");
+    println!();
 }
 
-impl std::fmt::Display for Widget {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Widget::BarChart => write!(f, "barchart"),
-            Widget::Histogram => write!(f, "histogram"),
-        }
-    }
+fn barchart_breakdown_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
+    let new_dataset = dataset.recast(
+        Schemas::three("Species", "Sepal Length", parameters.field.to_string()),
+        |flower| {
+            (
+                flower.species.clone(),
+                flower.sepal_length.clone(),
+                OrderedFloat(flower.value(&parameters.field)),
+            )
+        },
+    );
+    let view = new_dataset.breakdown_3rd();
+    let flat = BarChart::new(&view).render(Render {
+        aggregate: Aggregate::Sum,
+        show_aggregate: parameters.verbose,
+        widget_config: {
+            BarChartConfig {
+                show_aggregate: parameters.verbose,
+                ..BarChartConfig::default()
+            }
+        },
+        ..Render::default()
+    });
+    println!(
+        "Shows the breakdown count across '{}' for flowers based off their species + sepal length.",
+        parameters.field
+    );
+    println!("Produced via `Dataset::recast`.");
+    println!();
+    println!("{flat}");
+    println!();
 }
 
-impl std::str::FromStr for Widget {
-    type Err = String;
+fn histogram_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
+    let view = SepalLengthView {
+        data: dataset.data(),
+        field: parameters.field.clone(),
+    };
+    let flat = Histogram::new(&view, 10).render(Render {
+        aggregate: Aggregate::Sum,
+        show_aggregate: parameters.verbose,
+        widget_config: { HistogramConfig::default() },
+        ..Render::default()
+    });
+    println!(
+        "Shows the '{}' of flowers histogram-ed by their sepal length.",
+        parameters.field
+    );
+    println!("Produced via custom implementation of a `flat::View`.");
+    println!();
+    println!("{flat}");
+    println!();
+}
 
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value.to_lowercase().as_str() {
-            "barchart" => Ok(Widget::BarChart),
-            "histogram" => Ok(Widget::Histogram),
-            _ => Err(format!("unknown: {}", value)),
-        }
-    }
+fn histogram_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
+    let new_dataset = dataset.recast(
+        Schemas::two("Sepal Length", parameters.field.to_string()),
+        |flower| {
+            (
+                flower.sepal_length.0 .0.clone(),
+                flower.value(&parameters.field),
+            )
+        },
+    );
+    let view = new_dataset.view_2nd();
+    let flat = Histogram::new(&view, 10).render(Render {
+        aggregate: Aggregate::Sum,
+        show_aggregate: parameters.verbose,
+        widget_config: { HistogramConfig::default() },
+        ..Render::default()
+    });
+    println!(
+        "Shows the '{}' of flowers histogram-ed by their sepal length.",
+        parameters.field
+    );
+    println!("Produced via `Dataset::recast`.");
+    println!();
+    println!("{flat}");
+    println!();
+}
+
+fn histogram_breakdown_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
+    let new_dataset = dataset.recast(
+        Schemas::two("Sepal Length", parameters.field.to_string()),
+        |flower| {
+            (
+                flower.sepal_length.clone(),
+                OrderedFloat(flower.value(&parameters.field)),
+            )
+        },
+    );
+    let view = new_dataset.breakdown_2nd();
+    let flat = Histogram::new(&view, 10).render(Render {
+        aggregate: Aggregate::Sum,
+        show_aggregate: parameters.verbose,
+        widget_config: { HistogramConfig::default() },
+        ..Render::default()
+    });
+    println!(
+        "Shows the breakdown count across '{}' for flowers histogram-ed by their sepal length.",
+        parameters.field
+    );
+    println!("Produced via `Dataset::recast`.");
+    println!();
+    println!("{flat}");
+    println!();
 }
 
 #[derive(Default, BlargParser)]
 struct Parameters {
     #[blarg(short = 'v')]
     verbose: bool,
-    // #[blarg(choices)]
-    // widget: Widget,
-    // breakdown: bool,
+    #[blarg(choices)]
+    field: AttributeField,
 }
 
 struct FlowerSchema;
@@ -190,196 +198,153 @@ impl Schema for FlowerSchema {
     type Dimensions = Flower;
 }
 
-// struct SpeciesView<'a> {
-//     dataset: &'a Dataset<FlowerSchema>,
-// }
-//
-// impl<'a> View<FlowerSchema> for SpeciesView<'a> {
-//     type Dimensions = Flower;
-//     type PrimaryDimension = Species;
-//     type BreakdownDimension = Nothing;
-//     type SortDimensions = Species;
-//
-//     fn data(&self) -> &Dataset<FlowerSchema> {
-//         &self.dataset
-//     }
-//
-//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-//         1f64
-//     }
-//
-//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-//         dims.species.clone()
-//     }
-//
-//     fn breakdown_dim(
-//         &self,
-//         dims: &<FlowerSchema as Schema>::Dimensions,
-//     ) -> Self::BreakdownDimension {
-//         Nothing
-//     }
-//
-//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-//         dims.species.clone()
-//     }
-//
-//     fn headers(&self) -> Vec<String> {
-//         vec!["Species".to_string()]
-//     }
-//
-//     fn value_header(&self) -> String {
-//         "dooo".to_string()
-//     }
-//
-//     fn is_breakdown(&self) -> bool {
-//         false
-//     }
-// }
-//
-// struct SepalView<'a> {
-//     dataset: &'a Dataset<FlowerSchema>,
-// }
-//
-// impl<'a> View<FlowerSchema> for SepalView<'a> {
-//     type Dimensions = Flower;
-//     type PrimaryDimension = Species;
-//     type BreakdownDimension = Nothing;
-//     type SortDimensions = (Species, SepalWidth);
-//
-//     fn data(&self) -> &Dataset<FlowerSchema> {
-//         &self.dataset
-//     }
-//
-//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-//         dims.sepal_length.0 .0
-//     }
-//
-//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-//         dims.species.clone()
-//         // (dims.sepal_length.clone(), dims.sepal_width.clone())
-//     }
-//
-//     fn breakdown_dim(
-//         &self,
-//         dims: &<FlowerSchema as Schema>::Dimensions,
-//     ) -> Self::BreakdownDimension {
-//         Nothing
-//     }
-//
-//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-//         (dims.species.clone(), dims.sepal_width.clone())
-//     }
-//
-//     fn headers(&self) -> Vec<String> {
-//         vec!["Species".to_string(), "Sepal Width".to_string()]
-//     }
-//
-//     fn value_header(&self) -> String {
-//         "Sepal Length".to_string()
-//     }
-//
-//     fn is_breakdown(&self) -> bool {
-//         false
-//     }
-// }
-//
-// struct SepalViewX<'a> {
-//     dataset: &'a Dataset<FlowerSchema>,
-// }
-//
-// impl<'a> View<FlowerSchema> for SepalViewX<'a> {
-//     type Dimensions = Flower;
-//     type PrimaryDimension = Species;
-//     type BreakdownDimension = Nothing;
-//     type SortDimensions = Species;
-//
-//     fn data(&self) -> &Dataset<FlowerSchema> {
-//         &self.dataset
-//     }
-//
-//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-//         dims.sepal_length.0 .0
-//     }
-//
-//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-//         dims.species.clone()
-//         // (dims.sepal_length.clone(), dims.sepal_width.clone())
-//     }
-//
-//     fn breakdown_dim(
-//         &self,
-//         dims: &<FlowerSchema as Schema>::Dimensions,
-//     ) -> Self::BreakdownDimension {
-//         Nothing
-//     }
-//
-//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-//         dims.species.clone()
-//     }
-//
-//     fn headers(&self) -> Vec<String> {
-//         vec!["Species".to_string()]
-//     }
-//
-//     fn value_header(&self) -> String {
-//         "Sepal Length".to_string()
-//     }
-//
-//     fn is_breakdown(&self) -> bool {
-//         false
-//     }
-// }
-//
-// struct FlowerView2D<'a, T, U> {
-//     dataset: &'a Dataset<FlowerSchema>,
-//     extractor: Box<dyn Fn(&Flower) -> f64>,
-//     t: Box<dyn Fn(&Flower) -> T>,
-//     u: Box<dyn Fn(&Flower) -> U>,
-// }
-//
-// impl<'a, T, U> View<FlowerSchema> for FlowerView2D<'a, T, U> {
-//     type Dimensions = Flower;
-//     type PrimaryDimension = T;
-//     type BreakdownDimension = Nothing;
-//     type SortDimensions = (T, U);
-//
-//     fn data(&self) -> &Dataset<FlowerSchema> {
-//         &self.dataset
-//     }
-//
-//     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
-//         (self.extractor)(dims)
-//     }
-//
-//     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
-//         (self.t)(dims)
-//         // dims.species.clone()
-//         // (dims.sepal_length.clone(), dims.sepal_width.clone())
-//     }
-//
-//     fn breakdown_dim(
-//         &self,
-//         dims: &<FlowerSchema as Schema>::Dimensions,
-//     ) -> Self::BreakdownDimension {
-//         Nothing
-//     }
-//
-//     fn sort_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::SortDimensions {
-//         ((self.t)(dims), (self.u)(dims))
-//     }
-//
-//     fn headers(&self) -> Vec<String> {
-//         vec!["t".to_string(), "u".to_string()]
-//     }
-//
-//     fn value_header(&self) -> String {
-//         "xyz".to_string()
-//     }
-//
-//     fn is_breakdown(&self) -> bool {
-//         false
-//     }
-// }
+#[derive(Debug, Clone, BlargChoices, PartialEq)]
+enum AttributeField {
+    #[blarg(help = "View the Sepal Length attribute.")]
+    SepalLength,
+    #[blarg(help = "View the Sepal Width attribute.")]
+    SepalWidth,
+    #[blarg(help = "View the Petal Length attribute.")]
+    PetalLength,
+    #[blarg(help = "View the Petal Width attribute.")]
+    PetalWidth,
+}
+
+impl Default for AttributeField {
+    fn default() -> Self {
+        AttributeField::SepalLength
+    }
+}
+
+impl std::fmt::Display for AttributeField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AttributeField::SepalLength => write!(f, "SepalLength"),
+            AttributeField::SepalWidth => write!(f, "SepalWidth"),
+            AttributeField::PetalLength => write!(f, "PetalLength"),
+            AttributeField::PetalWidth => write!(f, "PetalWidth"),
+        }
+    }
+}
+
+impl std::str::FromStr for AttributeField {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "SepalLength" => Ok(AttributeField::SepalLength),
+            "SepalWidth" => Ok(AttributeField::SepalWidth),
+            "PetalLength" => Ok(AttributeField::PetalLength),
+            "PetalWidth" => Ok(AttributeField::PetalWidth),
+            _ => Err(format!("unknown: {}", value)),
+        }
+    }
+}
+
+impl AttributeField {
+    fn print_string(&self) -> String {
+        match &self {
+            AttributeField::SepalLength => "Sepal Length".to_string(),
+            AttributeField::SepalWidth => "Sepal Width".to_string(),
+            AttributeField::PetalLength => "Petal Length".to_string(),
+            AttributeField::PetalWidth => "Petal Width".to_string(),
+        }
+    }
+}
+
+struct AttributeView<'a> {
+    data: &'a [<FlowerSchema as Schema>::Dimensions],
+    field: AttributeField,
+}
+
+impl<'a> View<FlowerSchema> for AttributeView<'a> {
+    // type Dimensions = Flower;
+    type PrimaryDimension = Species;
+    type BreakdownDimension = Nothing;
+    type DisplayDimensions = (Species,);
+
+    fn data(&self) -> &[<FlowerSchema as Schema>::Dimensions] {
+        &self.data
+    }
+
+    fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
+        dims.value(&self.field)
+    }
+
+    fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
+        dims.species.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        _dims: &<FlowerSchema as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn display_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::DisplayDimensions {
+        (dims.species.clone(),)
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec!["Species".to_string()]
+    }
+
+    fn value_header(&self) -> String {
+        self.field.print_string()
+    }
+
+    fn is_breakdown(&self) -> bool {
+        false
+    }
+}
+
+struct SepalLengthView<'a> {
+    data: &'a [<FlowerSchema as Schema>::Dimensions],
+    field: AttributeField,
+}
+
+impl<'a> View<FlowerSchema> for SepalLengthView<'a> {
+    // type Dimensions = Flower;
+    type PrimaryDimension = SepalLength;
+    type BreakdownDimension = Nothing;
+    type DisplayDimensions = (SepalLength,);
+
+    fn data(&self) -> &[<FlowerSchema as Schema>::Dimensions] {
+        &self.data
+    }
+
+    fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
+        dims.value(&self.field)
+    }
+
+    fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
+        dims.sepal_length.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        _dims: &<FlowerSchema as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn display_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::DisplayDimensions {
+        (dims.sepal_length.clone(),)
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec!["Sepal Length".to_string()]
+    }
+
+    fn value_header(&self) -> String {
+        self.field.print_string()
+    }
+
+    fn is_breakdown(&self) -> bool {
+        false
+    }
+}
 
 #[derive(Debug, Deserialize)]
 struct FlowerJson {
@@ -415,6 +380,32 @@ struct SepalLength(OrderedFloat<f64>);
 impl std::fmt::Display for SepalLength {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", minimal_precision_string(self.0 .0))
+    }
+}
+
+impl Add for SepalLength {
+    type Output = SepalLength;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        SepalLength(self.0.add(rhs.0))
+    }
+}
+
+impl Sub for SepalLength {
+    type Output = SepalLength;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        SepalLength(self.0.sub(rhs.0))
+    }
+}
+
+impl Binnable for SepalLength {
+    fn multiply(&self, rhs: usize) -> Self {
+        SepalLength(OrderedFloat(self.0 .0.mul(rhs as f64)))
+    }
+
+    fn divide(&self, rhs: usize) -> Self {
+        SepalLength(OrderedFloat(self.0 .0.div(rhs as f64)))
     }
 }
 
@@ -479,6 +470,17 @@ impl Dimensions for Flower {
 
     fn len(&self) -> usize {
         5
+    }
+}
+
+impl Flower {
+    fn value(&self, field: &AttributeField) -> f64 {
+        match field {
+            AttributeField::SepalLength => self.sepal_length.0 .0,
+            AttributeField::SepalWidth => self.sepal_width.0 .0,
+            AttributeField::PetalLength => self.petal_length.0 .0,
+            AttributeField::PetalWidth => self.petal_width.0 .0,
+        }
     }
 }
 

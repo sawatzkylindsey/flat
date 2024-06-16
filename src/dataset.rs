@@ -16,7 +16,14 @@ use ordered_float::OrderedFloat;
 /// ```
 pub struct Dataset<S: Schema> {
     pub(crate) schema: S,
-    pub(crate) data: Vec<S::Dimensions>,
+    data: Vec<S::Dimensions>,
+}
+
+impl<S: Schema> Dataset<S> {
+    /// Get the data held within this `Dataset`.
+    pub fn data(&self) -> &[S::Dimensions] {
+        self.data.as_slice()
+    }
 }
 
 /// Builder for a dataset in `flat`.
@@ -33,6 +40,10 @@ pub struct DatasetBuilder<S: Schema> {
 }
 
 impl<'a, S: Schema> Dataset<S> {
+    /// Make a copy of this dataset by recasting it into a new schema.
+    ///
+    /// Notice, this is an expensive operation (typically requires the whole dataset to be cloned).
+    /// For a cheaper alternative, use either a built-in or custom [`View`].
     pub fn recast<R: Schema>(
         &self,
         new_schema: R,
@@ -567,6 +578,7 @@ impl<S: Schema> DatasetBuilder<S> {
         self
     }
 
+    /// Finalize the builder into a [`Dataset`].
     pub fn build(self) -> Dataset<S> {
         let DatasetBuilder { schema, data } = self;
         Dataset { schema, data }

@@ -36,11 +36,10 @@ use std::marker::PhantomData;
 pub struct BarChart<'a, S, V>
 where
     S: Schema,
-    <S as Schema>::Dimensions: Dimensions,
     V: View<S>,
     <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
     <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
-    <V as View<S>>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
+    <V as View<S>>::DisplayDimensions: Clone + PartialEq + Eq + Hash + Ord,
 {
     view: &'a V,
     _phantom: PhantomData<S>,
@@ -49,11 +48,10 @@ where
 impl<'a, S, V> BarChart<'a, S, V>
 where
     S: Schema,
-    <S as Schema>::Dimensions: Dimensions,
     V: View<S>,
     <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
     <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
-    <V as View<S>>::SortDimensions: Dimensions + Clone + PartialEq + Eq + Hash + Ord,
+    <V as View<S>>::DisplayDimensions: Clone + PartialEq + Eq + Hash + Ord,
 {
     /// Construct a bar-chart widget from the provided view.
     pub fn new(view: &'a V) -> Self {
@@ -69,11 +67,13 @@ where
             HashMap::default();
         let mut partial_aggregate_values: HashMap<String, Vec<f64>> = HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
-        let mut sort_dimensions: Vec<V::SortDimensions> = Vec::default();
+        let mut sort_dimensions: Vec<V::DisplayDimensions> = Vec::default();
         let mut sort_breakdowns: Vec<V::BreakdownDimension> = Vec::default();
-        let mut lookup: HashMap<V::SortDimensions, (V::PrimaryDimension, V::BreakdownDimension)> =
-            HashMap::default();
-        let mut dimension_values: Vec<HashSet<String>> = (0..self.view.headers().len())
+        let mut lookup: HashMap<
+            V::DisplayDimensions,
+            (V::PrimaryDimension, V::BreakdownDimension),
+        > = HashMap::default();
+        let mut dimension_values: Vec<HashSet<String>> = (0..self.view.display_headers().len())
             .map(|_| HashSet::default())
             .collect();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
@@ -83,13 +83,13 @@ where
             let primary_dim = self.view.primary_dim(dims);
             let breakdown_dims = self.view.breakdown_dim(dims);
             let aggregate_dims = (primary_dim.clone(), breakdown_dims.clone());
-            let sort_dims = self.view.sort_dims(dims);
-            let full_path = sort_dims
+            let display_dims = self.view.display_dims(dims);
+            let full_path = display_dims
                 .as_strings()
                 .iter()
                 .fold(String::default(), |acc, part| acc + part + ";");
 
-            for (j, value) in sort_dims.as_strings().into_iter().enumerate() {
+            for (j, value) in display_dims.as_strings().into_iter().enumerate() {
                 dimension_values[j].insert(value);
             }
 
@@ -103,8 +103,8 @@ where
             if !full_paths.contains(&full_path) {
                 full_paths.insert(full_path);
 
-                for dag_index in 0..sort_dims.len() {
-                    let partial_path = sort_dims.as_strings()[0..dag_index + 1]
+                for dag_index in 0..display_dims.len() {
+                    let partial_path = display_dims.as_strings()[0..dag_index + 1]
                         .iter()
                         .fold(String::default(), |acc, part| acc + part + ";");
                     path_occurrences
@@ -115,8 +115,8 @@ where
             }
 
             if config.widget_config.show_aggregate {
-                for dag_index in 1..sort_dims.len() {
-                    let partial_path = sort_dims.as_strings()[0..dag_index + 1]
+                for dag_index in 1..display_dims.len() {
+                    let partial_path = display_dims.as_strings()[0..dag_index + 1]
                         .iter()
                         .fold(String::default(), |acc, part| acc + part + ";");
                     let values = partial_aggregate_values.entry(partial_path).or_default();
@@ -127,15 +127,15 @@ where
             let values = aggregate_values.entry(aggregate_dims.clone()).or_default();
             values.push(value);
 
-            if !lookup.contains_key(&sort_dims) {
+            if !lookup.contains_key(&display_dims) {
                 // Notice, the breakdown_dim will be different in the case of an `is_breakdown` schema.
                 // But in that case, we don't actually use the breakdown from `lookup`.
                 // We really only need this so we can get the `Nothing` breakdown for non-`is_breakdown` schemas.
                 lookup.insert(
-                    sort_dims.clone(),
+                    display_dims.clone(),
                     (primary_dim.clone(), breakdown_dims.clone()),
                 );
-                sort_dimensions.push(sort_dims);
+                sort_dimensions.push(display_dims);
             }
 
             if !sort_breakdowns.contains(&breakdown_dims) {
@@ -147,12 +147,12 @@ where
         sort_breakdowns.sort();
 
         let mut dimension_abbreviations: Vec<HashMap<String, String>> =
-            (0..self.view.headers().len())
+            (0..self.view.display_headers().len())
                 .map(|_| HashMap::default())
                 .collect();
 
         if config.widget_config.abbreviate {
-            let headers = self.view.headers();
+            let headers = self.view.display_headers();
             let max_header_length = headers.iter().map(|h| h.chars().count()).max().unwrap();
 
             for (dag_index, values) in dimension_values.iter().enumerate() {
@@ -165,11 +165,11 @@ where
 
         let mut columns = Columns::default();
 
-        for j in 0..self.view.headers().len() {
+        for j in 0..self.view.display_headers().len() {
             // dimension value
             columns.push(Column::string(Alignment::Left));
 
-            if j + 1 < self.view.headers().len() {
+            if j + 1 < self.view.display_headers().len() {
                 // spacer " "
                 columns.push(Column::string(Alignment::Center));
 
@@ -226,10 +226,10 @@ where
         if self.view.is_breakdown() {
             let mut pre_header = Row::default();
 
-            for j in 0..self.view.headers().len() {
+            for j in 0..self.view.display_headers().len() {
                 pre_header.push(Value::Empty);
 
-                if j + 1 < self.view.headers().len() {
+                if j + 1 < self.view.display_headers().len() {
                     pre_header.push(Value::Empty);
 
                     if config.widget_config.show_aggregate {
@@ -261,10 +261,10 @@ where
 
         let mut header = Row::default();
 
-        for (j, name) in self.view.headers().iter().rev().enumerate() {
+        for (j, name) in self.view.display_headers().iter().rev().enumerate() {
             header.push(Value::String(name.clone()));
 
-            if j + 1 < self.view.headers().len() {
+            if j + 1 < self.view.display_headers().len() {
                 header.push(Value::String(" ".to_string()));
 
                 if config.widget_config.show_aggregate {
@@ -312,8 +312,8 @@ where
         let mut minimum_value = f64::MAX;
         let mut maximum_value = f64::MIN;
 
-        for sort_dims in sort_dimensions.iter() {
-            let path = sort_dims.as_strings();
+        for display_dims in sort_dimensions.iter() {
+            let path = display_dims.as_strings();
             let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
             let mut descendant_position = None;
 
@@ -384,7 +384,7 @@ where
 
                     if dag_index == 0 {
                         let (primary_dim, breakdown_dim) = lookup
-                            .get(sort_dims)
+                            .get(display_dims)
                             .expect("sort dimensions must be mapped to dimensions");
 
                         if self.view.is_breakdown() {

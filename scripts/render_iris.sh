@@ -1,31 +1,10 @@
 #!/bin/bash -e
 
-./target/debug/examples/iris barchart
-echo ""
-echo ""
-
-./target/debug/examples/iris barchart -v
-echo ""
+./target/debug/examples/iris -v "SepalWidth"
 echo ""
 
-./target/debug/examples/iris barchart --breakdown
-echo ""
-echo ""
-
-./target/debug/examples/iris barchart --breakdown -v
-echo ""
+./target/debug/examples/iris -v "PetalLength"
 echo ""
 
-./target/debug/examples/iris histogram
+./target/debug/examples/iris -v "PetalWidth"
 echo ""
-echo ""
-
-./target/debug/examples/iris histogram -v
-echo ""
-echo ""
-
-./target/debug/examples/iris histogram --breakdown
-echo ""
-echo ""
-
-./target/debug/examples/iris histogram --breakdown -v

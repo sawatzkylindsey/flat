@@ -1,6 +1,6 @@
 use crate::aggregate::{aggregate_apply, minimal_precision_string};
 use crate::render::{Alignment, Column, Columns, Flat, Grid, Render, Row, Value};
-use crate::{Binnable, Dimensions, HistogramConfig, Schema, View};
+use crate::{Binnable, HistogramConfig, Schema, View};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
@@ -31,7 +31,6 @@ use std::ops::{Add, Sub};
 pub struct Histogram<'a, S, V>
 where
     S: Schema,
-    <S as Schema>::Dimensions: Dimensions,
     V: View<S>,
     <V as View<S>>::PrimaryDimension: Clone
         + Display
@@ -50,7 +49,6 @@ where
 impl<'a, S, V> Histogram<'a, S, V>
 where
     S: Schema,
-    <S as Schema>::Dimensions: Dimensions,
     V: View<S>,
     <V as View<S>>::PrimaryDimension: Clone
         + Display
@@ -221,7 +219,7 @@ where
 
         let mut header = Row::default();
 
-        header.push(Value::String(self.view.headers()[0].clone()));
+        header.push(Value::String(self.view.display_headers()[0].clone()));
 
         if config.show_aggregate {
             header.push(Value::Empty);

@@ -65,6 +65,7 @@ mod aggregate;
 mod barchart;
 mod dataset;
 mod histogram;
+mod pathchart;
 mod render;
 mod schema;
 mod view;
@@ -73,17 +74,20 @@ pub use aggregate::{minimal_precision_string, Aggregate};
 pub use barchart::*;
 pub use dataset::*;
 pub use histogram::*;
+pub use pathchart::*;
 pub use render::{Flat, Render};
 pub use schema::*;
 use std::fmt::{Display, Formatter};
 pub use view::*;
 
-/// The internal trait to operate on variadic generics.
-/// Consumers should not implement this trait.
-#[doc(hidden)]
+/// Trait to extract the display values for rendering.
+///
+/// Typically, consumers need not implement this trait (as long as they use tuple data types, ex: `(T, U, V)`).
 pub trait Dimensions {
+    /// Get the string format values from this vector/data.
     fn as_strings(&self) -> Vec<String>;
 
+    /// Get the length of this vector/data.
     fn len(&self) -> usize;
 }
 

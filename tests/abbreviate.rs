@@ -1,4 +1,4 @@
-use flat::{BarChart, Dataset, Histogram, Render, Schemas};
+use flat::{BarChart, Dataset, Histogram, PathChart, Render, Schemas};
 
 #[test]
 fn abbreviate_barchart_breakdown_hint1() {
@@ -335,5 +335,33 @@ pterodactyl  |pt.. tr.. ty..|
 shark        |      *       |
 tiger        | **           |
 triceratops  |              |"#
+    );
+}
+
+#[test]
+fn abbreviate_pathchart_breakdown_separation() {
+    let schema = Schemas::two("pterodactyl", "dinosaur");
+    let dataset = Dataset::builder(schema)
+        .add(("triceratops".to_string(), "tyrannosaurs".to_string()))
+        .add(("shark".to_string(), "triceratops".to_string()))
+        .add(("shark".to_string(), "triceratops".to_string()))
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .build();
+    let view = dataset.breakdown_2nd();
+    let flat = PathChart::new(&view).render(Render {
+        width_hint: 1,
+        abbreviate_breakdown: true,
+        ..Render::default()
+    });
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+               Sum(Breakdown(dinosaur))
+/pterodactyl  |pt.. tr.. ty..|
+/shark        |      *       |
+/tiger        | **           |
+/triceratops  |              |"#
     );
 }

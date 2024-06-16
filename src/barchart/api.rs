@@ -1,8 +1,5 @@
 // We use this in the doc strings.
 #[allow(unused_imports)]
-use super::BarChart;
-// We use this in the doc strings.
-#[allow(unused_imports)]
 use super::super::Aggregate;
 // We use this in the doc strings.
 #[allow(unused_imports)]
