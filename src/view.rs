@@ -1,5 +1,6 @@
 use crate::{Dataset, Dimensions, Nothing, Schema, Schema1, Schema2, Schema3};
 use std::fmt::Display;
+use std::hash::Hash;
 
 /// Trait which defines how to render a [`Dataset`] across different [`Schema`]s.
 /// Consumers may choose to implement this trait to provide custom views over datasets.
@@ -7,7 +8,7 @@ pub trait View<S: Schema> {
     /// The primary dimension - see [`View::primary_dim`] for more details.
     type PrimaryDimension;
     /// The breakdown dimension - see [`View::breakdown_dim`] for more details.
-    type BreakdownDimension;
+    type BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord;
     /// The display dimension(s) - see [`View::display_dims`] for more details.
     /// The first must always be the `PrimaryDimension` for the `View`.
     type DisplayDimensions: Dimensions;
@@ -99,7 +100,10 @@ pub struct View1Full<'a, S: Schema> {
     pub(crate) value_header: String,
 }
 
-impl<'a, T: Clone + Display> View<Schema1<T>> for View1Full<'a, Schema1<T>> {
+impl<'a, T> View<Schema1<T>> for View1Full<'a, Schema1<T>>
+where
+    T: Clone + Display,
+{
     type PrimaryDimension = T;
     type BreakdownDimension = Nothing;
     type DisplayDimensions = <Schema1<T> as Schema>::Dimensions;
@@ -147,8 +151,10 @@ pub struct View2Full<'a, S: Schema> {
     pub(crate) value_header: String,
 }
 
-impl<'a, T: Clone + Display, U: Clone + Display> View<Schema2<T, U>>
-    for View2Full<'a, Schema2<T, U>>
+impl<'a, T, U> View<Schema2<T, U>> for View2Full<'a, Schema2<T, U>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = Nothing;
@@ -202,8 +208,10 @@ pub struct View2Regular<'a, S: Schema> {
     pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
 }
 
-impl<'a, T: Clone + Display, U: Clone + Display> View<Schema2<T, U>>
-    for View2Regular<'a, Schema2<T, U>>
+impl<'a, T, U> View<Schema2<T, U>> for View2Regular<'a, Schema2<T, U>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = Nothing;
@@ -253,8 +261,10 @@ pub struct View2Breakdown2<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T: Clone + Display, U: Clone + Display> View<Schema2<T, U>>
-    for View2Breakdown2<'a, Schema2<T, U>>
+impl<'a, T, U> View<Schema2<T, U>> for View2Breakdown2<'a, Schema2<T, U>>
+where
+    T: Clone + Display,
+    U: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = U;
@@ -307,8 +317,11 @@ pub struct View3Full<'a, S: Schema> {
     pub(crate) value_header: String,
 }
 
-impl<'a, T: Clone + Display, U: Clone + Display, V: Clone + Display> View<Schema3<T, U, V>>
-    for View3Full<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Full<'a, Schema3<T, U, V>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = Nothing;
@@ -366,8 +379,11 @@ pub struct View3Regular<'a, S: Schema> {
     pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
 }
 
-impl<'a, T: Clone + Display, U: Clone + Display, V: Clone + Display> View<Schema3<T, U, V>>
-    for View3Regular<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Regular<'a, Schema3<T, U, V>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = Nothing;
@@ -423,8 +439,11 @@ pub struct View3Breakdown2<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T: Clone + Display, U: Clone + Display, V: Clone + Display> View<Schema3<T, U, V>>
-    for View3Breakdown2<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown2<'a, Schema3<T, U, V>>
+where
+    T: Clone + Display,
+    U: Clone + Display + PartialEq + Eq + Hash + Ord,
+    V: Clone + Display,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = U;
@@ -480,8 +499,11 @@ pub struct View3Breakdown3<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T: Clone + Display, U: Clone + Display, V: Clone + Display> View<Schema3<T, U, V>>
-    for View3Breakdown3<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown3<'a, Schema3<T, U, V>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = V;
@@ -636,16 +658,16 @@ mod tests {
 
     #[test]
     fn view2_breakdown2nd() {
-        let schema: Schema2<i64, f32> = Schemas::two("abc", "def");
+        let schema: Schema2<i64, &str> = Schemas::two("abc", "def");
         let dataset = Dataset::builder(schema)
-            .add((1, 0.1))
-            .add((2, 0.2))
-            .add((3, 0.3))
+            .add((1, "a"))
+            .add((2, "b"))
+            .add((3, "c"))
             .build();
         let view = dataset.breakdown_2nd();
-        assert_eq!(view.primary_dim(&(2, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2)), 0.2);
-        assert_eq!(view.display_dims(&(2, 0.2)), (2,));
+        assert_eq!(view.primary_dim(&(2, "b")), 2);
+        assert_eq!(view.breakdown_dim(&(2, "b")), "b");
+        assert_eq!(view.display_dims(&(2, "b")), (2,));
         assert_eq!(view.display_headers(), vec!["abc".to_string()]);
         assert_eq!(view.value_header(), "Breakdown(def)".to_string());
         assert_eq!(view.is_breakdown(), true);
@@ -713,16 +735,16 @@ mod tests {
 
     #[test]
     fn view3_breakdown_2nd() {
-        let schema: Schema3<u64, f32, bool> = Schemas::three("abc", "def", "ghi");
+        let schema: Schema3<u64, &str, bool> = Schemas::three("abc", "def", "ghi");
         let dataset = Dataset::builder(schema)
-            .add((1, 0.1, true))
-            .add((2, 0.2, false))
-            .add((3, 0.3, true))
+            .add((1, "a", true))
+            .add((2, "b", false))
+            .add((3, "c", true))
             .build();
         let view = dataset.breakdown_2nd();
-        assert_eq!(view.primary_dim(&(2, 0.2, false)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2, false)), 0.2);
-        assert_eq!(view.display_dims(&(2, 0.2, false)), (2, false));
+        assert_eq!(view.primary_dim(&(2, "b", false)), 2);
+        assert_eq!(view.breakdown_dim(&(2, "b", false)), "b");
+        assert_eq!(view.display_dims(&(2, "b", false)), (2, false));
         assert_eq!(
             view.display_headers(),
             vec!["abc".to_string(), "ghi".to_string()]

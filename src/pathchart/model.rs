@@ -4,7 +4,7 @@ use crate::render::{Alignment, Column, Columns, Grid, Row, Value};
 use crate::{Dimensions, Schema, View};
 use crate::{Flat, Render};
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -42,9 +42,6 @@ pub struct PathChart<'a, S, V>
 where
     S: Schema,
     V: View<S>,
-    <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
-    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
-    <V as View<S>>::DisplayDimensions: Clone + PartialEq + Eq + Hash + Ord,
 {
     view: &'a V,
     _phantom: PhantomData<S>,
@@ -55,8 +52,6 @@ where
     S: Schema,
     V: View<S>,
     <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
-    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
-    <V as View<S>>::DisplayDimensions: Clone + PartialEq + Eq + Hash + Ord,
 {
     /// Construct a path-chart widget from the provided view.
     pub fn new(view: &'a V) -> Self {

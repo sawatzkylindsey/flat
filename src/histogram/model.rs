@@ -3,7 +3,6 @@ use crate::render::{Alignment, Column, Columns, Flat, Grid, Render, Row, Value};
 use crate::{Binnable, HistogramConfig, Schema, View};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
-use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
@@ -32,14 +31,6 @@ pub struct Histogram<'a, S, V>
 where
     S: Schema,
     V: View<S>,
-    <V as View<S>>::PrimaryDimension: Clone
-        + Display
-        + PartialEq
-        + PartialOrd
-        + Add<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
-        + Sub<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
-        + Binnable,
-    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
     view: &'a V,
     bins: usize,
@@ -57,7 +48,6 @@ where
         + Add<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
         + Sub<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
         + Binnable,
-    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
     /// Construct a histogram widget from the provided view and number of bins.
     pub fn new(view: &'a V, bins: usize) -> Self {

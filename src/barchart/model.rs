@@ -4,7 +4,7 @@ use crate::render::{Alignment, Column, Columns, Grid, Row, Value};
 use crate::{BarChartConfig, Dimensions, Schema, View};
 use crate::{Flat, Render};
 use std::collections::{HashMap, HashSet};
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -37,9 +37,6 @@ pub struct BarChart<'a, S, V>
 where
     S: Schema,
     V: View<S>,
-    <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
-    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
-    <V as View<S>>::DisplayDimensions: Clone + PartialEq + Eq + Hash + Ord,
 {
     view: &'a V,
     _phantom: PhantomData<S>,
@@ -50,7 +47,6 @@ where
     S: Schema,
     V: View<S>,
     <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
-    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
     <V as View<S>>::DisplayDimensions: Clone + PartialEq + Eq + Hash + Ord,
 {
     /// Construct a bar-chart widget from the provided view.
@@ -67,7 +63,7 @@ where
             HashMap::default();
         let mut partial_aggregate_values: HashMap<String, Vec<f64>> = HashMap::default();
         let mut full_paths: HashSet<String> = HashSet::default();
-        let mut sort_dimensions: Vec<V::DisplayDimensions> = Vec::default();
+        let mut display_dimensions: Vec<V::DisplayDimensions> = Vec::default();
         let mut sort_breakdowns: Vec<V::BreakdownDimension> = Vec::default();
         let mut lookup: HashMap<
             V::DisplayDimensions,
@@ -135,7 +131,7 @@ where
                     display_dims.clone(),
                     (primary_dim.clone(), breakdown_dims.clone()),
                 );
-                sort_dimensions.push(display_dims);
+                display_dimensions.push(display_dims);
             }
 
             if !sort_breakdowns.contains(&breakdown_dims) {
@@ -143,7 +139,7 @@ where
             }
         }
 
-        sort_dimensions.sort();
+        display_dimensions.sort();
         sort_breakdowns.sort();
 
         let mut dimension_abbreviations: Vec<HashMap<String, String>> =
@@ -312,7 +308,7 @@ where
         let mut minimum_value = f64::MAX;
         let mut maximum_value = f64::MIN;
 
-        for display_dims in sort_dimensions.iter() {
+        for display_dims in display_dimensions.iter() {
             let path = display_dims.as_strings();
             let mut column_chunks_reversed: Vec<Vec<Value>> = Vec::default();
             let mut descendant_position = None;

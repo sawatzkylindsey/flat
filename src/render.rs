@@ -45,8 +45,8 @@ pub struct Render<C> {
     /// In the case of a breakdown, this represents the aggregate applied to the breakdown aggregates.
     /// ```ignore
     /// r#"
-    /// Show Aggregate                                      | Rendering of Aggregate of A | Rendering of Aggregate of B |
-    /// aggregate([aggregate([1, 2, 3]), aggregate(\[4\])]) | aggregate([1, 2, 3])        | aggregate(\[4\])            |"#
+    /// Show Aggregate                                    | Rendering of Aggregate of A | Rendering of Aggregate of B |
+    /// aggregate([aggregate([1, 2, 3]), aggregate([4])]) | aggregate([1, 2, 3])        | aggregate([4])              |"#
     /// ```
     ///
     /// Default: `false`.
