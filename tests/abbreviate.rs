@@ -365,3 +365,29 @@ fn abbreviate_pathchart_breakdown_separation() {
 /triceratops  |              |"#
     );
 }
+
+#[test]
+fn abbreviate_non_breakdown() {
+    let schema = Schemas::two("animal", "dinosaur");
+    let dataset = Dataset::builder(schema)
+        .add(("whale".to_string(), "tyrannosaurs".to_string()))
+        .add(("shark".to_string(), "triceratops".to_string()))
+        .add(("shark".to_string(), "triceratops".to_string()))
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .add(("tiger".to_string(), "pterodactyl".to_string()))
+        .build();
+    let view = dataset.counting_view();
+    let flat = BarChart::new(&view).render(Render {
+        abbreviate_breakdown: true,
+        ..Render::default()
+    });
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+dinosaur        animal  |Sum(Count)
+triceratops   - shark   |**
+pterodactyl   - tiger   |***
+tyrannosaurs  - whale   |*"#
+    );
+}

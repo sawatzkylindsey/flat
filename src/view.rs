@@ -148,6 +148,61 @@ where
 }
 
 #[doc(hidden)]
+pub struct View1Truncated2<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
+    pub(crate) value_header: String,
+}
+
+impl<'a, T, U> View<Schema2<T, U>> for View1Truncated2<'a, Schema2<T, U>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+{
+    type PrimaryDimension = T;
+    type BreakdownDimension = Nothing;
+    type DisplayDimensions = (T,);
+
+    fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
+        self.dataset.data()
+    }
+
+    fn value(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
+    }
+
+    fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        _dims: &<Schema2<T, U> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema2<T, U> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (dims.0.clone(),)
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![self.dataset.schema.dimension_0.clone()]
+    }
+
+    fn value_header(&self) -> String {
+        self.value_header.clone()
+    }
+
+    fn is_breakdown(&self) -> bool {
+        false
+    }
+}
+
+#[doc(hidden)]
 pub struct View2Full<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
     pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
@@ -252,6 +307,60 @@ where
 
     fn value_header(&self) -> String {
         self.dataset.schema.dimension_1.clone()
+    }
+
+    fn is_breakdown(&self) -> bool {
+        false
+    }
+}
+
+#[doc(hidden)]
+pub struct View2Inverted<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
+}
+
+impl<'a, T, U> View<Schema2<T, U>> for View2Inverted<'a, Schema2<T, U>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+{
+    type PrimaryDimension = U;
+    type BreakdownDimension = Nothing;
+    type DisplayDimensions = (U,);
+
+    fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
+        self.dataset.data()
+    }
+
+    fn value(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
+    }
+
+    fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
+        dims.1.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        _dims: &<Schema2<T, U> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema2<T, U> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (dims.1.clone(),)
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![self.dataset.schema.dimension_1.clone()]
+    }
+
+    fn value_header(&self) -> String {
+        self.dataset.schema.dimension_0.clone()
     }
 
     fn is_breakdown(&self) -> bool {

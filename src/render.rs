@@ -574,11 +574,18 @@ impl Display for Flat {
             view_width > self.grid.maximum_breakdown_width,
         ) {
             // We're supposed to abbreviate, but we don't need to.
-            (true, true) => find_abbreviations(
-                self.grid.minimum_breakdown_width,
-                self.grid.maximum_breakdown_width,
-                &self.grid.breakdown_values,
-            ),
+            (true, true) => {
+                if self.grid.minimum_breakdown_width == usize::MAX {
+                    // The config asks to abbreviate the breakdown, but the view isn't actually a breakdown!
+                    (self.grid.maximum_breakdown_width, HashMap::default())
+                } else {
+                    find_abbreviations(
+                        self.grid.minimum_breakdown_width,
+                        self.grid.maximum_breakdown_width,
+                        &self.grid.breakdown_values,
+                    )
+                }
+            }
             // We're supposed to abbreviate and we need to.
             (true, false) => find_abbreviations(
                 view_width,

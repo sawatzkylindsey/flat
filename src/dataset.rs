@@ -1,10 +1,13 @@
 use crate::{
-    Schema, Schema1, Schema2, Schema3, View1Full, View2Breakdown2, View2Full, View2Regular,
-    View3Breakdown2, View3Breakdown3, View3Full, View3Regular,
+    Schema, Schema1, Schema2, Schema3, View1Full, View1Truncated2, View2Breakdown2, View2Full,
+    View2Inverted, View2Regular, View3Breakdown2, View3Breakdown3, View3Full, View3Regular,
 };
 // We use this in the doc strings.
 #[allow(unused_imports)]
 use super::View;
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use super::Schemas;
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
 use ordered_float::OrderedFloat;
 
@@ -21,6 +24,11 @@ pub struct Dataset<S: Schema> {
     pub(crate) schema: S,
     data: Vec<S::Dimensions>,
 }
+//
+// pub struct RefDataset<'a, S: Schema> {
+//     pub(crate) schema: S,
+//     data: Vec<&'a S::Dimensions>,
+// }
 
 impl<S: Schema> Dataset<S> {
     /// Get the data held within this `Dataset`.
@@ -206,6 +214,23 @@ macro_rules! impl_schema2_view {
     };
 }
 
+macro_rules! impl_schema2_view_inverted {
+    ($T:ty, $attrs:meta) => {
+        #[$attrs]
+        #[allow(rustdoc::broken_intra_doc_links)]
+        impl<U> Dataset<Schema2<$T, U>> {
+            pub fn view_1st(&self) -> View2Inverted<Schema2<$T, U>> {
+                let extractor: Box<dyn Fn(&<Schema2<$T, U> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.0 as f64);
+                View2Inverted {
+                    dataset: &self,
+                    extractor,
+                }
+            }
+        }
+    };
+}
+
 impl_schema2_view!(f64, doc());
 impl_schema2_view!(f32, doc(hidden));
 impl_schema2_view!(isize, doc(hidden));
@@ -220,6 +245,20 @@ impl_schema2_view!(u64, doc(hidden));
 impl_schema2_view!(u32, doc(hidden));
 impl_schema2_view!(u16, doc(hidden));
 impl_schema2_view!(u8, doc(hidden));
+impl_schema2_view_inverted!(f64, doc());
+impl_schema2_view_inverted!(f32, doc(hidden));
+impl_schema2_view_inverted!(isize, doc(hidden));
+impl_schema2_view_inverted!(i128, doc(hidden));
+impl_schema2_view_inverted!(i64, doc(hidden));
+impl_schema2_view_inverted!(i32, doc(hidden));
+impl_schema2_view_inverted!(i16, doc(hidden));
+impl_schema2_view_inverted!(i8, doc(hidden));
+impl_schema2_view_inverted!(usize, doc(hidden));
+impl_schema2_view_inverted!(u128, doc(hidden));
+impl_schema2_view_inverted!(u64, doc(hidden));
+impl_schema2_view_inverted!(u32, doc(hidden));
+impl_schema2_view_inverted!(u16, doc(hidden));
+impl_schema2_view_inverted!(u8, doc(hidden));
 
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
 macro_rules! impl_schema2_view_smart_pointer {
@@ -312,6 +351,16 @@ impl<T, U> Dataset<Schema2<T, U>> {
     /// ```
     pub fn breakdown_2nd(&self) -> View2Breakdown2<Schema2<T, U>> {
         View2Breakdown2 { dataset: &self }
+    }
+
+    pub fn without_2nd(&self) -> View1Truncated2<Schema2<T, U>> {
+        let extractor: Box<dyn Fn(&<Schema2<T, U> as Schema>::Dimensions) -> f64> =
+            Box::new(|_| 1.0);
+        View1Truncated2 {
+            dataset: &self,
+            extractor,
+            value_header: "Count".to_string(),
+        }
     }
 }
 
