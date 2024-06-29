@@ -1,6 +1,9 @@
-use crate::{Dataset, Dimensions, Nothing, Schema, Schema1, Schema2, Schema3};
+use crate::{Dimensions, Nothing, Schema, Schema1, Schema2, Schema3};
 use std::fmt::Display;
 use std::hash::Hash;
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use crate::Dataset;
 // We use this in the doc strings.
 #[allow(unused_imports)]
 use crate::Render;
@@ -52,7 +55,7 @@ pub trait View<S: Schema> {
     fn primary_dim(&self, dims: &S::Dimensions) -> Self::PrimaryDimension;
 
     /// Extract the breakdown dimension for this view from the input vector.
-    /// In the case of, non-breakdown views ([`View::is_breakdown`] == false) should simply return [`Nothing`].
+    /// In the case of non-breakdown views ([`View::is_breakdown`] == false), this method should return [`Nothing`].
     ///
     /// Breakdown views allow `flat` renderings to span the horizontal space.
     /// For example:
@@ -70,9 +73,9 @@ pub trait View<S: Schema> {
 
     /// Extract the display dimensions for this view from the input vector.
     ///
-    /// The display dimensions are *optionally* shown in the dimensional aspect of `flat`.
+    /// The display dimensions are *optionally* shown in the frame of `flat`.
     /// How they are shown is totally at the discretion of the widget's implementation.
-    /// However, the view implementation must always include display dimensions (if only the primary dimension).
+    /// However, the widget implementation must always include the primary dimension.
     /// For example:
     /// ```text
     /// Dimensions..                      | Rendering
@@ -132,61 +135,6 @@ where
 
     fn display_dims(&self, dims: &<Schema1<T> as Schema>::Dimensions) -> Self::DisplayDimensions {
         dims.clone()
-    }
-
-    fn display_headers(&self) -> Vec<String> {
-        vec![self.dataset.schema.dimension_0.clone()]
-    }
-
-    fn value_header(&self) -> String {
-        self.value_header.clone()
-    }
-
-    fn is_breakdown(&self) -> bool {
-        false
-    }
-}
-
-#[doc(hidden)]
-pub struct View1Truncated2<'a, S: Schema> {
-    pub(crate) dataset: &'a Dataset<S>,
-    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
-    pub(crate) value_header: String,
-}
-
-impl<'a, T, U> View<Schema2<T, U>> for View1Truncated2<'a, Schema2<T, U>>
-where
-    T: Clone + Display,
-    U: Clone + Display,
-{
-    type PrimaryDimension = T;
-    type BreakdownDimension = Nothing;
-    type DisplayDimensions = (T,);
-
-    fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
-        self.dataset.data()
-    }
-
-    fn value(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
-        (self.extractor)(dims)
-    }
-
-    fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
-        dims.0.clone()
-    }
-
-    fn breakdown_dim(
-        &self,
-        _dims: &<Schema2<T, U> as Schema>::Dimensions,
-    ) -> Self::BreakdownDimension {
-        Nothing
-    }
-
-    fn display_dims(
-        &self,
-        dims: &<Schema2<T, U> as Schema>::Dimensions,
-    ) -> Self::DisplayDimensions {
-        (dims.0.clone(),)
     }
 
     fn display_headers(&self) -> Vec<String> {

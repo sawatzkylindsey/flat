@@ -1,6 +1,6 @@
 use crate::{
-    Schema, Schema1, Schema2, Schema3, View1Full, View1Truncated2, View2Breakdown2, View2Full,
-    View2Inverted, View2Regular, View3Breakdown2, View3Breakdown3, View3Full, View3Regular,
+    Schema, Schema1, Schema2, Schema3, View1Full, View2Breakdown2, View2Full, View2Inverted,
+    View2Regular, View3Breakdown2, View3Breakdown3, View3Full, View3Regular,
 };
 // We use this in the doc strings.
 #[allow(unused_imports)]
@@ -351,16 +351,6 @@ impl<T, U> Dataset<Schema2<T, U>> {
     /// ```
     pub fn breakdown_2nd(&self) -> View2Breakdown2<Schema2<T, U>> {
         View2Breakdown2 { dataset: &self }
-    }
-
-    pub fn without_2nd(&self) -> View1Truncated2<Schema2<T, U>> {
-        let extractor: Box<dyn Fn(&<Schema2<T, U> as Schema>::Dimensions) -> f64> =
-            Box::new(|_| 1.0);
-        View1Truncated2 {
-            dataset: &self,
-            extractor,
-            value_header: "Count".to_string(),
-        }
     }
 }
 

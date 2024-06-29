@@ -28,6 +28,28 @@ whale  |*"#
     );
 }
 
+#[test]
+fn barchart_1d_reflective() {
+    let schema: Schema1<u64> = Schemas::one("anml");
+    let dataset = Dataset::builder(schema)
+        .add((1,))
+        .add((2,))
+        .add((3,))
+        .add((2,))
+        .add((2,))
+        .build();
+    let view = dataset.reflective_view();
+    let flat = BarChart::new(&view).render(Render::default());
+    assert_eq!(
+        format!("\n{}", flat.to_string()),
+        r#"
+anml  |Sum(anml)
+1     |*
+2     |******
+3     |***"#
+    );
+}
+
 fn dataset_2d() -> Dataset<Schema2<String, u32>> {
     let schema = Schemas::two("animal", "length");
     Dataset::builder(schema)
