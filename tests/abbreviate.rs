@@ -1,7 +1,7 @@
 use flat::{BarChart, Dataset, Histogram, PathChart, Render, Schemas};
 
 #[test]
-fn abbreviate_barchart_breakdown_hint1() {
+fn abbreviate_barchart_count_breakdown_hint1() {
     let schema = Schemas::two("animal", "dinosaur");
     let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
@@ -11,7 +11,7 @@ fn abbreviate_barchart_breakdown_hint1() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -20,7 +20,8 @@ fn abbreviate_barchart_breakdown_hint1() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-         Sum(Breakdown(dinosaur))
+         dinosaur
+         Sum(Count)
 animal  |pt.. tr.. ty..|
 shark   |      *       |
 tiger   | **           |
@@ -29,7 +30,7 @@ whale   |              |"#
 }
 
 #[test]
-fn abbreviate_barchart_breakdown_hint15() {
+fn abbreviate_barchart_count_breakdown_hint15() {
     let schema = Schemas::two("animal", "dinosaur");
     let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
@@ -39,7 +40,7 @@ fn abbreviate_barchart_breakdown_hint15() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 15,
         abbreviate_breakdown: true,
@@ -48,7 +49,8 @@ fn abbreviate_barchart_breakdown_hint15() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-         Sum(Breakdown(dinosaur))
+         dinosaur
+         Sum(Count)
 animal  |pt.. tr.. ty..|
 shark   |      *       |
 tiger   | **           |
@@ -57,7 +59,7 @@ whale   |              |"#
 }
 
 #[test]
-fn abbreviate_barchart_breakdown_hint30() {
+fn abbreviate_barchart_count_breakdown_hint30() {
     let schema = Schemas::two("animal", "dinosaur");
     let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
@@ -67,7 +69,7 @@ fn abbreviate_barchart_breakdown_hint30() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 30,
         abbreviate_breakdown: true,
@@ -76,7 +78,8 @@ fn abbreviate_barchart_breakdown_hint30() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-         Sum(Breakdown(dinosaur))
+         dinosaur
+         Sum(Count)
 animal  |pter.. tric.. tyra..|
 shark   |         **         |
 tiger   | ***                |
@@ -85,7 +88,7 @@ whale   |                *   |"#
 }
 
 #[test]
-fn abbreviate_barchart_breakdown_hint180() {
+fn abbreviate_barchart_count_breakdown_hint180() {
     let schema = Schemas::two("animal", "dinosaur");
     let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), "tyrannosaurs".to_string()))
@@ -95,7 +98,7 @@ fn abbreviate_barchart_breakdown_hint180() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 180,
         abbreviate_breakdown: true,
@@ -104,7 +107,8 @@ fn abbreviate_barchart_breakdown_hint180() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-         Sum(Breakdown(dinosaur))
+         dinosaur
+         Sum(Count)
 animal  |pterodactyl  triceratops  tyrannosaurs|
 shark   |                  **                  |
 tiger   |    ***                               |
@@ -113,7 +117,7 @@ whale   |                               *      |"#
 }
 
 #[test]
-fn barchart_3d_breakdown2_abbreviate() {
+fn barchart_3d_count_breakdown_abbreviate() {
     let schema = Schemas::three("animal", "length", "stable");
     let dataset = Dataset::builder(schema)
         .add(("whale".to_string(), 4u32, true))
@@ -129,7 +133,7 @@ fn barchart_3d_breakdown2_abbreviate() {
         .add(("tiger".to_string(), 1u32, false))
         .add(("tiger".to_string(), 1u32, false))
         .build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_3rd();
     let flat = BarChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -137,42 +141,8 @@ fn barchart_3d_breakdown2_abbreviate() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                   Sum(Breakdown(length))
-stable    animal  | 1   4   5 |
-false   - shark   |***  *     |
-true    ┘
-false   - tiger   |***  *  ***|
-true    ┘
-true    - whale   |     *     |"#
-    );
-}
-
-#[test]
-fn barchart_3d_breakdown3_abbreviate() {
-    let schema = Schemas::three("animal", "length", "stable");
-    let dataset = Dataset::builder(schema)
-        .add(("whale".to_string(), 4u32, true))
-        .add(("shark".to_string(), 4u32, false))
-        .add(("shark".to_string(), 1u32, true))
-        .add(("shark".to_string(), 1u32, true))
-        .add(("shark".to_string(), 1u32, true))
-        .add(("tiger".to_string(), 4u32, false))
-        .add(("tiger".to_string(), 5u32, true))
-        .add(("tiger".to_string(), 5u32, true))
-        .add(("tiger".to_string(), 5u32, true))
-        .add(("tiger".to_string(), 1u32, false))
-        .add(("tiger".to_string(), 1u32, false))
-        .add(("tiger".to_string(), 1u32, false))
-        .build();
-    let view = dataset.breakdown_3rd();
-    let flat = BarChart::new(&view).render(Render {
-        abbreviate_breakdown: true,
-        ..Render::default()
-    });
-    assert_eq!(
-        format!("\n{}", flat.to_string()),
-        r#"
-                   Sum(Breakdown(stable))
+                   stable
+                   Sum(Count)
 length    animal  |false true |
 1       - shark   |  *    *** |
 4       ┘
@@ -184,7 +154,7 @@ length    animal  |false true |
 }
 
 #[test]
-fn histogram_breakdown_abbreviate() {
+fn histogram_count_breakdown_abbreviate() {
     let pets = vec!["ralf", "kipp", "orville"];
     let schema = Schemas::two("length", "pet");
     let mut builder = Dataset::builder(schema);
@@ -196,7 +166,7 @@ fn histogram_breakdown_abbreviate() {
     }
 
     let dataset = builder.build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -204,7 +174,8 @@ fn histogram_breakdown_abbreviate() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                           Sum(Breakdown(pet))
+                           pet
+                           Sum(Count)
 length                    |  kipp     orvi..     ralf   |
 [1, 2.6)                  |    *        **              |
 [2.6, 4.2)                |  ****                 ***   |
@@ -215,7 +186,7 @@ length                    |  kipp     orvi..     ralf   |
 }
 
 #[test]
-fn histogram_breakdown_abbreviate_hint1() {
+fn histogram_count_breakdown_abbreviate_hint1() {
     let pets = vec!["ralf", "kipp", "orville"];
     let schema = Schemas::two("length", "pet");
     let mut builder = Dataset::builder(schema);
@@ -227,7 +198,7 @@ fn histogram_breakdown_abbreviate_hint1() {
     }
 
     let dataset = builder.build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -236,7 +207,8 @@ fn histogram_breakdown_abbreviate_hint1() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                           Sum(Breakdown(pet))
+                           pet
+                           Sum(Count)
 length                    |k.. o.. r..|
 [1, 2.6)                  |           |
 [2.6, 4.2)                |           |
@@ -247,7 +219,7 @@ length                    |k.. o.. r..|
 }
 
 #[test]
-fn histogram_breakdown_abbreviate_hint15() {
+fn histogram_count_breakdown_abbreviate_hint15() {
     let pets = vec!["ralf", "kipp", "orville"];
     let schema = Schemas::two("length", "pet");
     let mut builder = Dataset::builder(schema);
@@ -259,7 +231,7 @@ fn histogram_breakdown_abbreviate_hint15() {
     }
 
     let dataset = builder.build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 15,
         abbreviate_breakdown: true,
@@ -268,7 +240,8 @@ fn histogram_breakdown_abbreviate_hint15() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                           Sum(Breakdown(pet))
+                           pet
+                           Sum(Count)
 length                    |k.. o.. r..|
 [1, 2.6)                  |           |
 [2.6, 4.2)                |           |
@@ -279,7 +252,7 @@ length                    |k.. o.. r..|
 }
 
 #[test]
-fn histogram_breakdown_abbreviate_hint30() {
+fn histogram_count_breakdown_abbreviate_hint30() {
     let pets = vec!["ralf", "kipp", "orville"];
     let schema = Schemas::two("length", "pet");
     let mut builder = Dataset::builder(schema);
@@ -291,7 +264,7 @@ fn histogram_breakdown_abbreviate_hint30() {
     }
 
     let dataset = builder.build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint: 30,
         abbreviate_breakdown: true,
@@ -300,7 +273,8 @@ fn histogram_breakdown_abbreviate_hint30() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                           Sum(Breakdown(pet))
+                           pet
+                           Sum(Count)
 length                    |k.. o.. r..|
 [1, 2.6)                  |           |
 [2.6, 4.2)                |           |
@@ -311,7 +285,7 @@ length                    |k.. o.. r..|
 }
 
 #[test]
-fn abbreviate_barchart_breakdown_separation() {
+fn abbreviate_barchart_count_breakdown_separation() {
     let schema = Schemas::two("pterodactyl", "dinosaur");
     let dataset = Dataset::builder(schema)
         .add(("triceratops".to_string(), "tyrannosaurs".to_string()))
@@ -321,7 +295,7 @@ fn abbreviate_barchart_breakdown_separation() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = BarChart::new(&view).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -330,7 +304,8 @@ fn abbreviate_barchart_breakdown_separation() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-              Sum(Breakdown(dinosaur))
+              dinosaur
+              Sum(Count)
 pterodactyl  |pt.. tr.. ty..|
 shark        |      *       |
 tiger        | **           |
@@ -339,7 +314,7 @@ triceratops  |              |"#
 }
 
 #[test]
-fn abbreviate_pathchart_breakdown_separation() {
+fn abbreviate_pathchart_count_breakdown_separation() {
     let schema = Schemas::two("pterodactyl", "dinosaur");
     let dataset = Dataset::builder(schema)
         .add(("triceratops".to_string(), "tyrannosaurs".to_string()))
@@ -349,7 +324,7 @@ fn abbreviate_pathchart_breakdown_separation() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = PathChart::new(&view).render(Render {
         width_hint: 1,
         abbreviate_breakdown: true,
@@ -358,7 +333,8 @@ fn abbreviate_pathchart_breakdown_separation() {
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-               Sum(Breakdown(dinosaur))
+               dinosaur
+               Sum(Count)
 /pterodactyl  |pt.. tr.. ty..|
 /shark        |      *       |
 /tiger        | **           |
@@ -377,7 +353,7 @@ fn abbreviate_non_breakdown() {
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .add(("tiger".to_string(), "pterodactyl".to_string()))
         .build();
-    let view = dataset.counting_view();
+    let view = dataset.count();
     let flat = BarChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()

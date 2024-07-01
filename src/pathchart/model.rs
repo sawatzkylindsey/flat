@@ -4,7 +4,7 @@ use crate::render::{Alignment, Column, Columns, Grid, Row, Value};
 use crate::{Dimensions, Schema, View};
 use crate::{Flat, Render};
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -22,7 +22,7 @@ use std::marker::PhantomData;
 ///     .add(("tiger".to_string(), "medium".to_string()))
 ///     .add(("tiger".to_string(), "small".to_string()))
 ///     .build();
-/// let view = dataset.counting_view();
+/// let view = dataset.count();
 /// let flat = PathChart::new(&view)
 ///     .render(Render::default());
 /// assert_eq!(
@@ -52,6 +52,7 @@ where
     S: Schema,
     V: View<S>,
     <V as View<S>>::PrimaryDimension: Clone + PartialEq + Eq + Hash,
+    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
     /// Construct a path-chart widget from the provided view.
     pub fn new(view: &'a V) -> Self {
@@ -137,7 +138,7 @@ where
         // rendering delimiter |
         columns.push(Column::string(Alignment::Center));
 
-        if self.view.is_breakdown() {
+        if self.view.breakdown_label().is_some() {
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
                 columns.push(Column::breakdown(Alignment::Center));
@@ -157,28 +158,33 @@ where
 
         let mut grid = Grid::new(columns);
 
-        if self.view.is_breakdown() {
-            let mut pre_header = Row::default();
+        if let Some(breakdown_header) = self.view.breakdown_label() {
+            let value_label = self.view.value_label();
 
-            for _ in 0..self.view.display_headers().len() {
-                pre_header.push(Value::Empty);
+            if value_label == breakdown_header {
+                let pre_header = build_preheader(
+                    &config,
+                    self.view.display_headers().len(),
+                    &breakdown_header,
+                    true,
+                );
+                grid.add(pre_header);
+            } else {
+                let pre_header1 = build_preheader(
+                    &config,
+                    self.view.display_headers().len(),
+                    &breakdown_header,
+                    false,
+                );
+                grid.add(pre_header1);
+                let pre_header2 = build_preheader(
+                    &config,
+                    self.view.display_headers().len(),
+                    &value_label,
+                    true,
+                );
+                grid.add(pre_header2);
             }
-
-            if config.show_aggregate {
-                pre_header.push(Value::Empty);
-                pre_header.push(Value::Empty);
-                pre_header.push(Value::Empty);
-                pre_header.push(Value::Empty);
-            }
-
-            pre_header.push(Value::Empty);
-            pre_header.push(Value::Empty);
-            pre_header.push(Value::Plain(format!(
-                "{}({})",
-                config.aggregate.to_string(),
-                self.view.value_header()
-            )));
-            grid.add(pre_header);
         }
 
         let mut header = Row::default();
@@ -205,7 +211,7 @@ where
         header.push(Value::String("  ".to_string()));
         header.push(Value::String("|".to_string()));
 
-        if self.view.is_breakdown() {
+        if self.view.breakdown_label().is_some() {
             for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
                 header.push(Value::String(breakdown_dim.to_string()));
 
@@ -219,7 +225,7 @@ where
             header.push(Value::Plain(format!(
                 "{}({})",
                 config.aggregate.to_string(),
-                self.view.value_header()
+                self.view.value_label()
             )));
         }
 
@@ -245,7 +251,7 @@ where
                         .get(part)
                         .expect("sort dimensions must be mapped to dimensions");
 
-                    if self.view.is_breakdown() {
+                    if self.view.breakdown_label().is_some() {
                         let breakdown_values: Vec<f64> = sort_breakdowns
                             .iter()
                             .map(|breakdown_dim| {
@@ -343,6 +349,40 @@ where
     }
 }
 
+fn build_preheader(
+    config: &Render<PathChartConfig>,
+    columns: usize,
+    label: &str,
+    embed: bool,
+) -> Row {
+    let mut row = Row::default();
+
+    for _ in 0..columns {
+        row.push(Value::Empty);
+    }
+
+    if config.show_aggregate {
+        row.push(Value::Empty);
+        row.push(Value::Empty);
+        row.push(Value::Empty);
+        row.push(Value::Empty);
+    }
+
+    row.push(Value::Empty);
+    row.push(Value::Empty);
+
+    if embed {
+        row.push(Value::Plain(format!(
+            "{}({label})",
+            config.aggregate.to_string(),
+        )));
+    } else {
+        row.push(Value::Plain(format!("{label}")));
+    }
+
+    row
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Path {
     path: Vec<String>,
@@ -358,7 +398,7 @@ mod tests {
     fn empty() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let builder = Dataset::builder(schema).build();
-        let view = builder.reflective_view();
+        let view = builder.reflect_1st();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render::default());
         assert_eq!(
@@ -372,7 +412,7 @@ mod tests {
     fn zero() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let dataset = Dataset::builder(schema).add((0,)).build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render::default());
         assert_eq!(
@@ -391,7 +431,7 @@ mod tests {
             .add((0,))
             .add((1,))
             .build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render::default());
         assert_eq!(
@@ -414,7 +454,7 @@ mod tests {
         }
 
         let dataset = builder.build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render::default());
         assert_eq!(
@@ -435,7 +475,7 @@ mod tests {
         }
 
         let dataset = builder.build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render::default());
         assert_eq!(
@@ -448,7 +488,7 @@ mod tests {
 
     #[test]
     fn breakdown() {
-        let schema = Schemas::two("abc", "something long");
+        let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
         let dataset = Dataset::builder(schema)
             .add((1, 2))
             .add((2, 3))
@@ -460,7 +500,30 @@ mod tests {
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-       Sum(Breakdown(something long))
+       Sum(something long)
+/abc  | 2    3    4  |
+/1    | **           |
+/2    |     ***      |
+/3    |          ****|"#
+        );
+    }
+
+    #[test]
+    fn count_breakdown() {
+        let schema = Schemas::two("abc", "something long");
+        let dataset = Dataset::builder(schema)
+            .add((1, 2))
+            .add((2, 3))
+            .add((3, 4))
+            .build();
+        let view = dataset.count_breakdown_2nd();
+        let barchart = PathChart::new(&view);
+        let flat = barchart.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+       something long
+       Sum(Count)
 /abc  |2 3 4|
 /1    |*    |
 /2    |  *  |
@@ -472,7 +535,7 @@ mod tests {
     fn depth_3_combo111() {
         let schema = Schemas::three("A", "B", "C");
         let dataset = Dataset::builder(schema).add(("a1", "b1", "c1")).build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -495,7 +558,7 @@ mod tests {
             .add(("a1", "b1", "c1"))
             .add(("a1", "b1", "c2"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -520,7 +583,7 @@ mod tests {
             .add(("a1", "b1", "c2"))
             .add(("a1", "b2", "c2"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -547,7 +610,7 @@ mod tests {
             .add(("a1", "b1", "c2"))
             .add(("a1", "b2", "c1"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -574,7 +637,7 @@ mod tests {
             .add(("a1", "b1", "c2"))
             .add(("a1", "b1", "c3"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -601,7 +664,7 @@ mod tests {
             .add(("a1", "b1", "c3"))
             .add(("a1", "b2", "c3"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -630,7 +693,7 @@ mod tests {
             .add(("a1", "b1", "c3"))
             .add(("a1", "b2", "c2"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -659,7 +722,7 @@ mod tests {
             .add(("a1", "b1", "c3"))
             .add(("a1", "b2", "c1"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -689,7 +752,7 @@ mod tests {
             .add(("a1", "b2", "c1"))
             .add(("a1", "b3", "c1"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -722,7 +785,7 @@ mod tests {
             .add(("a1", "b1", "c2"))
             .add(("a1", "b1", "c1"))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render {
             show_aggregate: true,
@@ -766,7 +829,7 @@ mod tests {
 /4    |*"#
         );
 
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let barchart = PathChart::new(&view);
         let flat = barchart.render(Render::default());
         assert_eq!(
@@ -789,7 +852,22 @@ mod tests {
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-       Sum(Breakdown(def))
+       Sum(def)
+/abc  |0.1 0.4 0.5 0.9|
+/1    |               |
+/2    |               |
+/3    |         *     |
+/4    |             * |"#
+        );
+
+        let view = dataset.count_breakdown_2nd();
+        let barchart = PathChart::new(&view);
+        let flat = barchart.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+       def
+       Sum(Count)
 /abc  |0.1 0.4 0.5 0.9|
 /1    | *             |
 /2    |     *         |

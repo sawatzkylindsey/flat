@@ -290,12 +290,12 @@ impl<'a> View<FlowerSchema> for AttributeView<'a> {
         vec!["Species".to_string()]
     }
 
-    fn value_header(&self) -> String {
+    fn value_label(&self) -> String {
         self.field.print_string()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 }
 
@@ -337,12 +337,12 @@ impl<'a> View<FlowerSchema> for SepalLengthView<'a> {
         vec!["Sepal Length".to_string()]
     }
 
-    fn value_header(&self) -> String {
+    fn value_label(&self) -> String {
         self.field.print_string()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 }
 

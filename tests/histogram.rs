@@ -13,7 +13,7 @@ fn histogram() {
     }
 
     let dataset = builder.build();
-    let view = dataset.reflective_view();
+    let view = dataset.reflect_1st();
     let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -39,7 +39,7 @@ fn histogram_u64() {
     }
 
     let dataset = builder.build();
-    let view = dataset.reflective_view();
+    let view = dataset.reflect_1st();
     let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
@@ -70,7 +70,7 @@ fn histogram_squish(#[case] width_hint: usize) {
     }
 
     let dataset = builder.build();
-    let view = dataset.reflective_view();
+    let view = dataset.reflect_1st();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint,
         ..Render::default()
@@ -99,7 +99,7 @@ fn histogram_show_sum() {
     }
 
     let dataset = builder.build();
-    let view = dataset.reflective_view();
+    let view = dataset.reflect_1st();
     let flat = Histogram::new(&view, 5).render(Render {
         show_aggregate: true,
         ..Render::default()
@@ -128,7 +128,7 @@ fn histogram_show_average() {
     }
 
     let dataset = builder.build();
-    let view = dataset.reflective_view();
+    let view = dataset.reflect_1st();
     let flat = Histogram::new(&view, 5).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -163,7 +163,7 @@ fn histogram_show_sum_squish(#[case] width_hint: usize) {
     }
 
     let dataset = builder.build();
-    let view = dataset.reflective_view();
+    let view = dataset.reflect_1st();
     let flat = Histogram::new(&view, 5).render(Render {
         width_hint,
         show_aggregate: true,
@@ -201,7 +201,7 @@ fn histogram_show_average_squish(#[case] width_hint: usize) {
     }
 
     let dataset = builder.build();
-    let view = dataset.reflective_view();
+    let view = dataset.reflect_1st();
     let flat = Histogram::new(&view, 5).render(Render {
         aggregate: Aggregate::Average,
         width_hint,
@@ -221,7 +221,7 @@ length                   Average  |Average(length)
 }
 
 #[test]
-fn histogram_breakdown() {
+fn histogram_count_breakdown() {
     let pets = vec!["ralf", "kipp", "orville"];
     let schema = Schemas::two("length", "pet");
     let mut builder = Dataset::builder(schema);
@@ -233,12 +233,13 @@ fn histogram_breakdown() {
     }
 
     let dataset = builder.build();
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = Histogram::new(&view, 5).render(Render::default());
     assert_eq!(
         format!("\n{}", flat.to_string()),
         r#"
-                           Sum(Breakdown(pet))
+                           pet
+                           Sum(Count)
 length                    |  kipp     orville    ralf   |
 [1, 2.6)                  |    *        **              |
 [2.6, 4.2)                |  ****                 ***   |

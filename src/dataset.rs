@@ -1,6 +1,6 @@
 use crate::{
-    Schema, Schema1, Schema2, Schema3, View1Full, View2Breakdown2, View2Full, View2Inverted,
-    View2Regular, View3Breakdown2, View3Breakdown3, View3Full, View3Regular,
+    Schema, Schema1, Schema2, Schema3, View1Full, View2Breakdown, View2BreakdownCount, View2Full,
+    View2Regular, View3Breakdown, View3BreakdownCount, View3Full, View3Regular,
 };
 // We use this in the doc strings.
 #[allow(unused_imports)]
@@ -24,11 +24,6 @@ pub struct Dataset<S: Schema> {
     pub(crate) schema: S,
     data: Vec<S::Dimensions>,
 }
-//
-// pub struct RefDataset<'a, S: Schema> {
-//     pub(crate) schema: S,
-//     data: Vec<&'a S::Dimensions>,
-// }
 
 impl<S: Schema> Dataset<S> {
     /// Get the data held within this `Dataset`.
@@ -79,18 +74,19 @@ macro_rules! impl_schema1_view {
         impl Dataset<Schema1<$T>> {
             /// Take a reflective view of this 1-dimensional dataset.
             /// Views are rendered differently by different widgets, but
-            /// always have a dimensional component on the left and a rendering component on the right.
+            /// always have a frame on the left and a rendering on the right.
             ///
-            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+            /// This view will render the final dimension (1st), and use all other dimensions in the frame of the widget.
+            /// The term 'reflection' refers to the fact that the value will appear in both in the frame and rendering of the widget.
             /// ```text
             /// r#"
-            /// Dimensions.. | Rendering
-            /// (dim1, )     | aggregate(dim1)"#
+            /// Frame..   | Rendering....
+            /// (dim1, )  | aggregate(dim1)"#
             /// ```
             ///
             /// Note, implemented for all numeric primitives.
             /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
-            pub fn reflective_view(&self) -> View1Full<Schema1<$T>> {
+            pub fn reflect_1st(&self) -> View1Full<Schema1<$T>> {
                 let extractor: Box<dyn Fn(&<Schema1<$T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| d.0 as f64);
                 View1Full {
@@ -122,7 +118,7 @@ impl_schema1_view!(u8, doc(hidden));
 macro_rules! impl_schema1_view_smart_pointer {
     ($T:ty) => {
         impl Dataset<Schema1<$T>> {
-            pub fn reflective_view(&self) -> View1Full<Schema1<$T>> {
+            pub fn reflect_1st(&self) -> View1Full<Schema1<$T>> {
                 let extractor: Box<dyn Fn(&<Schema1<$T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| (*d.0) as f64);
                 View1Full {
@@ -143,15 +139,15 @@ impl_schema1_view_smart_pointer!(OrderedFloat<f32>);
 impl<T> Dataset<Schema1<T>> {
     /// Take a counting view of this 1-dimensional dataset.
     /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
+    /// always have a frame on the left and a rendering on the right.
     ///
-    /// The term 'counting' refers to the fact that we count the occurrences of each dimensional vector.
+    /// This view will render the occurrences of each dimensional vector, while using all dimensions in the frame of the widget.
     /// ```text
     /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, )     | aggregate(count())"#
+    /// Frame..   | Rendering..
+    /// (dim1, )  | aggregate(count())"#
     /// ```
-    pub fn counting_view(&self) -> View1Full<Schema1<T>> {
+    pub fn count(&self) -> View1Full<Schema1<T>> {
         let extractor: Box<dyn Fn(&<Schema1<T> as Schema>::Dimensions) -> f64> = Box::new(|_| 1f64);
         View1Full {
             dataset: &self,
@@ -168,18 +164,19 @@ macro_rules! impl_schema2_view {
         impl<T> Dataset<Schema2<T, $T>> {
             /// Take a reflective view of this 2-dimensional dataset.
             /// Views are rendered differently by different widgets, but
-            /// always have a dimensional component on the left and a rendering component on the right.
+            /// always have a frame on the left and a rendering on the right.
             ///
-            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+            /// This view will render the final dimension (2nd), and use all other dimensions in the frame of the widget.
+            /// The term 'reflection' refers to the fact that the value will appear in both in the frame and rendering of the widget.
             /// ```text
             /// r#"
-            /// Dimensions.. | Rendering
-            /// (dim1, dim2) | aggregate(dim2)"#
+            /// Frame..       | Rendering..
+            /// (dim1, dim2)  | aggregate(dim2)"#
             /// ```
             ///
             /// Note, implemented for all numeric primitives.
             /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
-            pub fn reflective_view(&self) -> View2Full<Schema2<T, $T>> {
+            pub fn reflect_2nd(&self) -> View2Full<Schema2<T, $T>> {
                 let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| d.1 as f64);
                 View2Full {
@@ -191,13 +188,13 @@ macro_rules! impl_schema2_view {
 
             /// Take a regular view of this 2-dimensional dataset.
             /// Views are rendered differently by different widgets, but
-            /// always have a dimensional component on the left and a rendering component on the right.
+            /// always have a frame on the left and a rendering on the right.
             ///
-            /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
+            /// This view will render the final dimension (2nd), and use all other dimensions in the frame of the widget.
             /// ```text
             /// r#"
-            /// Dimensions.. | Rendering
-            /// (dim1, )     | aggregate(dim2)"#
+            /// Frame..   | Rendering..
+            /// (dim1, )  | aggregate(dim2)"#
             /// ```
             ///
             /// Note, implemented for all numeric primitives.
@@ -210,19 +207,21 @@ macro_rules! impl_schema2_view {
                     extractor,
                 }
             }
-        }
-    };
-}
 
-macro_rules! impl_schema2_view_inverted {
-    ($T:ty, $attrs:meta) => {
-        #[$attrs]
-        #[allow(rustdoc::broken_intra_doc_links)]
-        impl<U> Dataset<Schema2<$T, U>> {
-            pub fn view_1st(&self) -> View2Inverted<Schema2<$T, U>> {
-                let extractor: Box<dyn Fn(&<Schema2<$T, U> as Schema>::Dimensions) -> f64> =
-                    Box::new(|d| d.0 as f64);
-                View2Inverted {
+            /// Take a breakdown view of this 2-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a frame on the left and a rendering on the right.
+            ///
+            /// This view will render the breakdown of the final dimension (2nd), and use all other dimensions in the frame of the widget.
+            /// ```text
+            /// r#"
+            /// Frame..   | Breakdown Rendering..        |
+            /// (dim1, )  | breakdown(aggregate(dim2)).. |"#
+            /// ```
+            pub fn breakdown_2nd(&self) -> View2Breakdown<Schema2<T, $T>> {
+                let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.1 as f64);
+                View2Breakdown {
                     dataset: &self,
                     extractor,
                 }
@@ -245,39 +244,12 @@ impl_schema2_view!(u64, doc(hidden));
 impl_schema2_view!(u32, doc(hidden));
 impl_schema2_view!(u16, doc(hidden));
 impl_schema2_view!(u8, doc(hidden));
-impl_schema2_view_inverted!(f64, doc());
-impl_schema2_view_inverted!(f32, doc(hidden));
-impl_schema2_view_inverted!(isize, doc(hidden));
-impl_schema2_view_inverted!(i128, doc(hidden));
-impl_schema2_view_inverted!(i64, doc(hidden));
-impl_schema2_view_inverted!(i32, doc(hidden));
-impl_schema2_view_inverted!(i16, doc(hidden));
-impl_schema2_view_inverted!(i8, doc(hidden));
-impl_schema2_view_inverted!(usize, doc(hidden));
-impl_schema2_view_inverted!(u128, doc(hidden));
-impl_schema2_view_inverted!(u64, doc(hidden));
-impl_schema2_view_inverted!(u32, doc(hidden));
-impl_schema2_view_inverted!(u16, doc(hidden));
-impl_schema2_view_inverted!(u8, doc(hidden));
 
 #[cfg(any(feature = "impls_ordered_float", feature = "all"))]
 macro_rules! impl_schema2_view_smart_pointer {
     ($T:ty) => {
         impl<T> Dataset<Schema2<T, $T>> {
-            /// Take a reflective view of this 2-dimensional dataset.
-            /// Views are rendered differently by different widgets, but
-            /// always have a dimensional component on the left and a rendering component on the right.
-            ///
-            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
-            /// ```text
-            /// r#"
-            /// Dimensions.. | Rendering
-            /// (dim1, dim2) | aggregate(dim2)"#
-            /// ```
-            ///
-            /// Note, implemented for all numeric primitives.
-            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
-            pub fn reflective_view(&self) -> View2Full<Schema2<T, $T>> {
+            pub fn reflect_2nd(&self) -> View2Full<Schema2<T, $T>> {
                 let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| (*d.1) as f64);
                 View2Full {
@@ -287,23 +259,19 @@ macro_rules! impl_schema2_view_smart_pointer {
                 }
             }
 
-            /// Take a regular view of this 2-dimensional dataset.
-            /// Views are rendered differently by different widgets, but
-            /// always have a dimensional component on the left and a rendering component on the right.
-            ///
-            /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-            /// ```text
-            /// r#"
-            /// Dimensions.. | Rendering
-            /// (dim1, )     | aggregate(dim2)"#
-            /// ```
-            ///
-            /// Note, implemented for all numeric primitives.
-            /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
             pub fn view_2nd(&self) -> View2Regular<Schema2<T, $T>> {
                 let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| (*d.1) as f64);
                 View2Regular {
+                    dataset: &self,
+                    extractor,
+                }
+            }
+
+            pub fn breakdown_2nd(&self) -> View2Breakdown<Schema2<T, $T>> {
+                let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| (*d.1) as f64);
+                View2Breakdown {
                     dataset: &self,
                     extractor,
                 }
@@ -320,15 +288,15 @@ impl_schema2_view_smart_pointer!(OrderedFloat<f32>);
 impl<T, U> Dataset<Schema2<T, U>> {
     /// Take a counting view of this 2-dimensional dataset.
     /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
+    /// always have a frame on the left and a rendering on the right.
     ///
-    /// The term 'counting' refers to the fact that we count the occurrences of each dimensional vector.
+    /// This view will render the occurrences of each dimensional vector, while using all dimensions in the frame of the widget.
     /// ```text
     /// r#"
-    /// Dimensions.. | Rendering
-    /// (dim1, dim2) | aggregate(count())"#
+    /// Frame..       | Rendering..
+    /// (dim1, dim2)  | aggregate(count())"#
     /// ```
-    pub fn counting_view(&self) -> View2Full<Schema2<T, U>> {
+    pub fn count(&self) -> View2Full<Schema2<T, U>> {
         let extractor: Box<dyn Fn(&<Schema2<T, U> as Schema>::Dimensions) -> f64> =
             Box::new(|_| 1.0);
         View2Full {
@@ -338,19 +306,19 @@ impl<T, U> Dataset<Schema2<T, U>> {
         }
     }
 
-    /// Take a view of this 2-dimensional dataset breaking down the 2nd column.
+    /// Take a counting-breakdown view of this 2-dimensional dataset.
     /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
+    /// always have a frame on the left and a rendering on the right.
     ///
-    /// This view will render the breakdown of the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// Notice, a breakdown always 'counts' the values.
+    /// This view will render the breakdown of the final dimension (2nd), and use all other dimensions in the frame of the widget.
+    /// Rather than displaying the value of the final dimension, the occurrences of each dimensional vector are counted.
     /// ```text
     /// r#"
-    /// Dimensions.. | Breakdown Rendering.. |
-    /// (dim1, )     | aggregate(count())    |"#
+    /// Frame..   | Breakdown Rendering..           |
+    /// (dim1, )  | breakdown(aggregate(count())).. |"#
     /// ```
-    pub fn breakdown_2nd(&self) -> View2Breakdown2<Schema2<T, U>> {
-        View2Breakdown2 { dataset: &self }
+    pub fn count_breakdown_2nd(&self) -> View2BreakdownCount<Schema2<T, U>> {
+        View2BreakdownCount { dataset: &self }
     }
 }
 
@@ -361,18 +329,19 @@ macro_rules! impl_schema3_view {
         impl<T, U> Dataset<Schema3<T, U, $T>> {
             /// Take a reflective view of this 3-dimensional dataset.
             /// Views are rendered differently by different widgets, but
-            /// always have a dimensional component on the left and a rendering component on the right.
+            /// always have a frame on the left and a rendering on the right.
             ///
-            /// The term 'reflection' refers to the fact that the value will appear in both in the dimensional and rendering aspects of the widget.
+            /// This view will render the final dimension (3rd), and use all other dimensions in the frame of the widget.
+            /// The term 'reflection' refers to the fact that the value will appear in both in the frame and rendering of the widget.
             /// ```text
             /// r#"
-            /// Dimensions..       | Rendering
-            /// (dim1, dim2, dim3) | aggregate(dim3)"#
+            /// Frame..             | Rendering..
+            /// (dim1, dim2, dim3)  | aggregate(dim3)"#
             /// ```
             ///
             /// Note, implemented for all numeric primitives.
             /// To use with pointer types (such as [`ordered_float::OrderedFloat`]), see features.
-            pub fn reflective_view(&self) -> View3Full<Schema3<T, U, $T>> {
+            pub fn reflect_3rd(&self) -> View3Full<Schema3<T, U, $T>> {
                 let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| d.2 as f64);
                 View3Full {
@@ -384,13 +353,13 @@ macro_rules! impl_schema3_view {
 
             /// Take a regular view of this 3-dimensional dataset.
             /// Views are rendered differently by different widgets, but
-            /// always have a dimensional component on the left and a rendering component on the right.
+            /// always have a frame on the left and a rendering on the right.
             ///
-            /// This view will render the final dimension, and use the other dimensions in the dimensional aspect of the widget.
+            /// This view will render the final dimension (3rd), and use all other dimensions in the frame of the widget.
             /// ```text
             /// r#"
-            /// Dimensions.. | Rendering
-            /// (dim1, dim2) | aggregate(dim3)"#
+            /// Frame..       | Rendering..
+            /// (dim1, dim2)  | aggregate(dim3)"#
             /// ```
             ///
             /// Note, implemented for all numeric primitives.
@@ -399,6 +368,25 @@ macro_rules! impl_schema3_view {
                 let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| d.2 as f64);
                 View3Regular {
+                    dataset: &self,
+                    extractor,
+                }
+            }
+
+            /// Take a breakdown view of this 2-dimensional dataset.
+            /// Views are rendered differently by different widgets, but
+            /// always have a frame on the left and a rendering on the right.
+            ///
+            /// This view will render the breakdown of the final dimension (3rd), and use all other dimensions in the frame of the widget.
+            /// ```text
+            /// r#"
+            /// Frame..   | Breakdown Rendering..        |
+            /// (dim1, )  | breakdown(aggregate(dim2)).. |"#
+            /// ```
+            pub fn breakdown_3rd(&self) -> View3Breakdown<Schema3<T, U, $T>> {
+                let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| d.2 as f64);
+                View3Breakdown {
                     dataset: &self,
                     extractor,
                 }
@@ -426,7 +414,7 @@ impl_schema3_view!(u8, doc(hidden));
 macro_rules! impl_schema3_view_smart_pointer {
     ($T:ty) => {
         impl<T, U> Dataset<Schema3<T, U, $T>> {
-            pub fn reflective_view(&self) -> View3Full<Schema3<T, U, $T>> {
+            pub fn reflect_3rd(&self) -> View3Full<Schema3<T, U, $T>> {
                 let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
                     Box::new(|d| (*d.2) as f64);
                 View3Full {
@@ -444,6 +432,15 @@ macro_rules! impl_schema3_view_smart_pointer {
                     extractor,
                 }
             }
+
+            pub fn breakdown_3rd(&self) -> View3Breakdown<Schema3<T, U, $T>> {
+                let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                    Box::new(|d| (*d.2) as f64);
+                View3Breakdown {
+                    dataset: &self,
+                    extractor,
+                }
+            }
         }
     };
 }
@@ -456,15 +453,15 @@ impl_schema3_view_smart_pointer!(OrderedFloat<f32>);
 impl<T, U, V> Dataset<Schema3<T, U, V>> {
     /// Take a counting view of this 1-dimensional dataset.
     /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
+    /// always have a frame on the left and a rendering on the right.
     ///
-    /// The term 'counting' refers to the fact that we count the occurrences of each dimensional vector.
+    /// This view will render the occurrences of each dimensional vector, while using all dimensions in the frame of the widget.
     /// ```text
     /// r#"
-    /// Dimensions..       | Rendering
-    /// (dim1, dim2, dim3) | aggregate(count())"#
+    /// Frame..             | Rendering..
+    /// (dim1, dim2, dim3)  | aggregate(count())"#
     /// ```
-    pub fn counting_view(&self) -> View3Full<Schema3<T, U, V>> {
+    pub fn count(&self) -> View3Full<Schema3<T, U, V>> {
         let extractor: Box<dyn Fn(&<Schema3<T, U, V> as Schema>::Dimensions) -> f64> =
             Box::new(|_| 1.0);
         View3Full {
@@ -474,34 +471,18 @@ impl<T, U, V> Dataset<Schema3<T, U, V>> {
         }
     }
 
-    /// Take a view of this 3-dimensional dataset breaking down the 2nd column.
-    /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
-    ///
-    /// This view will render the breakdown of the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// Notice, a breakdown always 'counts' the values.
-    /// ```text
-    /// r#"
-    /// Dimensions.. | Breakdown Rendering.. |
-    /// (dim1, dim3) | aggregate(count())    |"#
-    /// ```
-    pub fn breakdown_2nd(&self) -> View3Breakdown2<Schema3<T, U, V>> {
-        View3Breakdown2 { dataset: &self }
-    }
-
     /// Take a view of this 2-dimensional dataset breaking down the 3rd column.
     /// Views are rendered differently by different widgets, but
-    /// always have a dimensional component on the left and a rendering component on the right.
+    /// always have a frame on the left and a rendering on the right.
     ///
-    /// This view will render the breakdown of the final dimension, and use the other dimensions in the dimensional aspect of the widget.
-    /// Notice, a breakdown always 'counts' the values.
+    /// This view will render the breakdown of the final dimension (3rd), and use all other dimensions in the frame of the widget.
     /// ```text
     /// r#"
-    /// Dimensions.. | Breakdown Rendering.. |
-    /// (dim1, dim2) | aggregate(count())    |"#
+    /// Frame..       | Breakdown Rendering..           |
+    /// (dim1, dim2)  | breakdown(aggregate(count())).. |"#
     /// ```
-    pub fn breakdown_3rd(&self) -> View3Breakdown3<Schema3<T, U, V>> {
-        View3Breakdown3 { dataset: &self }
+    pub fn count_breakdown_3rd(&self) -> View3BreakdownCount<Schema3<T, U, V>> {
+        View3BreakdownCount { dataset: &self }
     }
 }
 
@@ -531,7 +512,7 @@ impl<S: Schema> DatasetBuilder<S> {
     /// builder.update((0, ));
     /// builder.update((1, ));
     /// let dataset = builder.build();
-    /// let view = dataset.counting_view();
+    /// let view = dataset.count();
     ///
     /// let flat = BarChart::new(&view)
     ///     .render(Render::default());
@@ -570,7 +551,7 @@ impl<S: Schema> DatasetBuilder<S> {
     ///     .add((0, ))
     ///     .add((1, ))
     ///     .build();
-    /// let view = dataset.counting_view();
+    /// let view = dataset.count();
     ///
     /// let flat = BarChart::new(&view)
     ///     .render(Render::default());

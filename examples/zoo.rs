@@ -13,13 +13,13 @@ fn main() {
     }
 
     let dataset = builder.build();
-    let view = dataset.counting_view();
+    let view = dataset.count();
     let flat = BarChart::new(&view).render(Render::default());
     println!("Density across the zoo enclosures:");
     println!("{flat}");
     println!();
 
-    let view = dataset.breakdown_3rd();
+    let view = dataset.count_breakdown_3rd();
     let flat = BarChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
@@ -28,27 +28,15 @@ fn main() {
     println!("{flat}");
     println!();
 
-    let schema = Schemas::two("Length (cm)", "Animal");
+    let schema = Schemas::two("Animal", "Length (cm)");
     let mut builder = Dataset::builder(schema);
 
-    for double in attribute_dataset() {
-        builder.update((double.0, double.1));
+    for pair in attribute_dataset() {
+        builder.update((pair.1, pair.0));
     }
 
     let dataset = builder.build();
-    // let view = dataset.without_2nd();
-    // let flat = Histogram::new(&view, 10).render(Render {
-    //     show_aggregate: parameters.verbose,
-    //     widget_config: HistogramConfig {
-    //         ..HistogramConfig::default()
-    //     },
-    //     ..Render::default()
-    // });
-    // println!("abc..:");
-    // println!("{flat}");
-    // println!();
-
-    let view = dataset.view_1st();
+    let view = dataset.view_2nd();
     let flat = BarChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
@@ -59,7 +47,15 @@ fn main() {
     println!("{flat}");
     println!();
 
-    let view = dataset.counting_view();
+    let schema = Schemas::two("Length (cm)", "Animal");
+    let mut builder = Dataset::builder(schema);
+
+    for pair in attribute_dataset() {
+        builder.update((pair.0, pair.1));
+    }
+
+    let dataset = builder.build();
+    let view = dataset.count();
     let flat = Histogram::new(&view, 10).render(Render {
         ..Render::default()
     });
@@ -67,7 +63,7 @@ fn main() {
     println!("{flat}");
     println!();
 
-    let view = dataset.breakdown_2nd();
+    let view = dataset.count_breakdown_2nd();
     let flat = Histogram::new(&view, 10).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()

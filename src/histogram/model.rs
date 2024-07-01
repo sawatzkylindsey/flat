@@ -3,6 +3,7 @@ use crate::render::{Alignment, Column, Columns, Flat, Grid, Render, Row, Value};
 use crate::{Binnable, HistogramConfig, Schema, View};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
@@ -17,7 +18,7 @@ use std::ops::{Add, Sub};
 ///     .add((0,))
 ///     .add((1,))
 ///     .build();
-/// let view = dataset.counting_view();
+/// let view = dataset.count();
 /// let flat = Histogram::new(&view, 2)
 ///     .render(Render::default());
 /// assert_eq!(
@@ -48,6 +49,7 @@ where
         + Add<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
         + Sub<<V as View<S>>::PrimaryDimension, Output = <V as View<S>>::PrimaryDimension>
         + Binnable,
+    <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
 {
     /// Construct a histogram widget from the provided view and number of bins.
     pub fn new(view: &'a V, bins: usize) -> Self {
@@ -166,7 +168,7 @@ where
         // rendering delimiter |
         columns.push(Column::string(Alignment::Center));
 
-        if self.view.is_breakdown() {
+        if self.view.breakdown_label().is_some() {
             for i in 0..sort_breakdowns.len() {
                 // aggregate count
                 columns.push(Column::breakdown(Alignment::Center));
@@ -186,25 +188,51 @@ where
 
         let mut grid = Grid::new(columns);
 
-        if self.view.is_breakdown() {
-            let mut pre_header = Row::default();
-            pre_header.push(Value::Empty);
+        if let Some(breakdown_header) = self.view.breakdown_label() {
+            let value_label = self.view.value_label();
 
-            if config.show_aggregate {
-                pre_header.push(Value::Empty);
-                pre_header.push(Value::Empty);
-                pre_header.push(Value::Empty);
-                pre_header.push(Value::Empty);
+            if value_label == breakdown_header {
+                let pre_header = build_preheader(
+                    &config,
+                    self.view.display_headers().len(),
+                    &breakdown_header,
+                    true,
+                );
+                grid.add(pre_header);
+            } else {
+                let pre_header1 = build_preheader(
+                    &config,
+                    self.view.display_headers().len(),
+                    &breakdown_header,
+                    false,
+                );
+                grid.add(pre_header1);
+                let pre_header2 = build_preheader(
+                    &config,
+                    self.view.display_headers().len(),
+                    &value_label,
+                    true,
+                );
+                grid.add(pre_header2);
             }
-
-            pre_header.push(Value::Empty);
-            pre_header.push(Value::Empty);
-            pre_header.push(Value::Plain(format!(
-                "{}({})",
-                config.aggregate.to_string(),
-                self.view.value_header()
-            )));
-            grid.add(pre_header);
+            // let mut pre_header = Row::default();
+            // pre_header.push(Value::Empty);
+            //
+            // if config.show_aggregate {
+            //     pre_header.push(Value::Empty);
+            //     pre_header.push(Value::Empty);
+            //     pre_header.push(Value::Empty);
+            //     pre_header.push(Value::Empty);
+            // }
+            //
+            // pre_header.push(Value::Empty);
+            // pre_header.push(Value::Empty);
+            // pre_header.push(Value::Plain(format!(
+            //     "Breakdown({breakdown_header}, {}({}))",
+            //     config.aggregate.to_string(),
+            //     self.view.value_label(),
+            // )));
+            // grid.add(pre_header);
         }
 
         let mut header = Row::default();
@@ -221,7 +249,7 @@ where
         header.push(Value::String("  ".to_string()));
         header.push(Value::String("|".to_string()));
 
-        if self.view.is_breakdown() {
+        if self.view.breakdown_label().is_some() {
             for (k, breakdown_dim) in sort_breakdowns.iter().enumerate() {
                 header.push(Value::String(breakdown_dim.to_string()));
 
@@ -235,7 +263,7 @@ where
             header.push(Value::Plain(format!(
                 "{}({})",
                 config.aggregate.to_string(),
-                self.view.value_header()
+                self.view.value_label()
             )));
         }
 
@@ -247,7 +275,7 @@ where
             let mut row = Row::default();
             row.push(Value::String(bounds.to_string()));
 
-            if self.view.is_breakdown() {
+            if self.view.breakdown_label().is_some() {
                 let breakdown_values: Vec<f64> = sort_breakdowns
                     .iter()
                     .map(|breakdown_dim| {
@@ -310,6 +338,40 @@ where
     }
 }
 
+fn build_preheader(
+    config: &Render<HistogramConfig>,
+    columns: usize,
+    label: &str,
+    embed: bool,
+) -> Row {
+    let mut row = Row::default();
+
+    for _ in 0..columns {
+        row.push(Value::Empty);
+    }
+
+    if config.show_aggregate {
+        row.push(Value::Empty);
+        row.push(Value::Empty);
+        row.push(Value::Empty);
+        row.push(Value::Empty);
+    }
+
+    row.push(Value::Empty);
+    row.push(Value::Empty);
+
+    if embed {
+        row.push(Value::Plain(format!(
+            "{}({label})",
+            config.aggregate.to_string(),
+        )));
+    } else {
+        row.push(Value::Plain(format!("{label}")));
+    }
+
+    row
+}
+
 #[derive(Debug)]
 struct Bounds<T: PartialOrd> {
     lower: Bound<T>,
@@ -368,7 +430,7 @@ mod tests {
     fn empty() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let dataset = Dataset::builder(schema).build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 0);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -386,7 +448,7 @@ abc  |Sum(abc)"#
             .add((2,))
             .add((3,))
             .build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 0);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -405,7 +467,7 @@ abc     |Sum(abc)
             .add((2,))
             .add((3,))
             .build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -420,7 +482,7 @@ abc     |Sum(abc)
     fn extra_buckets() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let dataset = Dataset::builder(schema).add((1,)).build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 2);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -435,7 +497,7 @@ abc     |Sum(abc)
     fn zero() {
         let schema: Schema1<i64> = Schemas::one("abc");
         let dataset = Dataset::builder(schema).add((0,)).build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -454,7 +516,7 @@ abc     |Sum(abc)
             .add((0,))
             .add((1,))
             .build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -477,7 +539,7 @@ abc      |Sum(abc)
         }
 
         let dataset = builder.build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -498,7 +560,7 @@ abc     |Sum(abc)
         }
 
         let dataset = builder.build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         let histogram = Histogram::new(&view, 3);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -527,7 +589,7 @@ abc     |Sum(def)
 [1, 3]  |*"#
         );
 
-        let view = dataset.counting_view();
+        let view = dataset.count();
         let histogram = Histogram::new(&view, 1);
         let flat = histogram.render(Render::default());
         assert_eq!(
@@ -543,7 +605,19 @@ abc     |Sum(Count)
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-         Sum(Breakdown(def))
+         Sum(def)
+abc     |0.1 0.2 0.3|
+[1, 3]  |           |"#
+        );
+
+        let view = dataset.count_breakdown_2nd();
+        let histogram = Histogram::new(&view, 1);
+        let flat = histogram.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+         def
+         Sum(Count)
 abc     |0.1 0.2 0.3|
 [1, 3]  | *   *   * |"#
         );
@@ -551,7 +625,7 @@ abc     |0.1 0.2 0.3|
 
     #[test]
     fn breakdown() {
-        let schema = Schemas::two("abc", "something long");
+        let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
         let dataset = Dataset::builder(schema)
             .add((1, 2))
             .add((2, 3))
@@ -563,7 +637,30 @@ abc     |0.1 0.2 0.3|
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
-         Sum(Breakdown(something long))
+         Sum(something long)
+abc     | 2    3    4  |
+[1, 2)  | **           |
+[2, 3)  |     ***      |
+[3, 4]  |          ****|"#
+        );
+    }
+
+    #[test]
+    fn count_breakdown() {
+        let schema = Schemas::two("abc", "something long");
+        let dataset = Dataset::builder(schema)
+            .add((1, 2))
+            .add((2, 3))
+            .add((3, 4))
+            .build();
+        let view = dataset.count_breakdown_2nd();
+        let histogram = Histogram::new(&view, 3);
+        let flat = histogram.render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+         something long
+         Sum(Count)
 abc     |2 3 4|
 [1, 2)  |*    |
 [2, 3)  |  *  |

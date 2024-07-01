@@ -1,6 +1,5 @@
 use crate::{Dimensions, Nothing, Schema, Schema1, Schema2, Schema3};
 use std::fmt::Display;
-use std::hash::Hash;
 // We use this in the doc strings.
 #[allow(unused_imports)]
 use crate::Dataset;
@@ -14,7 +13,7 @@ pub trait View<S: Schema> {
     /// The primary dimension - see [`View::primary_dim`] for more details.
     type PrimaryDimension;
     /// The breakdown dimension - see [`View::breakdown_dim`] for more details.
-    type BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord;
+    type BreakdownDimension;
     /// The display dimension(s) - see [`View::display_dims`] for more details.
     /// The first must always be the `PrimaryDimension` for the `View`.
     type DisplayDimensions: Dimensions;
@@ -30,15 +29,14 @@ pub trait View<S: Schema> {
     /// ```
     fn value(&self, dims: &S::Dimensions) -> f64;
 
-    /// Get the header for the values in this view.
-    /// This serves to label the value rendering.
+    /// Get the label for the values in this view.
     /// For example:
     /// ```text
-    /// Dimensions.. | VALUE_HEADER
+    /// Dimensions.. | VALUE_LABEL
     /// primary_A    |     **
     /// primary_B    |   ******
     /// ```
-    fn value_header(&self) -> String;
+    fn value_label(&self) -> String;
 
     /// Extract the primary dimension for this view from the input vector.
     ///
@@ -55,7 +53,7 @@ pub trait View<S: Schema> {
     fn primary_dim(&self, dims: &S::Dimensions) -> Self::PrimaryDimension;
 
     /// Extract the breakdown dimension for this view from the input vector.
-    /// In the case of non-breakdown views ([`View::is_breakdown`] == false), this method should return [`Nothing`].
+    /// In the case of non-breakdown views (when [`View::breakdown_label`].is_none()), this method should return [`Nothing`].
     ///
     /// Breakdown views allow `flat` renderings to span the horizontal space.
     /// For example:
@@ -67,9 +65,10 @@ pub trait View<S: Schema> {
     /// ```
     fn breakdown_dim(&self, dims: &S::Dimensions) -> Self::BreakdownDimension;
 
-    /// Whether this view uses a breakdown rendering or not.
-    /// When true, [`View::breakdown_dim`] must extract the breakdown value.
-    fn is_breakdown(&self) -> bool;
+    /// Get the label for the breakdown in this view, if applicable.
+    /// When `Some(...)`, [`View::breakdown_dim`] must extract the breakdown value.
+    /// When `None`, [`View::breakdown_dim`] must extract [`Nothing`].
+    fn breakdown_label(&self) -> Option<String>;
 
     /// Extract the display dimensions for this view from the input vector.
     ///
@@ -141,12 +140,12 @@ where
         vec![self.dataset.schema.dimension_0.clone()]
     }
 
-    fn value_header(&self) -> String {
+    fn value_label(&self) -> String {
         self.value_header.clone()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 }
 
@@ -199,12 +198,12 @@ where
         ]
     }
 
-    fn value_header(&self) -> String {
+    fn value_label(&self) -> String {
         self.value_header.clone()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 }
 
@@ -253,29 +252,29 @@ where
         vec![self.dataset.schema.dimension_0.clone()]
     }
 
-    fn value_header(&self) -> String {
+    fn value_label(&self) -> String {
         self.dataset.schema.dimension_1.clone()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 }
 
 #[doc(hidden)]
-pub struct View2Inverted<'a, S: Schema> {
+pub struct View2Breakdown<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
     pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
 }
 
-impl<'a, T, U> View<Schema2<T, U>> for View2Inverted<'a, Schema2<T, U>>
+impl<'a, T, U> View<Schema2<T, U>> for View2Breakdown<'a, Schema2<T, U>>
 where
     T: Clone + Display,
     U: Clone + Display,
 {
-    type PrimaryDimension = U;
-    type BreakdownDimension = Nothing;
-    type DisplayDimensions = (U,);
+    type PrimaryDimension = T;
+    type BreakdownDimension = U;
+    type DisplayDimensions = (T,);
 
     fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
         self.dataset.data()
@@ -286,45 +285,45 @@ where
     }
 
     fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
-        dims.1.clone()
+        dims.0.clone()
     }
 
     fn breakdown_dim(
         &self,
-        _dims: &<Schema2<T, U> as Schema>::Dimensions,
+        dims: &<Schema2<T, U> as Schema>::Dimensions,
     ) -> Self::BreakdownDimension {
-        Nothing
+        dims.1.clone()
     }
 
     fn display_dims(
         &self,
         dims: &<Schema2<T, U> as Schema>::Dimensions,
     ) -> Self::DisplayDimensions {
-        (dims.1.clone(),)
+        (dims.0.clone(),)
     }
 
     fn display_headers(&self) -> Vec<String> {
-        vec![self.dataset.schema.dimension_1.clone()]
+        vec![self.dataset.schema.dimension_0.clone()]
     }
 
-    fn value_header(&self) -> String {
-        self.dataset.schema.dimension_0.clone()
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_1.clone()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_1.clone())
     }
 }
 
 #[doc(hidden)]
-pub struct View2Breakdown2<'a, S: Schema> {
+pub struct View2BreakdownCount<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T, U> View<Schema2<T, U>> for View2Breakdown2<'a, Schema2<T, U>>
+impl<'a, T, U> View<Schema2<T, U>> for View2BreakdownCount<'a, Schema2<T, U>>
 where
     T: Clone + Display,
-    U: Clone + Display + PartialEq + Eq + Hash + Ord,
+    U: Clone + Display,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = U;
@@ -361,12 +360,12 @@ where
         vec![self.dataset.schema.dimension_0.clone()]
     }
 
-    fn value_header(&self) -> String {
-        format!("Breakdown({})", self.dataset.schema.dimension_1)
+    fn value_label(&self) -> String {
+        "Count".to_string()
     }
 
-    fn is_breakdown(&self) -> bool {
-        true
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_1.clone())
     }
 }
 
@@ -424,12 +423,12 @@ where
         ]
     }
 
-    fn value_header(&self) -> String {
+    fn value_label(&self) -> String {
         self.value_header.clone()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 }
 
@@ -485,36 +484,37 @@ where
         ]
     }
 
-    fn value_header(&self) -> String {
+    fn value_label(&self) -> String {
         self.dataset.schema.dimension_2.clone()
     }
 
-    fn is_breakdown(&self) -> bool {
-        false
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 }
 
 #[doc(hidden)]
-pub struct View3Breakdown2<'a, S: Schema> {
+pub struct View3Breakdown<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
 }
 
-impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown2<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown<'a, Schema3<T, U, V>>
 where
     T: Clone + Display,
-    U: Clone + Display + PartialEq + Eq + Hash + Ord,
+    U: Clone + Display,
     V: Clone + Display,
 {
     type PrimaryDimension = T;
-    type BreakdownDimension = U;
-    type DisplayDimensions = (T, V);
+    type BreakdownDimension = V;
+    type DisplayDimensions = (T, U);
 
     fn data(&self) -> &[<Schema3<T, U, V> as Schema>::Dimensions] {
         self.dataset.data()
     }
 
-    fn value(&self, _dims: &<Schema3<T, U, V> as Schema>::Dimensions) -> f64 {
-        1f64
+    fn value(&self, dims: &<Schema3<T, U, V> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
     }
 
     fn primary_dim(
@@ -528,42 +528,42 @@ where
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
     ) -> Self::BreakdownDimension {
-        dims.1.clone()
+        dims.2.clone()
     }
 
     fn display_dims(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
     ) -> Self::DisplayDimensions {
-        (dims.0.clone(), dims.2.clone())
+        (dims.0.clone(), dims.1.clone())
     }
 
     fn display_headers(&self) -> Vec<String> {
         vec![
             self.dataset.schema.dimension_0.clone(),
-            self.dataset.schema.dimension_2.clone(),
+            self.dataset.schema.dimension_1.clone(),
         ]
     }
 
-    fn value_header(&self) -> String {
-        format!("Breakdown({})", self.dataset.schema.dimension_1)
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_2.clone()
     }
 
-    fn is_breakdown(&self) -> bool {
-        true
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_2.clone())
     }
 }
 
 #[doc(hidden)]
-pub struct View3Breakdown3<'a, S: Schema> {
+pub struct View3BreakdownCount<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown3<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3BreakdownCount<'a, Schema3<T, U, V>>
 where
     T: Clone + Display,
     U: Clone + Display,
-    V: Clone + Display + PartialEq + Eq + Hash + Ord,
+    V: Clone + Display,
 {
     type PrimaryDimension = T;
     type BreakdownDimension = V;
@@ -605,12 +605,12 @@ where
         ]
     }
 
-    fn value_header(&self) -> String {
-        format!("Breakdown({})", self.dataset.schema.dimension_2)
+    fn value_label(&self) -> String {
+        "Count".to_string()
     }
 
-    fn is_breakdown(&self) -> bool {
-        true
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_2.clone())
     }
 }
 
@@ -633,13 +633,13 @@ mod tests {
             .add((2,))
             .add((3,))
             .build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_1st();
         assert_eq!(view.primary_dim(&(2,)), 2);
         assert_eq!(view.breakdown_dim(&(2,)), Nothing);
         assert_eq!(view.display_dims(&(2,)), (2,));
         assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_header(), "abc".to_string());
-        assert_eq!(view.is_breakdown(), false);
+        assert_eq!(view.value_label(), "abc".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
@@ -650,13 +650,13 @@ mod tests {
             .add((2,))
             .add((3,))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         assert_eq!(view.primary_dim(&(2,)), 2);
         assert_eq!(view.breakdown_dim(&(2,)), Nothing);
         assert_eq!(view.display_dims(&(2,)), (2,));
         assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_header(), "Count".to_string());
-        assert_eq!(view.is_breakdown(), false);
+        assert_eq!(view.value_label(), "Count".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
@@ -667,7 +667,7 @@ mod tests {
             .add((2, 0.2))
             .add((3, 0.3))
             .build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_2nd();
         assert_eq!(view.primary_dim(&(2, 0.2)), 2);
         assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
         assert_eq!(view.display_dims(&(2, 0.2)), (2, 0.2));
@@ -675,8 +675,8 @@ mod tests {
             view.display_headers(),
             vec!["abc".to_string(), "def".to_string()]
         );
-        assert_eq!(view.value_header(), "def".to_string());
-        assert_eq!(view.is_breakdown(), false);
+        assert_eq!(view.value_label(), "def".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
@@ -687,7 +687,7 @@ mod tests {
             .add((2, 0.2))
             .add((3, 0.3))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         assert_eq!(view.primary_dim(&(2, 0.2)), 2);
         assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
         assert_eq!(view.display_dims(&(2, 0.2)), (2, 0.2));
@@ -695,8 +695,8 @@ mod tests {
             view.display_headers(),
             vec!["abc".to_string(), "def".to_string()]
         );
-        assert_eq!(view.value_header(), "Count".to_string());
-        assert_eq!(view.is_breakdown(), false);
+        assert_eq!(view.value_label(), "Count".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
@@ -712,25 +712,42 @@ mod tests {
         assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
         assert_eq!(view.display_dims(&(2, 0.2)), (2,));
         assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_header(), "def".to_string());
-        assert_eq!(view.is_breakdown(), false);
+        assert_eq!(view.value_label(), "def".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
-    fn view2_breakdown2nd() {
+    fn view2_breakdown_2nd() {
+        let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
+        let dataset = Dataset::builder(schema)
+            .add((1, 0.1))
+            .add((2, 0.2))
+            .add((3, 0.3))
+            .build();
+        let view = dataset.breakdown_2nd();
+        assert_eq!(view.primary_dim(&(2, 0.2)), 2);
+        assert_eq!(view.breakdown_dim(&(2, 0.2)), 0.2);
+        assert_eq!(view.display_dims(&(2, 0.2)), (2,));
+        assert_eq!(view.display_headers(), vec!["abc".to_string()]);
+        assert_eq!(view.value_label(), "def".to_string());
+        assert_eq!(view.breakdown_label(), Some("def".to_string()));
+    }
+
+    #[test]
+    fn view2_count_breakdown_2nd() {
         let schema: Schema2<i64, &str> = Schemas::two("abc", "def");
         let dataset = Dataset::builder(schema)
             .add((1, "a"))
             .add((2, "b"))
             .add((3, "c"))
             .build();
-        let view = dataset.breakdown_2nd();
+        let view = dataset.count_breakdown_2nd();
         assert_eq!(view.primary_dim(&(2, "b")), 2);
         assert_eq!(view.breakdown_dim(&(2, "b")), "b");
         assert_eq!(view.display_dims(&(2, "b")), (2,));
         assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_header(), "Breakdown(def)".to_string());
-        assert_eq!(view.is_breakdown(), true);
+        assert_eq!(view.value_label(), "Count".to_string());
+        assert_eq!(view.breakdown_label(), Some("def".to_string()));
     }
 
     #[test]
@@ -741,7 +758,7 @@ mod tests {
             .add((2, false, 0.2))
             .add((3, true, 0.3))
             .build();
-        let view = dataset.reflective_view();
+        let view = dataset.reflect_3rd();
         assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
         assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
         assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false, 0.2));
@@ -749,8 +766,8 @@ mod tests {
             view.display_headers(),
             vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
         );
-        assert_eq!(view.value_header(), "ghi".to_string());
-        assert_eq!(view.is_breakdown(), false);
+        assert_eq!(view.value_label(), "ghi".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
@@ -761,7 +778,7 @@ mod tests {
             .add((2, false, 0.2))
             .add((3, true, 0.3))
             .build();
-        let view = dataset.counting_view();
+        let view = dataset.count();
         assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
         assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
         assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false, 0.2));
@@ -769,8 +786,8 @@ mod tests {
             view.display_headers(),
             vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
         );
-        assert_eq!(view.value_header(), "Count".to_string());
-        assert_eq!(view.is_breakdown(), false);
+        assert_eq!(view.value_label(), "Count".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
@@ -789,39 +806,39 @@ mod tests {
             view.display_headers(),
             vec!["abc".to_string(), "def".to_string()]
         );
-        assert_eq!(view.value_header(), "ghi".to_string());
-        assert_eq!(view.is_breakdown(), false);
-    }
-
-    #[test]
-    fn view3_breakdown_2nd() {
-        let schema: Schema3<u64, &str, bool> = Schemas::three("abc", "def", "ghi");
-        let dataset = Dataset::builder(schema)
-            .add((1, "a", true))
-            .add((2, "b", false))
-            .add((3, "c", true))
-            .build();
-        let view = dataset.breakdown_2nd();
-        assert_eq!(view.primary_dim(&(2, "b", false)), 2);
-        assert_eq!(view.breakdown_dim(&(2, "b", false)), "b");
-        assert_eq!(view.display_dims(&(2, "b", false)), (2, false));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "ghi".to_string()]
-        );
-        assert_eq!(view.value_header(), "Breakdown(def)".to_string());
-        assert_eq!(view.is_breakdown(), true);
+        assert_eq!(view.value_label(), "ghi".to_string());
+        assert_eq!(view.breakdown_label(), None);
     }
 
     #[test]
     fn view3_breakdown_3rd() {
+        let schema: Schema3<u64, f32, f64> = Schemas::three("abc", "def", "ghi");
+        let dataset = Dataset::builder(schema)
+            .add((1, 0.1, 0.01))
+            .add((2, 0.2, 0.02))
+            .add((3, 0.3, 0.03))
+            .build();
+        let view = dataset.breakdown_3rd();
+        assert_eq!(view.primary_dim(&(2, 0.2, 0.02)), 2);
+        assert_eq!(view.breakdown_dim(&(2, 0.2, 0.02)), 0.02);
+        assert_eq!(view.display_dims(&(2, 0.2, 0.02)), (2, 0.2));
+        assert_eq!(
+            view.display_headers(),
+            vec!["abc".to_string(), "def".to_string()]
+        );
+        assert_eq!(view.value_label(), "ghi".to_string());
+        assert_eq!(view.breakdown_label(), Some("ghi".to_string()));
+    }
+
+    #[test]
+    fn view3_count_breakdown_3rd() {
         let schema: Schema3<u64, f32, bool> = Schemas::three("abc", "def", "ghi");
         let dataset = Dataset::builder(schema)
             .add((1, 0.1, true))
             .add((2, 0.2, false))
             .add((3, 0.3, true))
             .build();
-        let view = dataset.breakdown_3rd();
+        let view = dataset.count_breakdown_3rd();
         assert_eq!(view.primary_dim(&(2, 0.2, false)), 2);
         assert_eq!(view.breakdown_dim(&(2, 0.2, false)), false);
         assert_eq!(view.display_dims(&(2, 0.2, false)), (2, 0.2));
@@ -829,7 +846,7 @@ mod tests {
             view.display_headers(),
             vec!["abc".to_string(), "def".to_string()]
         );
-        assert_eq!(view.value_header(), "Breakdown(ghi)".to_string());
-        assert_eq!(view.is_breakdown(), true);
+        assert_eq!(view.value_label(), "Count".to_string());
+        assert_eq!(view.breakdown_label(), Some("ghi".to_string()));
     }
 }

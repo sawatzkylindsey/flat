@@ -32,7 +32,8 @@
 //! We can also drill into this dataset a number of ways.
 //! Let's look at the specific breakdown of animals across quadrants/enclosures:
 //! ```text
-//!                          Sum(Breakdown(Animal))
+//!                          Animal
+//!                          Sum(Count)
 //! Enclosure    Quadrant   |Black Bear     Crane       Duck       Falcon     Flamingo   Grizzly B.. Kingfisher  Mountain ..  Sea Otter     Stork       Tiger   |
 //! Pen01      - NorthEast  |                                        **                                                          ***                            |
 //! Pen02      ┘
@@ -79,7 +80,8 @@
 //!
 //! As before, we can further drill down into this by looking at how this spread looks specifically across the animal species.
 //! ```text
-//!                Sum(Breakdown(Animal))
+//!                Animal
+//!                Sum(Count)
 //! Length (cm)   | Black Bear     Crane         Duck        Falcon      Flamingo   Grizzly Bear  Kingfisher  Mountain G..  Sea Otter      Stork        Tiger    |
 //! [15, 42.5)    |     *                        ***                                                  *                                                          |
 //! [42.5, 70)    |                  *                         **                                                                            *                   |

@@ -492,7 +492,7 @@ impl Grid {
 ///     .add(("tiger".to_string(), ))
 ///     .add(("tiger".to_string(), ))
 ///     .build();
-/// let view = dataset.counting_view();
+/// let view = dataset.count();
 /// let flat = BarChart::new(&view).render(Render::default());
 /// assert_eq!(
 ///     format!("\n{}", flat.to_string()),

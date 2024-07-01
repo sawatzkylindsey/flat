@@ -11,7 +11,7 @@ fn main() {
     }
 
     let dataset = builder.build();
-    let view = dataset.breakdown_3rd();
+    let view = dataset.count_breakdown_3rd();
     let flat = BarChart::new(&view).render(Render {
         show_aggregate: parameters.verbose,
         widget_config: BarChartConfig {
