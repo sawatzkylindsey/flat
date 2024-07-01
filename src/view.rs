@@ -121,6 +121,10 @@ where
         (self.extractor)(dims)
     }
 
+    fn value_label(&self) -> String {
+        self.value_header.clone()
+    }
+
     fn primary_dim(&self, dims: &<Schema1<T> as Schema>::Dimensions) -> Self::PrimaryDimension {
         dims.0.clone()
     }
@@ -132,20 +136,16 @@ where
         Nothing
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        None
+    }
+
     fn display_dims(&self, dims: &<Schema1<T> as Schema>::Dimensions) -> Self::DisplayDimensions {
         dims.clone()
     }
 
     fn display_headers(&self) -> Vec<String> {
         vec![self.dataset.schema.dimension_0.clone()]
-    }
-
-    fn value_label(&self) -> String {
-        self.value_header.clone()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        None
     }
 }
 
@@ -173,6 +173,10 @@ where
         (self.extractor)(dims)
     }
 
+    fn value_label(&self) -> String {
+        self.value_header.clone()
+    }
+
     fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
         dims.0.clone()
     }
@@ -182,6 +186,10 @@ where
         _dims: &<Schema2<T, U> as Schema>::Dimensions,
     ) -> Self::BreakdownDimension {
         Nothing
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 
     fn display_dims(
@@ -196,14 +204,6 @@ where
             self.dataset.schema.dimension_0.clone(),
             self.dataset.schema.dimension_1.clone(),
         ]
-    }
-
-    fn value_label(&self) -> String {
-        self.value_header.clone()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        None
     }
 }
 
@@ -230,6 +230,10 @@ where
         (self.extractor)(dims)
     }
 
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_1.clone()
+    }
+
     fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
         dims.0.clone()
     }
@@ -241,6 +245,10 @@ where
         Nothing
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        None
+    }
+
     fn display_dims(
         &self,
         dims: &<Schema2<T, U> as Schema>::Dimensions,
@@ -250,14 +258,6 @@ where
 
     fn display_headers(&self) -> Vec<String> {
         vec![self.dataset.schema.dimension_0.clone()]
-    }
-
-    fn value_label(&self) -> String {
-        self.dataset.schema.dimension_1.clone()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        None
     }
 }
 
@@ -284,6 +284,10 @@ where
         (self.extractor)(dims)
     }
 
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_1.clone()
+    }
+
     fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
         dims.0.clone()
     }
@@ -295,6 +299,10 @@ where
         dims.1.clone()
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_1.clone())
+    }
+
     fn display_dims(
         &self,
         dims: &<Schema2<T, U> as Schema>::Dimensions,
@@ -304,14 +312,6 @@ where
 
     fn display_headers(&self) -> Vec<String> {
         vec![self.dataset.schema.dimension_0.clone()]
-    }
-
-    fn value_label(&self) -> String {
-        self.dataset.schema.dimension_1.clone()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        Some(self.dataset.schema.dimension_1.clone())
     }
 }
 
@@ -338,6 +338,10 @@ where
         1f64
     }
 
+    fn value_label(&self) -> String {
+        "Count".to_string()
+    }
+
     fn primary_dim(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> Self::PrimaryDimension {
         dims.0.clone()
     }
@@ -349,6 +353,10 @@ where
         dims.1.clone()
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_1.clone())
+    }
+
     fn display_dims(
         &self,
         dims: &<Schema2<T, U> as Schema>::Dimensions,
@@ -358,14 +366,6 @@ where
 
     fn display_headers(&self) -> Vec<String> {
         vec![self.dataset.schema.dimension_0.clone()]
-    }
-
-    fn value_label(&self) -> String {
-        "Count".to_string()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        Some(self.dataset.schema.dimension_1.clone())
     }
 }
 
@@ -394,6 +394,10 @@ where
         (self.extractor)(dims)
     }
 
+    fn value_label(&self) -> String {
+        self.value_header.clone()
+    }
+
     fn primary_dim(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
@@ -406,6 +410,10 @@ where
         _dims: &<Schema3<T, U, V> as Schema>::Dimensions,
     ) -> Self::BreakdownDimension {
         Nothing
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        None
     }
 
     fn display_dims(
@@ -421,14 +429,6 @@ where
             self.dataset.schema.dimension_1.clone(),
             self.dataset.schema.dimension_2.clone(),
         ]
-    }
-
-    fn value_label(&self) -> String {
-        self.value_header.clone()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        None
     }
 }
 
@@ -456,6 +456,10 @@ where
         (self.extractor)(dims)
     }
 
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_2.clone()
+    }
+
     fn primary_dim(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
@@ -470,6 +474,10 @@ where
         Nothing
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        None
+    }
+
     fn display_dims(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
@@ -482,14 +490,6 @@ where
             self.dataset.schema.dimension_0.clone(),
             self.dataset.schema.dimension_1.clone(),
         ]
-    }
-
-    fn value_label(&self) -> String {
-        self.dataset.schema.dimension_2.clone()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        None
     }
 }
 
@@ -517,6 +517,10 @@ where
         (self.extractor)(dims)
     }
 
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_2.clone()
+    }
+
     fn primary_dim(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
@@ -531,6 +535,10 @@ where
         dims.2.clone()
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_2.clone())
+    }
+
     fn display_dims(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
@@ -543,14 +551,6 @@ where
             self.dataset.schema.dimension_0.clone(),
             self.dataset.schema.dimension_1.clone(),
         ]
-    }
-
-    fn value_label(&self) -> String {
-        self.dataset.schema.dimension_2.clone()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        Some(self.dataset.schema.dimension_2.clone())
     }
 }
 
@@ -577,6 +577,10 @@ where
         1f64
     }
 
+    fn value_label(&self) -> String {
+        "Count".to_string()
+    }
+
     fn primary_dim(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
@@ -591,6 +595,10 @@ where
         dims.2.clone()
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_2.clone())
+    }
+
     fn display_dims(
         &self,
         dims: &<Schema3<T, U, V> as Schema>::Dimensions,
@@ -603,14 +611,6 @@ where
             self.dataset.schema.dimension_0.clone(),
             self.dataset.schema.dimension_1.clone(),
         ]
-    }
-
-    fn value_label(&self) -> String {
-        "Count".to_string()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        Some(self.dataset.schema.dimension_2.clone())
     }
 }
 

@@ -15,12 +15,7 @@ fn main() {
 
     let dataset = builder.build();
     barchart_impl_view(&parameters, &dataset);
-    barchart_recast(&parameters, &dataset);
-    barchart_breakdown_recast(&parameters, &dataset);
-
     histogram_impl_view(&parameters, &dataset);
-    histogram_recast(&parameters, &dataset);
-    histogram_breakdown_recast(&parameters, &dataset);
 }
 
 fn barchart_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
@@ -49,66 +44,6 @@ fn barchart_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) 
     println!();
 }
 
-fn barchart_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
-    let new_dataset = dataset.recast(
-        Schemas::two("Species", parameters.field.to_string()),
-        |flower| (flower.species.clone(), flower.value(&parameters.field)),
-    );
-    let view = new_dataset.view_2nd();
-    let flat = BarChart::new(&view).render(Render {
-        aggregate: Aggregate::Average,
-        show_aggregate: parameters.verbose,
-        widget_config: {
-            BarChartConfig {
-                show_aggregate: parameters.verbose,
-                ..BarChartConfig::default()
-            }
-        },
-        ..Render::default()
-    });
-    println!(
-        "Shows the '{}' of flowers based off their species.",
-        parameters.field
-    );
-    println!("Produced via `Dataset::recast`.");
-    println!();
-    println!("{flat}");
-    println!();
-}
-
-fn barchart_breakdown_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
-    let new_dataset = dataset.recast(
-        Schemas::three("Species", "Sepal Length", parameters.field.to_string()),
-        |flower| {
-            (
-                flower.species.clone(),
-                flower.sepal_length.clone(),
-                OrderedFloat(flower.value(&parameters.field)),
-            )
-        },
-    );
-    let view = new_dataset.breakdown_3rd();
-    let flat = BarChart::new(&view).render(Render {
-        aggregate: Aggregate::Sum,
-        show_aggregate: parameters.verbose,
-        widget_config: {
-            BarChartConfig {
-                show_aggregate: parameters.verbose,
-                ..BarChartConfig::default()
-            }
-        },
-        ..Render::default()
-    });
-    println!(
-        "Shows the breakdown count across '{}' for flowers based off their species + sepal length.",
-        parameters.field
-    );
-    println!("Produced via `Dataset::recast`.");
-    println!();
-    println!("{flat}");
-    println!();
-}
-
 fn histogram_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
     let view = SepalLengthView {
         data: dataset.data(),
@@ -125,60 +60,6 @@ fn histogram_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>)
         parameters.field
     );
     println!("Produced via custom implementation of a `flat::View`.");
-    println!();
-    println!("{flat}");
-    println!();
-}
-
-fn histogram_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
-    let new_dataset = dataset.recast(
-        Schemas::two("Sepal Length", parameters.field.to_string()),
-        |flower| {
-            (
-                flower.sepal_length.0 .0.clone(),
-                flower.value(&parameters.field),
-            )
-        },
-    );
-    let view = new_dataset.view_2nd();
-    let flat = Histogram::new(&view, 10).render(Render {
-        aggregate: Aggregate::Sum,
-        show_aggregate: parameters.verbose,
-        widget_config: { HistogramConfig::default() },
-        ..Render::default()
-    });
-    println!(
-        "Shows the '{}' of flowers histogram-ed by their sepal length.",
-        parameters.field
-    );
-    println!("Produced via `Dataset::recast`.");
-    println!();
-    println!("{flat}");
-    println!();
-}
-
-fn histogram_breakdown_recast(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
-    let new_dataset = dataset.recast(
-        Schemas::two("Sepal Length", parameters.field.to_string()),
-        |flower| {
-            (
-                flower.sepal_length.clone(),
-                OrderedFloat(flower.value(&parameters.field)),
-            )
-        },
-    );
-    let view = new_dataset.breakdown_2nd();
-    let flat = Histogram::new(&view, 10).render(Render {
-        aggregate: Aggregate::Sum,
-        show_aggregate: parameters.verbose,
-        widget_config: { HistogramConfig::default() },
-        ..Render::default()
-    });
-    println!(
-        "Shows the breakdown count across '{}' for flowers histogram-ed by their sepal length.",
-        parameters.field
-    );
-    println!("Produced via `Dataset::recast`.");
     println!();
     println!("{flat}");
     println!();

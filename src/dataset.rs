@@ -45,23 +45,6 @@ pub struct DatasetBuilder<S: Schema> {
     data: Vec<S::Dimensions>,
 }
 
-impl<'a, S: Schema> Dataset<S> {
-    /// Make a copy of this dataset by recasting it into a new schema.
-    ///
-    /// Notice, this is an expensive operation (typically requires the whole dataset to be cloned).
-    /// For a cheaper alternative, use either a built-in or custom [`View`].
-    pub fn recast<R: Schema>(
-        &self,
-        new_schema: R,
-        data_mapper: impl Fn(&S::Dimensions) -> R::Dimensions,
-    ) -> Dataset<R> {
-        Dataset {
-            schema: new_schema,
-            data: self.data.iter().map(data_mapper).collect(),
-        }
-    }
-}
-
 // Would love to be able to do this, but it conflicts with the specific `impl Dataset<Schema1<i32>>` (etc) implementations.
 // We need specialization!
 // impl<T: Deref<Target = f64>> Dataset<Schema1<T>> {
@@ -603,19 +586,5 @@ mod tests {
         dataset.update((2,));
         dataset.update((3,));
         assert_eq!(dataset.data.len(), 3);
-    }
-
-    #[test]
-    fn dataset_cast() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema)
-            .add((1,))
-            .add((2,))
-            .add((3,))
-            .build();
-        let dataset_2d: Dataset<Schema2<i64, bool>> =
-            dataset.recast(Schemas::two("abc", "is_even"), |i| (i.0, i.0 % 2 == 0));
-        assert_eq!(dataset.data.len(), 3);
-        assert_eq!(dataset_2d.data.len(), 3);
     }
 }
