@@ -2,7 +2,7 @@ use blarg::{derive::*, prelude::*, CommandLineParser, Parameter, Scalar, Switch}
 use flat::*;
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Deref, Div, Mul, Sub};
 
 fn main() {
     let parameters = Parameters::blarg_parse();
@@ -139,7 +139,6 @@ struct AttributeView<'a> {
 }
 
 impl<'a> View<FlowerSchema> for AttributeView<'a> {
-    // type Dimensions = Flower;
     type PrimaryDimension = Species;
     type BreakdownDimension = Nothing;
     type DisplayDimensions = (Species,);
@@ -150,6 +149,10 @@ impl<'a> View<FlowerSchema> for AttributeView<'a> {
 
     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
         dims.value(&self.field)
+    }
+
+    fn value_label(&self) -> String {
+        self.field.print_string()
     }
 
     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
@@ -163,20 +166,16 @@ impl<'a> View<FlowerSchema> for AttributeView<'a> {
         Nothing
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        None
+    }
+
     fn display_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::DisplayDimensions {
         (dims.species.clone(),)
     }
 
     fn display_headers(&self) -> Vec<String> {
         vec!["Species".to_string()]
-    }
-
-    fn value_label(&self) -> String {
-        self.field.print_string()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        None
     }
 }
 
@@ -186,7 +185,6 @@ struct SepalLengthView<'a> {
 }
 
 impl<'a> View<FlowerSchema> for SepalLengthView<'a> {
-    // type Dimensions = Flower;
     type PrimaryDimension = SepalLength;
     type BreakdownDimension = Nothing;
     type DisplayDimensions = (SepalLength,);
@@ -197,6 +195,10 @@ impl<'a> View<FlowerSchema> for SepalLengthView<'a> {
 
     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
         dims.value(&self.field)
+    }
+
+    fn value_label(&self) -> String {
+        self.field.print_string()
     }
 
     fn primary_dim(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::PrimaryDimension {
@@ -210,20 +212,16 @@ impl<'a> View<FlowerSchema> for SepalLengthView<'a> {
         Nothing
     }
 
+    fn breakdown_label(&self) -> Option<String> {
+        None
+    }
+
     fn display_dims(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> Self::DisplayDimensions {
         (dims.sepal_length.clone(),)
     }
 
     fn display_headers(&self) -> Vec<String> {
         vec!["Sepal Length".to_string()]
-    }
-
-    fn value_label(&self) -> String {
-        self.field.print_string()
-    }
-
-    fn breakdown_label(&self) -> Option<String> {
-        None
     }
 }
 
@@ -257,6 +255,14 @@ impl Dimensions for Species {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct SepalLength(OrderedFloat<f64>);
+
+impl Deref for SepalLength {
+    type Target = OrderedFloat<f64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl std::fmt::Display for SepalLength {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -293,6 +299,14 @@ impl Binnable for SepalLength {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct SepalWidth(OrderedFloat<f64>);
 
+impl Deref for SepalWidth {
+    type Target = OrderedFloat<f64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl std::fmt::Display for SepalWidth {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", minimal_precision_string(self.0 .0))
@@ -302,6 +316,14 @@ impl std::fmt::Display for SepalWidth {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct PetalLength(OrderedFloat<f64>);
 
+impl Deref for PetalLength {
+    type Target = OrderedFloat<f64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl std::fmt::Display for PetalLength {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", minimal_precision_string(self.0 .0))
@@ -310,6 +332,14 @@ impl std::fmt::Display for PetalLength {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct PetalWidth(OrderedFloat<f64>);
+
+impl Deref for PetalWidth {
+    type Target = OrderedFloat<f64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl std::fmt::Display for PetalWidth {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

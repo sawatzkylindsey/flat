@@ -622,231 +622,234 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::Schemas;
 
-    #[test]
-    fn view1_reflective() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema)
-            .add((1,))
-            .add((2,))
-            .add((3,))
-            .build();
-        let view = dataset.reflect_1st();
-        assert_eq!(view.primary_dim(&(2,)), 2);
-        assert_eq!(view.breakdown_dim(&(2,)), Nothing);
-        assert_eq!(view.display_dims(&(2,)), (2,));
-        assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_label(), "abc".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+    #[cfg(feature = "primitive_impls")]
+    mod primitive_impls {
+        use crate::{Dataset, Nothing, Schema1, Schema2, Schema3, Schemas, View};
 
-    #[test]
-    fn view1_counting() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema)
-            .add((1,))
-            .add((2,))
-            .add((3,))
-            .build();
-        let view = dataset.count();
-        assert_eq!(view.primary_dim(&(2,)), 2);
-        assert_eq!(view.breakdown_dim(&(2,)), Nothing);
-        assert_eq!(view.display_dims(&(2,)), (2,));
-        assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_label(), "Count".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+        #[test]
+        fn view1_reflective() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema)
+                .add((1,))
+                .add((2,))
+                .add((3,))
+                .build();
+            let view = dataset.reflect_1st();
+            assert_eq!(view.primary_dim(&(2,)), 2);
+            assert_eq!(view.breakdown_dim(&(2,)), Nothing);
+            assert_eq!(view.display_dims(&(2,)), (2,));
+            assert_eq!(view.display_headers(), vec!["abc".to_string()]);
+            assert_eq!(view.value_label(), "abc".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view2_reflective() {
-        let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-        let dataset = Dataset::builder(schema)
-            .add((1, 0.1))
-            .add((2, 0.2))
-            .add((3, 0.3))
-            .build();
-        let view = dataset.reflect_2nd();
-        assert_eq!(view.primary_dim(&(2, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
-        assert_eq!(view.display_dims(&(2, 0.2)), (2, 0.2));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "def".to_string()]
-        );
-        assert_eq!(view.value_label(), "def".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+        #[test]
+        fn view1_counting() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema)
+                .add((1,))
+                .add((2,))
+                .add((3,))
+                .build();
+            let view = dataset.count();
+            assert_eq!(view.primary_dim(&(2,)), 2);
+            assert_eq!(view.breakdown_dim(&(2,)), Nothing);
+            assert_eq!(view.display_dims(&(2,)), (2,));
+            assert_eq!(view.display_headers(), vec!["abc".to_string()]);
+            assert_eq!(view.value_label(), "Count".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view2_counting() {
-        let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-        let dataset = Dataset::builder(schema)
-            .add((1, 0.1))
-            .add((2, 0.2))
-            .add((3, 0.3))
-            .build();
-        let view = dataset.count();
-        assert_eq!(view.primary_dim(&(2, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
-        assert_eq!(view.display_dims(&(2, 0.2)), (2, 0.2));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "def".to_string()]
-        );
-        assert_eq!(view.value_label(), "Count".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+        #[test]
+        fn view2_reflective() {
+            let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
+            let dataset = Dataset::builder(schema)
+                .add((1, 0.1))
+                .add((2, 0.2))
+                .add((3, 0.3))
+                .build();
+            let view = dataset.reflect_2nd();
+            assert_eq!(view.primary_dim(&(2, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
+            assert_eq!(view.display_dims(&(2, 0.2)), (2, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string()]
+            );
+            assert_eq!(view.value_label(), "def".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view2_2nd() {
-        let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-        let dataset = Dataset::builder(schema)
-            .add((1, 0.1))
-            .add((2, 0.2))
-            .add((3, 0.3))
-            .build();
-        let view = dataset.view_2nd();
-        assert_eq!(view.primary_dim(&(2, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
-        assert_eq!(view.display_dims(&(2, 0.2)), (2,));
-        assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_label(), "def".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+        #[test]
+        fn view2_counting() {
+            let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
+            let dataset = Dataset::builder(schema)
+                .add((1, 0.1))
+                .add((2, 0.2))
+                .add((3, 0.3))
+                .build();
+            let view = dataset.count();
+            assert_eq!(view.primary_dim(&(2, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
+            assert_eq!(view.display_dims(&(2, 0.2)), (2, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string()]
+            );
+            assert_eq!(view.value_label(), "Count".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view2_breakdown_2nd() {
-        let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-        let dataset = Dataset::builder(schema)
-            .add((1, 0.1))
-            .add((2, 0.2))
-            .add((3, 0.3))
-            .build();
-        let view = dataset.breakdown_2nd();
-        assert_eq!(view.primary_dim(&(2, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2)), 0.2);
-        assert_eq!(view.display_dims(&(2, 0.2)), (2,));
-        assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_label(), "def".to_string());
-        assert_eq!(view.breakdown_label(), Some("def".to_string()));
-    }
+        #[test]
+        fn view2_2nd() {
+            let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
+            let dataset = Dataset::builder(schema)
+                .add((1, 0.1))
+                .add((2, 0.2))
+                .add((3, 0.3))
+                .build();
+            let view = dataset.view_2nd();
+            assert_eq!(view.primary_dim(&(2, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2)), Nothing);
+            assert_eq!(view.display_dims(&(2, 0.2)), (2,));
+            assert_eq!(view.display_headers(), vec!["abc".to_string()]);
+            assert_eq!(view.value_label(), "def".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view2_count_breakdown_2nd() {
-        let schema: Schema2<i64, &str> = Schemas::two("abc", "def");
-        let dataset = Dataset::builder(schema)
-            .add((1, "a"))
-            .add((2, "b"))
-            .add((3, "c"))
-            .build();
-        let view = dataset.count_breakdown_2nd();
-        assert_eq!(view.primary_dim(&(2, "b")), 2);
-        assert_eq!(view.breakdown_dim(&(2, "b")), "b");
-        assert_eq!(view.display_dims(&(2, "b")), (2,));
-        assert_eq!(view.display_headers(), vec!["abc".to_string()]);
-        assert_eq!(view.value_label(), "Count".to_string());
-        assert_eq!(view.breakdown_label(), Some("def".to_string()));
-    }
+        #[test]
+        fn view2_breakdown_2nd() {
+            let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
+            let dataset = Dataset::builder(schema)
+                .add((1, 0.1))
+                .add((2, 0.2))
+                .add((3, 0.3))
+                .build();
+            let view = dataset.breakdown_2nd();
+            assert_eq!(view.primary_dim(&(2, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2)), 0.2);
+            assert_eq!(view.display_dims(&(2, 0.2)), (2,));
+            assert_eq!(view.display_headers(), vec!["abc".to_string()]);
+            assert_eq!(view.value_label(), "def".to_string());
+            assert_eq!(view.breakdown_label(), Some("def".to_string()));
+        }
 
-    #[test]
-    fn view3_reflective() {
-        let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
-        let dataset = Dataset::builder(schema)
-            .add((1, true, 0.1))
-            .add((2, false, 0.2))
-            .add((3, true, 0.3))
-            .build();
-        let view = dataset.reflect_3rd();
-        assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
-        assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false, 0.2));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
-        );
-        assert_eq!(view.value_label(), "ghi".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+        #[test]
+        fn view2_count_breakdown_2nd() {
+            let schema: Schema2<i64, &str> = Schemas::two("abc", "def");
+            let dataset = Dataset::builder(schema)
+                .add((1, "a"))
+                .add((2, "b"))
+                .add((3, "c"))
+                .build();
+            let view = dataset.count_breakdown_2nd();
+            assert_eq!(view.primary_dim(&(2, "b")), 2);
+            assert_eq!(view.breakdown_dim(&(2, "b")), "b");
+            assert_eq!(view.display_dims(&(2, "b")), (2,));
+            assert_eq!(view.display_headers(), vec!["abc".to_string()]);
+            assert_eq!(view.value_label(), "Count".to_string());
+            assert_eq!(view.breakdown_label(), Some("def".to_string()));
+        }
 
-    #[test]
-    fn view3_counting() {
-        let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
-        let dataset = Dataset::builder(schema)
-            .add((1, true, 0.1))
-            .add((2, false, 0.2))
-            .add((3, true, 0.3))
-            .build();
-        let view = dataset.count();
-        assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
-        assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false, 0.2));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
-        );
-        assert_eq!(view.value_label(), "Count".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+        #[test]
+        fn view3_reflective() {
+            let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
+            let dataset = Dataset::builder(schema)
+                .add((1, true, 0.1))
+                .add((2, false, 0.2))
+                .add((3, true, 0.3))
+                .build();
+            let view = dataset.reflect_3rd();
+            assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
+            assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
+            );
+            assert_eq!(view.value_label(), "ghi".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view3_3rd() {
-        let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
-        let dataset = Dataset::builder(schema)
-            .add((1, true, 0.1))
-            .add((2, false, 0.2))
-            .add((3, true, 0.3))
-            .build();
-        let view = dataset.view_3rd();
-        assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
-        assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
-        assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "def".to_string()]
-        );
-        assert_eq!(view.value_label(), "ghi".to_string());
-        assert_eq!(view.breakdown_label(), None);
-    }
+        #[test]
+        fn view3_counting() {
+            let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
+            let dataset = Dataset::builder(schema)
+                .add((1, true, 0.1))
+                .add((2, false, 0.2))
+                .add((3, true, 0.3))
+                .build();
+            let view = dataset.count();
+            assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
+            assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
+            );
+            assert_eq!(view.value_label(), "Count".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view3_breakdown_3rd() {
-        let schema: Schema3<u64, f32, f64> = Schemas::three("abc", "def", "ghi");
-        let dataset = Dataset::builder(schema)
-            .add((1, 0.1, 0.01))
-            .add((2, 0.2, 0.02))
-            .add((3, 0.3, 0.03))
-            .build();
-        let view = dataset.breakdown_3rd();
-        assert_eq!(view.primary_dim(&(2, 0.2, 0.02)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2, 0.02)), 0.02);
-        assert_eq!(view.display_dims(&(2, 0.2, 0.02)), (2, 0.2));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "def".to_string()]
-        );
-        assert_eq!(view.value_label(), "ghi".to_string());
-        assert_eq!(view.breakdown_label(), Some("ghi".to_string()));
-    }
+        #[test]
+        fn view3_3rd() {
+            let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
+            let dataset = Dataset::builder(schema)
+                .add((1, true, 0.1))
+                .add((2, false, 0.2))
+                .add((3, true, 0.3))
+                .build();
+            let view = dataset.view_3rd();
+            assert_eq!(view.primary_dim(&(2, false, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, false, 0.2)), Nothing);
+            assert_eq!(view.display_dims(&(2, false, 0.2)), (2, false));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string()]
+            );
+            assert_eq!(view.value_label(), "ghi".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
 
-    #[test]
-    fn view3_count_breakdown_3rd() {
-        let schema: Schema3<u64, f32, bool> = Schemas::three("abc", "def", "ghi");
-        let dataset = Dataset::builder(schema)
-            .add((1, 0.1, true))
-            .add((2, 0.2, false))
-            .add((3, 0.3, true))
-            .build();
-        let view = dataset.count_breakdown_3rd();
-        assert_eq!(view.primary_dim(&(2, 0.2, false)), 2);
-        assert_eq!(view.breakdown_dim(&(2, 0.2, false)), false);
-        assert_eq!(view.display_dims(&(2, 0.2, false)), (2, 0.2));
-        assert_eq!(
-            view.display_headers(),
-            vec!["abc".to_string(), "def".to_string()]
-        );
-        assert_eq!(view.value_label(), "Count".to_string());
-        assert_eq!(view.breakdown_label(), Some("ghi".to_string()));
+        #[test]
+        fn view3_breakdown_3rd() {
+            let schema: Schema3<u64, f32, f64> = Schemas::three("abc", "def", "ghi");
+            let dataset = Dataset::builder(schema)
+                .add((1, 0.1, 0.01))
+                .add((2, 0.2, 0.02))
+                .add((3, 0.3, 0.03))
+                .build();
+            let view = dataset.breakdown_3rd();
+            assert_eq!(view.primary_dim(&(2, 0.2, 0.02)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2, 0.02)), 0.02);
+            assert_eq!(view.display_dims(&(2, 0.2, 0.02)), (2, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string()]
+            );
+            assert_eq!(view.value_label(), "ghi".to_string());
+            assert_eq!(view.breakdown_label(), Some("ghi".to_string()));
+        }
+
+        #[test]
+        fn view3_count_breakdown_3rd() {
+            let schema: Schema3<u64, f32, bool> = Schemas::three("abc", "def", "ghi");
+            let dataset = Dataset::builder(schema)
+                .add((1, 0.1, true))
+                .add((2, 0.2, false))
+                .add((3, 0.3, true))
+                .build();
+            let view = dataset.count_breakdown_3rd();
+            assert_eq!(view.primary_dim(&(2, 0.2, false)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2, false)), false);
+            assert_eq!(view.display_dims(&(2, 0.2, false)), (2, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string()]
+            );
+            assert_eq!(view.value_label(), "Count".to_string());
+            assert_eq!(view.breakdown_label(), Some("ghi".to_string()));
+        }
     }
 }

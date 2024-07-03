@@ -305,32 +305,3 @@ fn attribute_dataset() -> Vec<(f64, Animal)> {
         (130.0, Animal::new("Mountain Goat")),
     ]
 }
-
-// // Some fake attribute data.
-// fn attribute_dataset() -> Vec<(Length, Animal)> {
-//     vec![
-//         (Length(1.2), Animal::new("Sea Otter")),
-//         (Length(1.3), Animal::new("Sea Otter")),
-//         (Length(1.5), Animal::new("Sea Otter")),
-//         (Length(0.6), Animal::new("Falcon")),
-//         (Length(0.5), Animal::new("Falcon")),
-//         (Length(2.8), Animal::new("Tiger")),
-//         (Length(2.9), Animal::new("Tiger")),
-//         (Length(0.6), Animal::new("Stork")),
-//         (Length(0.6), Animal::new("Crane")),
-//         (Length(0.15), Animal::new("Kingfisher")),
-//         (Length(0.9), Animal::new("Flamingo")),
-//         (Length(0.9), Animal::new("Flamingo")),
-//         (Length(0.8), Animal::new("Flamingo")),
-//         (Length(0.8), Animal::new("Flamingo")),
-//         (Length(0.25), Animal::new("Duck")),
-//         (Length(0.32), Animal::new("Duck")),
-//         (Length(0.3), Animal::new("Duck")),
-//         (Length(0.3), Animal::new("Black Bear")),
-//         (Length(1.2), Animal::new("Black Bear")),
-//         (Length(2.2), Animal::new("Grizzly Bear")),
-//         (Length(1.1), Animal::new("Mountain Goat")),
-//         (Length(1.0), Animal::new("Mountain Goat")),
-//         (Length(1.3), Animal::new("Mountain Goat")),
-//     ]
-// }

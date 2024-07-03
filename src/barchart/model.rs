@@ -600,456 +600,465 @@ impl Group {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{Dataset, Schema1, Schema2, Schemas};
-    use ordered_float::OrderedFloat;
 
-    #[test]
-    fn empty() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let builder = Dataset::builder(schema).build();
-        let view = builder.reflect_1st();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+    #[cfg(feature = "primitive_impls")]
+    mod primitive_impls {
+        use crate::{BarChart, BarChartConfig, Render};
+        use crate::{Dataset, Schema1, Schema2, Schemas};
+
+        #[test]
+        fn empty() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let builder = Dataset::builder(schema).build();
+            let view = builder.reflect_1st();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc  |Sum(abc)"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn zero() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema).add((0,)).build();
-        let view = dataset.reflect_1st();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn zero() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema).add((0,)).build();
+            let view = dataset.reflect_1st();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc  |Sum(abc)
 0    |"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn negatives_and_positives() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema)
-            .add((-1,))
-            .add((0,))
-            .add((1,))
-            .build();
-        let view = dataset.reflect_1st();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn negatives_and_positives() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema)
+                .add((-1,))
+                .add((0,))
+                .add((1,))
+                .build();
+            let view = dataset.reflect_1st();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc  |Sum(abc)
 -1   |⊖
 0    |
 1    |*"#
-        );
-    }
-
-    #[test]
-    fn one_thousand() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let mut builder = Dataset::builder(schema);
-
-        for _ in 0..1_000 {
-            builder.update((1,));
+            );
         }
 
-        let dataset = builder.build();
-        let view = dataset.reflect_1st();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn one_thousand() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let mut builder = Dataset::builder(schema);
+
+            for _ in 0..1_000 {
+                builder.update((1,));
+            }
+
+            let dataset = builder.build();
+            let view = dataset.reflect_1st();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc  |Sum(abc)
 1    |**********************************************************************************************************************************************************"#
-        );
-    }
-
-    #[test]
-    fn negative_one_thousand() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let mut builder = Dataset::builder(schema);
-
-        for _ in 0..1_000 {
-            builder.update((-1,));
+            );
         }
 
-        let dataset = builder.build();
-        let view = dataset.reflect_1st();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn negative_one_thousand() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let mut builder = Dataset::builder(schema);
+
+            for _ in 0..1_000 {
+                builder.update((-1,));
+            }
+
+            let dataset = builder.build();
+            let view = dataset.reflect_1st();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc  |Sum(abc)
 -1   |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn breakdown() {
-        let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
-        let dataset = Dataset::builder(schema)
-            .add((1, 2))
-            .add((2, 3))
-            .add((3, 4))
-            .build();
-        let view = dataset.breakdown_2nd();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn breakdown() {
+            let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
+            let dataset = Dataset::builder(schema)
+                .add((1, 2))
+                .add((2, 3))
+                .add((3, 4))
+                .build();
+            let view = dataset.breakdown_2nd();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
       Sum(something long)
 abc  | 2    3    4  |
 1    | **           |
 2    |     ***      |
 3    |          ****|"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn count_breakdown() {
-        let schema = Schemas::two("abc", "something long");
-        let dataset = Dataset::builder(schema)
-            .add((1, 2))
-            .add((2, 3))
-            .add((3, 4))
-            .build();
-        let view = dataset.count_breakdown_2nd();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn count_breakdown() {
+            let schema = Schemas::two("abc", "something long");
+            let dataset = Dataset::builder(schema)
+                .add((1, 2))
+                .add((2, 3))
+                .add((3, 4))
+                .build();
+            let view = dataset.count_breakdown_2nd();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
       something long
       Sum(Count)
 abc  |2 3 4|
 1    |*    |
 2    |  *  |
 3    |    *|"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo111() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema).add(("a1", "b1", "c1")).build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo111() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema).add(("a1", "b1", "c1")).build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] - b1 [1] - a1 [1]  |*"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo211() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo211() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] - b1 [2] - a1 [2]  |**
 c2 [1] ┘"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo221() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .add(("a1", "b2", "c2"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo221() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .add(("a1", "b2", "c2"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] - b1 [2] ┐
 c2 [1] ┘        - a1 [3]  |***
 c2 [1] - b2 [1] ┘"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo221x() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .add(("a1", "b2", "c1"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo221x() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .add(("a1", "b2", "c1"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] - b1 [2] ┐
 c2 [1] ┘        - a1 [3]  |***
 c1 [1] - b2 [1] ┘"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo311() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .add(("a1", "b1", "c3"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo311() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .add(("a1", "b1", "c3"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] ┐
 c2 [1] - b1 [3] - a1 [3]  |***
 c3 [1] ┘"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo321() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .add(("a1", "b1", "c3"))
-            .add(("a1", "b2", "c3"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo321() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .add(("a1", "b1", "c3"))
+                .add(("a1", "b2", "c3"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] ┐
 c2 [1] - b1 [3] - a1 [4]  |****
 c3 [1] ┘
 c3 [1] - b2 [1] ┘"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo321x() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .add(("a1", "b1", "c3"))
-            .add(("a1", "b2", "c2"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo321x() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .add(("a1", "b1", "c3"))
+                .add(("a1", "b2", "c2"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] ┐
 c2 [1] - b1 [3] - a1 [4]  |****
 c3 [1] ┘
 c2 [1] - b2 [1] ┘"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo321y() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .add(("a1", "b1", "c3"))
-            .add(("a1", "b2", "c1"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo321y() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .add(("a1", "b1", "c3"))
+                .add(("a1", "b2", "c1"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] ┐
 c2 [1] - b1 [3] - a1 [4]  |****
 c3 [1] ┘
 c1 [1] - b2 [1] ┘"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn depth_3_combo331() {
-        let schema = Schemas::three("A", "B", "C");
-        let dataset = Dataset::builder(schema)
-            .add(("a1", "b1", "c1"))
-            .add(("a1", "b1", "c2"))
-            .add(("a1", "b1", "c3"))
-            .add(("a1", "b2", "c1"))
-            .add(("a1", "b3", "c1"))
-            .build();
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render {
-            show_aggregate: true,
-            widget_config: BarChartConfig {
+        #[test]
+        fn depth_3_combo331() {
+            let schema = Schemas::three("A", "B", "C");
+            let dataset = Dataset::builder(schema)
+                .add(("a1", "b1", "c1"))
+                .add(("a1", "b1", "c2"))
+                .add(("a1", "b1", "c3"))
+                .add(("a1", "b2", "c1"))
+                .add(("a1", "b3", "c1"))
+                .build();
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render {
                 show_aggregate: true,
-                ..BarChartConfig::default()
-            },
-            ..Render::default()
-        });
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+                widget_config: BarChartConfig {
+                    show_aggregate: true,
+                    ..BarChartConfig::default()
+                },
+                ..Render::default()
+            });
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 C  Sum   B  Sum   A  Sum  |Sum(Count)
 c1 [1] ┐
 c2 [1] - b1 [3] ┐
 c3 [1] ┘        - a1 [5]  |*****
 c1 [1] - b2 [1] ┘
 c1 [1] - b3 [1] ┘"#
-        );
+            );
+        }
     }
 
-    #[test]
-    fn view2() {
-        let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
-        let dataset = Dataset::builder(schema)
-            .add((1, OrderedFloat(0.1)))
-            .add((2, OrderedFloat(0.4)))
-            .add((3, OrderedFloat(0.5)))
-            .add((4, OrderedFloat(0.9)))
-            .build();
-        let view = dataset.view_2nd();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+    #[cfg(feature = "pointer_impls")]
+    mod pointer_impls {
+        use crate::{BarChart, Render};
+        use crate::{Dataset, Schema2, Schemas};
+        use ordered_float::OrderedFloat;
+
+        #[test]
+        fn view2() {
+            let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
+            let dataset = Dataset::builder(schema)
+                .add((1, OrderedFloat(0.1)))
+                .add((2, OrderedFloat(0.4)))
+                .add((3, OrderedFloat(0.5)))
+                .add((4, OrderedFloat(0.9)))
+                .build();
+            let view = dataset.view_2nd();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc  |Sum(def)
 1    |
 2    |
 3    |*
 4    |*"#
-        );
+            );
 
-        let view = dataset.count();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+            let view = dataset.count();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 def    abc  |Sum(Count)
 0.1  - 1    |*
 0.4  - 2    |*
 0.5  - 3    |*
 0.9  - 4    |*"#
-        );
+            );
 
-        let view = dataset.breakdown_2nd();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+            let view = dataset.breakdown_2nd();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
       Sum(def)
 abc  |0.1 0.4 0.5 0.9|
 1    |               |
 2    |               |
 3    |         *     |
 4    |             * |"#
-        );
+            );
 
-        let view = dataset.count_breakdown_2nd();
-        let barchart = BarChart::new(&view);
-        let flat = barchart.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+            let view = dataset.count_breakdown_2nd();
+            let barchart = BarChart::new(&view);
+            let flat = barchart.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
       def
       Sum(Count)
 abc  |0.1 0.4 0.5 0.9|
@@ -1057,6 +1066,7 @@ abc  |0.1 0.4 0.5 0.9|
 2    |     *         |
 3    |         *     |
 4    |             * |"#
-        );
+            );
+        }
     }
 }

@@ -422,249 +422,259 @@ impl<T: PartialOrd> Bound<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{Dataset, Histogram, Schema1, Schema2, Schemas};
-    use ordered_float::OrderedFloat;
 
-    #[test]
-    fn empty() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema).build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 0);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+    #[cfg(feature = "primitive_impls")]
+    mod primitive_impls {
+        use crate::{Dataset, Schema1, Schema2, Schemas};
+        use crate::{Histogram, Render};
+
+        #[test]
+        fn empty() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema).build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 0);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc  |Sum(abc)"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn zero_buckets() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema)
-            .add((1,))
-            .add((2,))
-            .add((3,))
-            .build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 0);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn zero_buckets() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema)
+                .add((1,))
+                .add((2,))
+                .add((3,))
+                .build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 0);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc     |Sum(abc)
 [1, 3]  |******"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn one_bucket() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema)
-            .add((1,))
-            .add((2,))
-            .add((3,))
-            .build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 1);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn one_bucket() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema)
+                .add((1,))
+                .add((2,))
+                .add((3,))
+                .build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 1);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc     |Sum(abc)
 [1, 3]  |******"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn extra_buckets() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema).add((1,)).build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 2);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn extra_buckets() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema).add((1,)).build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 2);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc     |Sum(abc)
 [1, 1]  |*"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn zero() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema).add((0,)).build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 1);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn zero() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema).add((0,)).build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 1);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc     |Sum(abc)
 [0, 0]  |"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn negative_and_positive() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema)
-            .add((-1,))
-            .add((0,))
-            .add((1,))
-            .build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 3);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn negative_and_positive() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let dataset = Dataset::builder(schema)
+                .add((-1,))
+                .add((0,))
+                .add((1,))
+                .build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 3);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc      |Sum(abc)
 [-1, 0)  |⊖
 [0, 1)   |
 [1, 2]   |*"#
-        );
-    }
-
-    #[test]
-    fn one_thousand() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let mut builder = Dataset::builder(schema);
-
-        for _ in 0..1_000 {
-            builder.update((1,));
+            );
         }
 
-        let dataset = builder.build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 1);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn one_thousand() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let mut builder = Dataset::builder(schema);
+
+            for _ in 0..1_000 {
+                builder.update((1,));
+            }
+
+            let dataset = builder.build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 1);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc     |Sum(abc)
 [1, 1]  |*******************************************************************************************************************************************************"#
-        );
-    }
-
-    #[test]
-    fn negative_one_thousand() {
-        let schema: Schema1<i64> = Schemas::one("abc");
-        let mut builder = Dataset::builder(schema);
-
-        for _ in 0..1_000 {
-            builder.update((-1,));
+            );
         }
 
-        let dataset = builder.build();
-        let view = dataset.reflect_1st();
-        let histogram = Histogram::new(&view, 3);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn negative_one_thousand() {
+            let schema: Schema1<i64> = Schemas::one("abc");
+            let mut builder = Dataset::builder(schema);
+
+            for _ in 0..1_000 {
+                builder.update((-1,));
+            }
+
+            let dataset = builder.build();
+            let view = dataset.reflect_1st();
+            let histogram = Histogram::new(&view, 3);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
 abc       |Sum(abc)
 [-1, -1]  |⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖⊖"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn view2() {
-        let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
-        let dataset = Dataset::builder(schema)
-            .add((1, OrderedFloat(0.1)))
-            .add((2, OrderedFloat(0.2)))
-            .add((3, OrderedFloat(0.3)))
-            .build();
-        let view = dataset.view_2nd();
-        let histogram = Histogram::new(&view, 1);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
-abc     |Sum(def)
-[1, 3]  |*"#
-        );
-
-        let view = dataset.count();
-        let histogram = Histogram::new(&view, 1);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
-abc     |Sum(Count)
-[1, 3]  |***"#
-        );
-
-        let view = dataset.breakdown_2nd();
-        let histogram = Histogram::new(&view, 1);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
-         Sum(def)
-abc     |0.1 0.2 0.3|
-[1, 3]  |           |"#
-        );
-
-        let view = dataset.count_breakdown_2nd();
-        let histogram = Histogram::new(&view, 1);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
-         def
-         Sum(Count)
-abc     |0.1 0.2 0.3|
-[1, 3]  | *   *   * |"#
-        );
-    }
-
-    #[test]
-    fn breakdown() {
-        let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
-        let dataset = Dataset::builder(schema)
-            .add((1, 2))
-            .add((2, 3))
-            .add((3, 4))
-            .build();
-        let view = dataset.breakdown_2nd();
-        let histogram = Histogram::new(&view, 3);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn breakdown() {
+            let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
+            let dataset = Dataset::builder(schema)
+                .add((1, 2))
+                .add((2, 3))
+                .add((3, 4))
+                .build();
+            let view = dataset.breakdown_2nd();
+            let histogram = Histogram::new(&view, 3);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
          Sum(something long)
 abc     | 2    3    4  |
 [1, 2)  | **           |
 [2, 3)  |     ***      |
 [3, 4]  |          ****|"#
-        );
-    }
+            );
+        }
 
-    #[test]
-    fn count_breakdown() {
-        let schema = Schemas::two("abc", "something long");
-        let dataset = Dataset::builder(schema)
-            .add((1, 2))
-            .add((2, 3))
-            .add((3, 4))
-            .build();
-        let view = dataset.count_breakdown_2nd();
-        let histogram = Histogram::new(&view, 3);
-        let flat = histogram.render(Render::default());
-        assert_eq!(
-            format!("\n{}", flat.to_string()),
-            r#"
+        #[test]
+        fn count_breakdown() {
+            let schema = Schemas::two("abc", "something long");
+            let dataset = Dataset::builder(schema)
+                .add((1, 2))
+                .add((2, 3))
+                .add((3, 4))
+                .build();
+            let view = dataset.count_breakdown_2nd();
+            let histogram = Histogram::new(&view, 3);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
          something long
          Sum(Count)
 abc     |2 3 4|
 [1, 2)  |*    |
 [2, 3)  |  *  |
 [3, 4]  |    *|"#
-        );
+            );
+        }
+    }
+
+    #[cfg(feature = "pointer_impls")]
+    mod pointer_impls {
+        use crate::{Dataset, Schema2, Schemas};
+        use crate::{Histogram, Render};
+        use ordered_float::OrderedFloat;
+
+        #[test]
+        fn view2() {
+            let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
+            let dataset = Dataset::builder(schema)
+                .add((1, OrderedFloat(0.1)))
+                .add((2, OrderedFloat(0.2)))
+                .add((3, OrderedFloat(0.3)))
+                .build();
+            let view = dataset.view_2nd();
+            let histogram = Histogram::new(&view, 1);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
+abc     |Sum(def)
+[1, 3]  |*"#
+            );
+
+            let view = dataset.count();
+            let histogram = Histogram::new(&view, 1);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
+abc     |Sum(Count)
+[1, 3]  |***"#
+            );
+
+            let view = dataset.breakdown_2nd();
+            let histogram = Histogram::new(&view, 1);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
+         Sum(def)
+abc     |0.1 0.2 0.3|
+[1, 3]  |           |"#
+            );
+
+            let view = dataset.count_breakdown_2nd();
+            let histogram = Histogram::new(&view, 1);
+            let flat = histogram.render(Render::default());
+            assert_eq!(
+                format!("\n{}", flat.to_string()),
+                r#"
+         def
+         Sum(Count)
+abc     |0.1 0.2 0.3|
+[1, 3]  | *   *   * |"#
+            );
+        }
     }
 }

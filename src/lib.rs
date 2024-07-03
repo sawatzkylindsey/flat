@@ -9,6 +9,8 @@
 //! Go to the next section for usage instructions.
 //!
 //! ### Zoo Dataset
+//! The code for this example lives [here](https://github.com/sawatzkylindsey/flat/tree/main/flat_examples_primitives/examples/zoo.rs).
+//!
 //! Imagine a zoo; it contains various species of animals held in enclosures.
 //! The enclosures of this imaginary zoo are organized into the quadrants NorthEast, NorthWest, SouthEast, and SouthWest.
 //!
@@ -97,7 +99,7 @@
 //!
 //! # Usage
 //! This rest of this page describes the general usage for `flat`.
-//! Detailed examples can be found in [the source](https://github.com/sawatzkylindsey/flat/tree/main/examples).
+//! Detailed examples can be found in [the source](https://github.com/sawatzkylindsey/flat/tree/main).
 //!
 //! The general workflow for using `flat` is to 1) construct a dataset, 2) get a specific view of that dataset, and 3) render the view using a widget.
 //!
@@ -146,8 +148,9 @@
 //!
 //! To get a view, simply invoke the appropriate method on your dataset.
 //! These methods are inferred based off the schema of the dataset, and multiple views may be drawn from the same dataset.
-//! For example: `dataset.reflective_view()`, `dataset.view_2nd()`, `dataset.breakdown_3rd()`, or `dataset.counting_view()`.
+//! For example: `dataset.reflect_1st()`, `dataset.view_2nd()`, `dataset.breakdown_3rd()`, or `dataset.count()`.
 //! See the [`Dataset`] docs for more details.
+//! **Note**: many views are made available through features, described later in this documentation.
 //!
 //! Additionally, custom view implementations may be defined by the user.
 //! Take a look at the docs for more details: [`View`].
@@ -186,6 +189,26 @@
 //! For specific details on the configurable values, take a look at the docs: [`Render`].
 //! The next section describes one of the key parameters to a rendering - the width (via `width_hint`).
 //!
+//! # Features
+//! `flat` uses features to enable rendering numeric types, specifically defined at the "Get a View" step.
+//! This is required due to how rust handles [specialization](https://rust-lang.github.io/rfcs/1210-impl-specialization.html).
+//!
+//! When deciding to use `flat`, you need to also decide the flavour of view generation.
+//! There are roughly three options:
+//! 1. `primitive_impls`: With this option, `flat` provides view implementations for all numeric primitive types.
+//! For example, a `SchemaN<*, u8>` knows to extract the `u8` value and render that within the view.
+//! Choosing this option is mutually exclusive with the next.
+//! This choice also limits the kinds of custom views you may implement (they must also follow the concrete numeric implementation pattern).
+//! 2. `pointer_impls`: With this option, `flat` provides view implementations for all `Deref` types.
+//! For example, a `SchemaN<*, Box<u8>>` knows to extract the `u8` value and render that within the view.
+//! Choosing this option is mutually exclusive with the previous.
+//! This choice also limits the kinds of custom views you may implement (they must also follow the Deref type implementation pattern).
+//! 3. `default`: With this option, `flat` does not provide any numeric view generation.
+//! You still get non-numeric view generation (such as counts).
+//! You may also implement your own [`View`]s (see [the example here](https://github.com/sawatzkylindsey/flat/blob/main/examples/iris.rs)).
+//!
+//! If you don't know which to decide, a good starting point is `primitive_impls`.
+//!
 //! # Value Rendering Details
 //! `flat` follows a few simple rules when generating the "visual" rendering of data.
 //! The details follow, but in the general case the visual rendering should be assumed to be *relative*.
@@ -206,15 +229,6 @@
 //! For fractions, `flat` always round the aggregate value before scaling.
 //! In the case of negatives, `flat` takes the absolute value to detect the appropriate bounds and to render the representation characters.
 //! Negative values are rendering using a different character marker (ex: `'⊖'`).
-//!
-
-// For example, it is simple to extend the debug lines of a standalone tool to include multi-line charts.
-// where adding graphical charts may add logistic complexity
-//
-//
-// in the debug logs of a standalone tool, we can easily include some multi-line
-// Although it is possible to render graphical charts, saved as files either locally or remotely, this option is not always attractive or practical.
-// `flat` is designed to fill this gap.
 mod abbreviate;
 mod aggregate;
 mod barchart;
@@ -234,6 +248,9 @@ pub use render::{Flat, Render};
 pub use schema::*;
 use std::fmt::{Display, Formatter};
 pub use view::*;
+
+#[cfg(all(feature = "primitive_impls", feature = "pointer_impls"))]
+compile_error!("Users may choose at most one of: [primitive_impls, pointer_impls]");
 
 /// Trait to extract the display values for rendering.
 ///

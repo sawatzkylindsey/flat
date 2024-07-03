@@ -1,6 +1,19 @@
+[workspace]
+members = [
+    "flat_examples",
+    "flat_examples_pointers",
+    "flat_examples_primitives",
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sawatzkylindsey/flat"
+
 [package]
 name = "flat"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 keywords = ["text", "graph", "chart", "plot"]
@@ -12,15 +25,12 @@ repository = "https://github.com/sawatzkylindsey/flat"
 
 [features]
 default = []
-impls_ordered_float = ["ordered-float"]
-all = ["impls_ordered_float"]
-
-[dependencies]
-ordered-float = { version = "4.2.0", optional = true }
+primitive_impls = []
+pointer_impls = []
 
 [dev-dependencies]
 auto_ops = "0.3.0"
-flat = { path = ".", features = ["all"] }
+flat = { path = "." }
 blarg = "1.0.4"
 ordered-float = "4.2.0"
 rstest = "0.19.0"
