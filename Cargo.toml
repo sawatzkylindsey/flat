@@ -6,14 +6,14 @@ members = [
 ]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.0.3"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/sawatzkylindsey/flat"
 
 [package]
 name = "flat"
-version = "0.0.1"
+version = "0.0.3"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 keywords = ["text", "graph", "chart", "plot"]
@@ -22,6 +22,10 @@ description = "Project multi-dimensional data onto the **flat** textual plane."
 repository = "https://github.com/sawatzkylindsey/flat"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.docs.rs]
+features = ["primitive_impls"]
+rustdoc-args = ["--no-deps"]
 
 [features]
 default = []
