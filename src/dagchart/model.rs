@@ -1,39 +1,41 @@
 use crate::abbreviate::find_abbreviations;
 use crate::aggregate::{aggregate_apply, minimal_precision_string};
 use crate::render::{Alignment, Column, Columns, Grid, Row, Value};
-use crate::{BarChartConfig, Dimensions, Schema, View};
+use crate::{DagChartConfig, Dimensions, Schema, View};
 use crate::{Flat, Render};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-/// The bar-chart widget.
+/// The dag-chart widget.
 ///
 /// ```
 /// use flat::*;
 ///
-/// let schema = Schemas::one("Animal");
-/// let dataset = Dataset::builder(schema)
-///     .add(("whale".to_string(),))
-///     .add(("shark".to_string(),))
-///     .add(("shark".to_string(),))
-///     .add(("tiger".to_string(),))
-///     .add(("tiger".to_string(),))
-///     .add(("tiger".to_string(),))
+/// let schema = Schemas::two("Animal", "Size");
+/// let dataset = DatasetBuilder::new(schema)
+///     .add(("whale".to_string(), "large".to_string()))
+///     .add(("shark".to_string(), "medium".to_string()))
+///     .add(("shark".to_string(), "small".to_string()))
+///     .add(("tiger".to_string(), "medium".to_string()))
+///     .add(("tiger".to_string(), "medium".to_string()))
+///     .add(("tiger".to_string(), "small".to_string()))
 ///     .build();
 /// let view = dataset.count();
-/// let flat = BarChart::new(&view)
+/// let flat = DagChart::new(&view)
 ///     .render(Render::default());
 /// assert_eq!(
 ///     format!("\n{}", flat.to_string()),
 ///     r#"
-/// Animal  |Sum(Count)
-/// shark   |**
-/// tiger   |***
-/// whale   |*"#);
+/// Size      Animal  |Sum(Count)
+/// medium  - shark   |**
+/// small   ┘
+/// medium  - tiger   |***
+/// small   ┘
+/// large   - whale   |*"#);
 /// ```
-pub struct BarChart<'a, S, V>
+pub struct DagChart<'a, S, V>
 where
     S: Schema,
     V: View<S>,
@@ -42,7 +44,7 @@ where
     _phantom: PhantomData<S>,
 }
 
-impl<'a, S, V> BarChart<'a, S, V>
+impl<'a, S, V> DagChart<'a, S, V>
 where
     S: Schema,
     V: View<S>,
@@ -50,7 +52,7 @@ where
     <V as View<S>>::BreakdownDimension: Clone + Display + PartialEq + Eq + Hash + Ord,
     <V as View<S>>::DisplayDimensions: Clone + PartialEq + Eq + Hash + Ord,
 {
-    /// Construct a bar-chart widget from the provided view.
+    /// Construct a dag-chart widget from the provided view.
     pub fn new(view: &'a V) -> Self {
         Self {
             view,
@@ -58,8 +60,8 @@ where
         }
     }
 
-    /// Generate the flat rendering for this bar-chart.
-    pub fn render(self, config: Render<BarChartConfig>) -> Flat {
+    /// Generate the flat rendering for this dag-chart.
+    pub fn render(self, config: Render<DagChartConfig>) -> Flat {
         let mut aggregate_values: HashMap<(V::PrimaryDimension, V::BreakdownDimension), Vec<f64>> =
             HashMap::default();
         let mut partial_aggregate_values: HashMap<String, Vec<f64>> = HashMap::default();
@@ -75,7 +77,7 @@ where
             .collect();
         let mut path_occurrences: HashMap<String, usize> = HashMap::default();
 
-        for dims in self.view.data() {
+        for dims in self.view.dataset().data() {
             let value = self.view.value(dims);
             let primary_dim = self.view.primary_dim(dims);
             let breakdown_dims = self.view.breakdown_dim(dims);
@@ -93,7 +95,7 @@ where
             // Only count the occurrences once per 'full path'.
             // This is because we might have multiple entries, for example:
             // ```
-            // Dataset::builder(schema)
+            // DatasetBuilder::new(schema)
             //     .add(("whale".to_string(), 4u32), 2)
             //     .add(("whale".to_string(), 4u32), 3)
             // ```
@@ -513,7 +515,7 @@ where
 }
 
 fn build_preheader(
-    config: &Render<BarChartConfig>,
+    config: &Render<DagChartConfig>,
     columns: usize,
     label: &str,
     embed: bool,
@@ -603,16 +605,16 @@ mod tests {
 
     #[cfg(feature = "primitive_impls")]
     mod primitive_impls {
-        use crate::{BarChart, BarChartConfig, Render};
-        use crate::{Dataset, Schema1, Schema2, Schemas};
+        use crate::{DagChart, DagChartConfig, Render};
+        use crate::{DatasetBuilder, Schema1, Schema2, Schemas};
 
         #[test]
         fn empty() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let builder = Dataset::builder(schema).build();
+            let builder = DatasetBuilder::new(schema).build();
             let view = builder.reflect_1st();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -623,10 +625,10 @@ abc  |Sum(abc)"#
         #[test]
         fn zero() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let dataset = Dataset::builder(schema).add((0,)).build();
+            let dataset = DatasetBuilder::new(schema).add((0,)).build();
             let view = dataset.reflect_1st();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -638,14 +640,14 @@ abc  |Sum(abc)
         #[test]
         fn negatives_and_positives() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((-1,))
                 .add((0,))
                 .add((1,))
                 .build();
             let view = dataset.reflect_1st();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -659,7 +661,7 @@ abc  |Sum(abc)
         #[test]
         fn one_thousand() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let mut builder = Dataset::builder(schema);
+            let mut builder = DatasetBuilder::new(schema);
 
             for _ in 0..1_000 {
                 builder.update((1,));
@@ -667,8 +669,8 @@ abc  |Sum(abc)
 
             let dataset = builder.build();
             let view = dataset.reflect_1st();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -680,7 +682,7 @@ abc  |Sum(abc)
         #[test]
         fn negative_one_thousand() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let mut builder = Dataset::builder(schema);
+            let mut builder = DatasetBuilder::new(schema);
 
             for _ in 0..1_000 {
                 builder.update((-1,));
@@ -688,8 +690,8 @@ abc  |Sum(abc)
 
             let dataset = builder.build();
             let view = dataset.reflect_1st();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -701,14 +703,14 @@ abc  |Sum(abc)
         #[test]
         fn breakdown() {
             let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 2))
                 .add((2, 3))
                 .add((3, 4))
                 .build();
             let view = dataset.breakdown_2nd();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -723,14 +725,14 @@ abc  | 2    3    4  |
         #[test]
         fn count_breakdown() {
             let schema = Schemas::two("abc", "something long");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 2))
                 .add((2, 3))
                 .add((3, 4))
                 .build();
             let view = dataset.count_breakdown_2nd();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -746,14 +748,14 @@ abc  |2 3 4|
         #[test]
         fn depth_3_combo111() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema).add(("a1", "b1", "c1")).build();
+            let dataset = DatasetBuilder::new(schema).add(("a1", "b1", "c1")).build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -768,17 +770,17 @@ c1 [1] - b1 [1] - a1 [1]  |*"#
         #[test]
         fn depth_3_combo211() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -794,18 +796,18 @@ c2 [1] ┘"#
         #[test]
         fn depth_3_combo221() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b2", "c2"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -822,18 +824,18 @@ c2 [1] - b2 [1] ┘"#
         #[test]
         fn depth_3_combo221x() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b2", "c1"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -850,18 +852,18 @@ c1 [1] - b2 [1] ┘"#
         #[test]
         fn depth_3_combo311() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -878,19 +880,19 @@ c3 [1] ┘"#
         #[test]
         fn depth_3_combo321() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
                 .add(("a1", "b2", "c3"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -908,19 +910,19 @@ c3 [1] - b2 [1] ┘"#
         #[test]
         fn depth_3_combo321x() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
                 .add(("a1", "b2", "c2"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -938,19 +940,19 @@ c2 [1] - b2 [1] ┘"#
         #[test]
         fn depth_3_combo321y() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
                 .add(("a1", "b2", "c1"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -968,7 +970,7 @@ c1 [1] - b2 [1] ┘"#
         #[test]
         fn depth_3_combo331() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
@@ -976,12 +978,12 @@ c1 [1] - b2 [1] ┘"#
                 .add(("a1", "b3", "c1"))
                 .build();
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render {
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render {
                 show_aggregate: true,
-                widget_config: BarChartConfig {
+                widget_config: DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 },
                 ..Render::default()
             });
@@ -1000,22 +1002,22 @@ c1 [1] - b3 [1] ┘"#
 
     #[cfg(feature = "pointer_impls")]
     mod pointer_impls {
-        use crate::{BarChart, Render};
-        use crate::{Dataset, Schema2, Schemas};
+        use crate::{DagChart, Render};
+        use crate::{DatasetBuilder, Schema2, Schemas};
         use ordered_float::OrderedFloat;
 
         #[test]
         fn view2() {
             let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, OrderedFloat(0.1)))
                 .add((2, OrderedFloat(0.4)))
                 .add((3, OrderedFloat(0.5)))
                 .add((4, OrderedFloat(0.9)))
                 .build();
             let view = dataset.view_2nd();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -1027,8 +1029,8 @@ abc  |Sum(def)
             );
 
             let view = dataset.count();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -1040,8 +1042,8 @@ def    abc  |Sum(Count)
             );
 
             let view = dataset.breakdown_2nd();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"
@@ -1054,8 +1056,8 @@ abc  |0.1 0.4 0.5 0.9|
             );
 
             let view = dataset.count_breakdown_2nd();
-            let barchart = BarChart::new(&view);
-            let flat = barchart.render(Render::default());
+            let dagchart = DagChart::new(&view);
+            let flat = dagchart.render(Render::default());
             assert_eq!(
                 format!("\n{}", flat.to_string()),
                 r#"

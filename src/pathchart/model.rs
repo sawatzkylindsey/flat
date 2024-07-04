@@ -14,7 +14,7 @@ use std::marker::PhantomData;
 /// use flat::*;
 ///
 /// let schema = Schemas::two("Animal", "Size");
-/// let dataset = Dataset::builder(schema)
+/// let dataset = DatasetBuilder::new(schema)
 ///     .add(("whale".to_string(), "large".to_string()))
 ///     .add(("shark".to_string(), "medium".to_string()))
 ///     .add(("shark".to_string(), "small".to_string()))
@@ -72,7 +72,7 @@ where
         let mut lookup: HashMap<String, (V::PrimaryDimension, V::BreakdownDimension)> =
             HashMap::default();
 
-        for dims in self.view.data() {
+        for dims in self.view.dataset().data() {
             let value = self.view.value(dims);
             let primary_dim = self.view.primary_dim(dims);
             let breakdown_dims = self.view.breakdown_dim(dims);
@@ -393,13 +393,13 @@ mod tests {
 
     #[cfg(feature = "primitive_impls")]
     mod primitive_impls {
-        use crate::{Dataset, Schema1, Schema2, Schemas};
+        use crate::{DatasetBuilder, Schema1, Schema2, Schemas};
         use crate::{PathChart, Render};
 
         #[test]
         fn empty() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let builder = Dataset::builder(schema).build();
+            let builder = DatasetBuilder::new(schema).build();
             let view = builder.reflect_1st();
             let barchart = PathChart::new(&view);
             let flat = barchart.render(Render::default());
@@ -413,7 +413,7 @@ mod tests {
         #[test]
         fn zero() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let dataset = Dataset::builder(schema).add((0,)).build();
+            let dataset = DatasetBuilder::new(schema).add((0,)).build();
             let view = dataset.reflect_1st();
             let barchart = PathChart::new(&view);
             let flat = barchart.render(Render::default());
@@ -428,7 +428,7 @@ mod tests {
         #[test]
         fn negatives_and_positives() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((-1,))
                 .add((0,))
                 .add((1,))
@@ -449,7 +449,7 @@ mod tests {
         #[test]
         fn one_thousand() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let mut builder = Dataset::builder(schema);
+            let mut builder = DatasetBuilder::new(schema);
 
             for _ in 0..1_000 {
                 builder.update((1,));
@@ -470,7 +470,7 @@ mod tests {
         #[test]
         fn negative_one_thousand() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let mut builder = Dataset::builder(schema);
+            let mut builder = DatasetBuilder::new(schema);
 
             for _ in 0..1_000 {
                 builder.update((-1,));
@@ -491,7 +491,7 @@ mod tests {
         #[test]
         fn breakdown() {
             let schema: Schema2<u8, u8> = Schemas::two("abc", "something long");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 2))
                 .add((2, 3))
                 .add((3, 4))
@@ -513,7 +513,7 @@ mod tests {
         #[test]
         fn count_breakdown() {
             let schema = Schemas::two("abc", "something long");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 2))
                 .add((2, 3))
                 .add((3, 4))
@@ -536,7 +536,7 @@ mod tests {
         #[test]
         fn depth_3_combo111() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema).add(("a1", "b1", "c1")).build();
+            let dataset = DatasetBuilder::new(schema).add(("a1", "b1", "c1")).build();
             let view = dataset.count();
             let barchart = PathChart::new(&view);
             let flat = barchart.render(Render {
@@ -556,7 +556,7 @@ mod tests {
         #[test]
         fn depth_3_combo211() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .build();
@@ -580,7 +580,7 @@ mod tests {
         #[test]
         fn depth_3_combo221() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b2", "c2"))
@@ -607,7 +607,7 @@ mod tests {
         #[test]
         fn depth_3_combo221x() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b2", "c1"))
@@ -634,7 +634,7 @@ mod tests {
         #[test]
         fn depth_3_combo311() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
@@ -660,7 +660,7 @@ mod tests {
         #[test]
         fn depth_3_combo321() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
@@ -689,7 +689,7 @@ mod tests {
         #[test]
         fn depth_3_combo321x() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
@@ -718,7 +718,7 @@ mod tests {
         #[test]
         fn depth_3_combo321y() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
@@ -747,7 +747,7 @@ mod tests {
         #[test]
         fn depth_3_combo331() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add(("a1", "b1", "c1"))
                 .add(("a1", "b1", "c2"))
                 .add(("a1", "b1", "c3"))
@@ -779,7 +779,7 @@ mod tests {
         #[test]
         fn depth_3_combo331x() {
             let schema = Schemas::three("A", "B", "C");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 // different order
                 .add(("a1", "b3", "c1"))
                 .add(("a1", "b2", "c1"))
@@ -812,14 +812,14 @@ mod tests {
 
     #[cfg(feature = "pointer_impls")]
     mod pointer_impls {
-        use crate::{Dataset, Schema2, Schemas};
+        use crate::{DatasetBuilder, Schema2, Schemas};
         use crate::{PathChart, Render};
         use ordered_float::OrderedFloat;
 
         #[test]
         fn view2() {
             let schema: Schema2<i64, OrderedFloat<f64>> = Schemas::two("abc", "def");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, OrderedFloat(0.1)))
                 .add((2, OrderedFloat(0.4)))
                 .add((3, OrderedFloat(0.5)))

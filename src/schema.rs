@@ -27,7 +27,7 @@ impl Schemas {
     /// // The inventory of animals in a zoo.
     /// // This dataset has 2 bears, and 1 tiger.
     /// let schema = Schemas::one("Animal");
-    /// let dataset = Dataset::builder(schema)
+    /// let dataset = DatasetBuilder::new(schema)
     ///     //   (Animal,)
     ///     .add(("Bear",))
     ///     .add(("Bear",))
@@ -52,7 +52,7 @@ impl Schemas {
     /// // This dataset has a bear which measures height "10", and another which measures height "11".
     /// // There is also a tiger which measures height "5".
     /// let schema = Schemas::two("Animal", "Height");
-    /// let dataset = Dataset::builder(schema)
+    /// let dataset = DatasetBuilder::new(schema)
     ///     //   (Animal, Height)
     ///     .add(("Bear", 10))
     ///     .add(("Bear", 11))
@@ -83,7 +83,7 @@ impl Schemas {
     /// // There is also a tiger which measures height "5".
     /// // The bears live in Pen01, while the tiger lives in Pen02.
     /// let schema = Schemas::three("Animal", "Height", "Enclosure");
-    /// let dataset = Dataset::builder(schema)
+    /// let dataset = DatasetBuilder::new(schema)
     ///     //   (Animal, Height, Enclosure)
     ///     .add(("Bear", 10, "Pen01"))
     ///     .add(("Bear", 11, "Pen01"))
@@ -117,7 +117,7 @@ impl Schemas {
     /// // There is also a tiger which measures height "5".
     /// // The bears live in Pen01 (North East quadrant), while the tiger lives in Pen02 (South West quadrant).
     /// let schema = Schemas::four("Animal", "Height", "Enclosure", "Quadrant");
-    /// let dataset = Dataset::builder(schema)
+    /// let dataset = DatasetBuilder::new(schema)
     ///     //   (Animal, Height, Enclosure, Quadrant)
     ///     .add(("Bear", 10, "Pen01", "NorthEast"))
     ///     .add(("Bear", 11, "Pen01", "NorthEast"))

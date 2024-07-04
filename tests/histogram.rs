@@ -6,7 +6,7 @@ mod tests {
     #[test]
     fn histogram() {
         let schema = Schemas::one("length");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -32,7 +32,7 @@ length                    |Sum(length)
     #[test]
     fn histogram_u64() {
         let schema: Schema1<i64> = Schemas::one("length");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -63,7 +63,7 @@ length   |Sum(length)
     // #[case(16)]
     fn histogram_squish(#[case] width_hint: usize) {
         let schema = Schemas::one("length");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -92,7 +92,7 @@ length                    |Sum(length)
     #[test]
     fn histogram_show_sum() {
         let schema = Schemas::one("length");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -121,7 +121,7 @@ length                   Sum    |Sum(length)
     #[test]
     fn histogram_show_average() {
         let schema = Schemas::one("length");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -156,7 +156,7 @@ length                   Average  |Average(length)
     // #[case(21)]
     fn histogram_show_sum_squish(#[case] width_hint: usize) {
         let schema = Schemas::one("length");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -194,7 +194,7 @@ length                   Sum   |Sum(length)
     // #[case(24)]
     fn histogram_show_average_squish(#[case] width_hint: usize) {
         let schema = Schemas::one("length");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -226,7 +226,7 @@ length                   Average  |Average(length)
     fn histogram_count_breakdown() {
         let pets = vec!["ralf", "kipp", "orville"];
         let schema = Schemas::two("length", "pet");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {

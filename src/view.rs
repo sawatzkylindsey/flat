@@ -19,7 +19,7 @@ pub trait View<S: Schema> {
     type DisplayDimensions: Dimensions;
 
     /// Get the data associated with this view.
-    fn data(&self) -> &[S::Dimensions];
+    fn dataset(&self) -> &Dataset<S>;
 
     /// Extract the render value for this view from the input vector.
     /// This will become aggregated according to the [`Render`] configuration.
@@ -113,8 +113,8 @@ where
     type BreakdownDimension = Nothing;
     type DisplayDimensions = <Schema1<T> as Schema>::Dimensions;
 
-    fn data(&self) -> &[<Schema1<T> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema1<T>> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<Schema1<T> as Schema>::Dimensions) -> f64 {
@@ -165,8 +165,8 @@ where
     type BreakdownDimension = Nothing;
     type DisplayDimensions = (T, U);
 
-    fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema2<T, U>> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
@@ -222,8 +222,8 @@ where
     type BreakdownDimension = Nothing;
     type DisplayDimensions = (T,);
 
-    fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema2<T, U>> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
@@ -276,8 +276,8 @@ where
     type BreakdownDimension = U;
     type DisplayDimensions = (T,);
 
-    fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema2<T, U>> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
@@ -329,8 +329,8 @@ where
     type BreakdownDimension = U;
     type DisplayDimensions = (T,);
 
-    fn data(&self) -> &[<Schema2<T, U> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema2<T, U>> {
+        &self.dataset
     }
 
     fn value(&self, _dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
@@ -386,8 +386,8 @@ where
     type BreakdownDimension = Nothing;
     type DisplayDimensions = <Schema3<T, U, V> as Schema>::Dimensions;
 
-    fn data(&self) -> &[<Schema3<T, U, V> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema3<T, U, V>> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<Schema3<T, U, V> as Schema>::Dimensions) -> f64 {
@@ -448,8 +448,8 @@ where
     type BreakdownDimension = Nothing;
     type DisplayDimensions = (T, U);
 
-    fn data(&self) -> &[<Schema3<T, U, V> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema3<T, U, V>> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<Schema3<T, U, V> as Schema>::Dimensions) -> f64 {
@@ -509,8 +509,8 @@ where
     type BreakdownDimension = V;
     type DisplayDimensions = (T, U);
 
-    fn data(&self) -> &[<Schema3<T, U, V> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema3<T, U, V>> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<Schema3<T, U, V> as Schema>::Dimensions) -> f64 {
@@ -569,8 +569,8 @@ where
     type BreakdownDimension = V;
     type DisplayDimensions = (T, U);
 
-    fn data(&self) -> &[<Schema3<T, U, V> as Schema>::Dimensions] {
-        self.dataset.data()
+    fn dataset(&self) -> &Dataset<Schema3<T, U, V>> {
+        &self.dataset
     }
 
     fn value(&self, _dims: &<Schema3<T, U, V> as Schema>::Dimensions) -> f64 {
@@ -625,12 +625,12 @@ mod tests {
 
     #[cfg(feature = "primitive_impls")]
     mod primitive_impls {
-        use crate::{Dataset, Nothing, Schema1, Schema2, Schema3, Schemas, View};
+        use crate::{DatasetBuilder, Nothing, Schema1, Schema2, Schema3, Schemas, View};
 
         #[test]
         fn view1_reflective() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1,))
                 .add((2,))
                 .add((3,))
@@ -647,7 +647,7 @@ mod tests {
         #[test]
         fn view1_counting() {
             let schema: Schema1<i64> = Schemas::one("abc");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1,))
                 .add((2,))
                 .add((3,))
@@ -664,7 +664,7 @@ mod tests {
         #[test]
         fn view2_reflective() {
             let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 0.1))
                 .add((2, 0.2))
                 .add((3, 0.3))
@@ -684,7 +684,7 @@ mod tests {
         #[test]
         fn view2_counting() {
             let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 0.1))
                 .add((2, 0.2))
                 .add((3, 0.3))
@@ -704,7 +704,7 @@ mod tests {
         #[test]
         fn view2_2nd() {
             let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 0.1))
                 .add((2, 0.2))
                 .add((3, 0.3))
@@ -721,7 +721,7 @@ mod tests {
         #[test]
         fn view2_breakdown_2nd() {
             let schema: Schema2<i64, f64> = Schemas::two("abc", "def");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 0.1))
                 .add((2, 0.2))
                 .add((3, 0.3))
@@ -738,7 +738,7 @@ mod tests {
         #[test]
         fn view2_count_breakdown_2nd() {
             let schema: Schema2<i64, &str> = Schemas::two("abc", "def");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, "a"))
                 .add((2, "b"))
                 .add((3, "c"))
@@ -755,7 +755,7 @@ mod tests {
         #[test]
         fn view3_reflective() {
             let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, true, 0.1))
                 .add((2, false, 0.2))
                 .add((3, true, 0.3))
@@ -775,7 +775,7 @@ mod tests {
         #[test]
         fn view3_counting() {
             let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, true, 0.1))
                 .add((2, false, 0.2))
                 .add((3, true, 0.3))
@@ -795,7 +795,7 @@ mod tests {
         #[test]
         fn view3_3rd() {
             let schema: Schema3<u64, bool, f64> = Schemas::three("abc", "def", "ghi");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, true, 0.1))
                 .add((2, false, 0.2))
                 .add((3, true, 0.3))
@@ -815,7 +815,7 @@ mod tests {
         #[test]
         fn view3_breakdown_3rd() {
             let schema: Schema3<u64, f32, f64> = Schemas::three("abc", "def", "ghi");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 0.1, 0.01))
                 .add((2, 0.2, 0.02))
                 .add((3, 0.3, 0.03))
@@ -835,7 +835,7 @@ mod tests {
         #[test]
         fn view3_count_breakdown_3rd() {
             let schema: Schema3<u64, f32, bool> = Schemas::three("abc", "def", "ghi");
-            let dataset = Dataset::builder(schema)
+            let dataset = DatasetBuilder::new(schema)
                 .add((1, 0.1, true))
                 .add((2, 0.2, false))
                 .add((3, 0.3, true))

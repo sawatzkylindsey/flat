@@ -5,7 +5,7 @@ mod tests {
 
     fn dataset_1d() -> Dataset<Schema1<String>> {
         let schema = Schemas::one("anml");
-        Dataset::builder(schema)
+        DatasetBuilder::new(schema)
             .add(("whale".to_string(),))
             .add(("shark".to_string(),))
             .add(("shark".to_string(),))
@@ -16,10 +16,10 @@ mod tests {
     }
 
     #[test]
-    fn barchart_1d() {
+    fn dagchart_1d() {
         let dataset = dataset_1d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render::default());
+        let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -31,9 +31,9 @@ whale  |*"#
     }
 
     #[test]
-    fn barchart_1d_reflective() {
+    fn dagchart_1d_reflective() {
         let schema: Schema1<u64> = Schemas::one("anml");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add((1,))
             .add((2,))
             .add((3,))
@@ -41,7 +41,7 @@ whale  |*"#
             .add((2,))
             .build();
         let view = dataset.reflect_1st();
-        let flat = BarChart::new(&view).render(Render::default());
+        let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -54,7 +54,7 @@ anml  |Sum(anml)
 
     fn dataset_2d() -> Dataset<Schema2<String, u32>> {
         let schema = Schemas::two("animal", "length");
-        Dataset::builder(schema)
+        DatasetBuilder::new(schema)
             .add(("whale".to_string(), 4u32))
             .add(("shark".to_string(), 4u32))
             .add(("shark".to_string(), 1u32))
@@ -71,10 +71,10 @@ anml  |Sum(anml)
     }
 
     #[test]
-    fn barchart_2d() {
+    fn dagchart_2d() {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render::default());
+        let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -95,10 +95,10 @@ length    animal  |Sum(Count)
     #[case(20)]
     #[case(21)]
     // #[case(22)]
-    fn barchart_2d_squish(#[case] width_hint: usize) {
+    fn dagchart_2d_squish(#[case] width_hint: usize) {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint,
             ..Render::default()
         });
@@ -116,10 +116,10 @@ length    animal  |Sum(Count)
     }
 
     #[test]
-    fn barchart_2d_show_sum() {
+    fn dagchart_2d_show_sum() {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             show_aggregate: true,
             ..Render::default()
         });
@@ -137,14 +137,14 @@ length    animal Sum  |Sum(Count)
     }
 
     #[test]
-    fn barchart_2d_show_sum_widget() {
+    fn dagchart_2d_show_sum_widget() {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -163,15 +163,15 @@ length Sum   animal  |Sum(Count)
     }
 
     #[test]
-    fn barchart_2d_show_sum_both() {
+    fn dagchart_2d_show_sum_both() {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             show_aggregate: true,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -190,10 +190,10 @@ length Sum   animal Sum  |Sum(Count)
     }
 
     #[test]
-    fn barchart_2d_show_average() {
+    fn dagchart_2d_show_average() {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             show_aggregate: true,
             ..Render::default()
@@ -212,15 +212,15 @@ length    animal Average  |Average(Count)
     }
 
     #[test]
-    fn barchart_2d_show_average_widget() {
+    fn dagchart_2d_show_average_widget() {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -239,16 +239,16 @@ length Average   animal  |Average(Count)
     }
 
     #[test]
-    fn barchart_2d_show_average_both() {
+    fn dagchart_2d_show_average_both() {
         let dataset = dataset_2d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             show_aggregate: true,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -267,10 +267,10 @@ length Average   animal Average  |Average(Count)
     }
 
     #[test]
-    fn barchart_2d_count_breakdown() {
+    fn dagchart_2d_count_breakdown() {
         let dataset = dataset_2d();
         let view = dataset.count_breakdown_2nd();
-        let flat = BarChart::new(&view).render(Render::default());
+        let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -285,7 +285,7 @@ whale   |     *     |"#
 
     fn dataset_3d() -> Dataset<Schema3<String, bool, u32>> {
         let schema = Schemas::three("animal", "stable", "length");
-        Dataset::builder(schema)
+        DatasetBuilder::new(schema)
             .add(("whale".to_string(), true, 4u32))
             .add(("shark".to_string(), false, 4u32))
             .add(("shark".to_string(), false, 1u32))
@@ -307,10 +307,10 @@ whale   |     *     |"#
     }
 
     #[test]
-    fn barchart_3d() {
+    fn dagchart_3d() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render::default());
+        let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -326,10 +326,10 @@ length    stable    animal  |Sum(Count)
     }
 
     #[test]
-    fn barchart_3d_show_sum() {
+    fn dagchart_3d_show_sum() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             show_aggregate: true,
             ..Render::default()
         });
@@ -348,14 +348,14 @@ length    stable    animal Sum   |Sum(Count)
     }
 
     #[test]
-    fn barchart_3d_show_sum_widget() {
+    fn dagchart_3d_show_sum_widget() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -375,15 +375,15 @@ length Sum   stable Sum   animal  |Sum(Count)
     }
 
     #[test]
-    fn barchart_3d_show_sum_both() {
+    fn dagchart_3d_show_sum_both() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             show_aggregate: true,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -403,10 +403,10 @@ length Sum   stable Sum   animal Sum   |Sum(Count)
     }
 
     #[test]
-    fn barchart_3d_show_average() {
+    fn dagchart_3d_show_average() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             show_aggregate: true,
             ..Render::default()
@@ -426,15 +426,15 @@ length    stable    animal Average  |Average(Count)
     }
 
     #[test]
-    fn barchart_3d_show_average_widget() {
+    fn dagchart_3d_show_average_widget() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -454,16 +454,16 @@ length Average   stable Average   animal  |Average(Count)
     }
 
     #[test]
-    fn barchart_3d_show_average_both() {
+    fn dagchart_3d_show_average_both() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             show_aggregate: true,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -497,10 +497,10 @@ length Average   stable Average   animal Average  |Average(Count)
     #[case(28)]
     #[case(30)]
     // #[case(31)]
-    fn barchart_3d_breakdown_squish(#[case] width_hint: usize) {
+    fn dagchart_3d_breakdown_squish(#[case] width_hint: usize) {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint,
             ..Render::default()
         });
@@ -518,10 +518,10 @@ true    - whale   |        |"#
     }
 
     #[test]
-    fn barchart_3d_breakdown_show_sum() {
+    fn dagchart_3d_breakdown_show_sum() {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             show_aggregate: true,
             ..Render::default()
         });
@@ -539,14 +539,14 @@ true    - whale  [ 4]  |                                            ****        
     }
 
     #[test]
-    fn barchart_3d_breakdown_show_sum_widget() {
+    fn dagchart_3d_breakdown_show_sum_widget() {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -565,15 +565,15 @@ true   [ 4] - whale   |                                            ****         
     }
 
     #[test]
-    fn barchart_3d_breakdown_show_sum_both() {
+    fn dagchart_3d_breakdown_show_sum_both() {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             show_aggregate: true,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -592,10 +592,10 @@ true   [ 4] - whale  [ 4]  |                                            ****    
     }
 
     #[test]
-    fn barchart_3d_breakdown_show_average() {
+    fn dagchart_3d_breakdown_show_average() {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             show_aggregate: true,
             ..Render::default()
@@ -614,15 +614,15 @@ true    - whale  [1.3]    |      ****       |"#
     }
 
     #[test]
-    fn barchart_3d_breakdown_show_average_widget() {
+    fn dagchart_3d_breakdown_show_average_widget() {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -641,16 +641,16 @@ true   [  4]   - whale   |      ****       |"#
     }
 
     #[test]
-    fn barchart_3d_breakdown_show_average_both() {
+    fn dagchart_3d_breakdown_show_average_both() {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             aggregate: Aggregate::Average,
             show_aggregate: true,
             widget_config: {
-                BarChartConfig {
+                DagChartConfig {
                     show_aggregate: true,
-                    ..BarChartConfig::default()
+                    ..DagChartConfig::default()
                 }
             },
             ..Render::default()
@@ -669,10 +669,10 @@ true   [  4]   - whale  [1.3]    |      ****       |"#
     }
 
     #[test]
-    fn barchart_3d_breakdown() {
+    fn dagchart_3d_breakdown() {
         let dataset = dataset_3d();
         let view = dataset.breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render::default());
+        let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -687,19 +687,19 @@ true    - whale   |                                            ****             
     }
 
     #[test]
-    fn abbreviate_barchart_1d() {
+    fn abbreviate_dagchart_1d() {
         let schema = Schemas::one("animal");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("whalewhalewhalewhale".to_string(),))
             .add(("sharksharksharkshark".to_string(),))
             .add(("tigertigertigertiger".to_string(),))
             .build();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint: 1,
-            widget_config: BarChartConfig {
+            widget_config: DagChartConfig {
                 abbreviate: true,
-                ..BarChartConfig::default()
+                ..DagChartConfig::default()
             },
             ..Render::default()
         });
@@ -714,9 +714,9 @@ whal..  |*"#
     }
 
     #[test]
-    fn abbreviate_barchart_2d() {
+    fn abbreviate_dagchart_2d() {
         let schema = Schemas::two("animal", "laminaanimal");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add((
                 "whalewhalewhalewhale".to_string(),
                 "whalewhalewhalewhale".to_string(),
@@ -731,11 +731,11 @@ whal..  |*"#
             ))
             .build();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint: 1,
-            widget_config: BarChartConfig {
+            widget_config: DagChartConfig {
                 abbreviate: true,
-                ..BarChartConfig::default()
+                ..DagChartConfig::default()
             },
             ..Render::default()
         });

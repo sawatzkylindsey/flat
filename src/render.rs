@@ -484,7 +484,7 @@ impl Grid {
 /// use flat::*;
 ///
 /// let schema = Schemas::one("Animal");
-/// let dataset = Dataset::builder(schema)
+/// let dataset = DatasetBuilder::new(schema)
 ///     .add(("whale".to_string(), ))
 ///     .add(("shark".to_string(), ))
 ///     .add(("shark".to_string(), ))
@@ -493,7 +493,7 @@ impl Grid {
 ///     .add(("tiger".to_string(), ))
 ///     .build();
 /// let view = dataset.count();
-/// let flat = BarChart::new(&view).render(Render::default());
+/// let flat = DagChart::new(&view).render(Render::default());
 /// assert_eq!(
 ///     format!("\n{}", flat.to_string()),
 ///     r#"

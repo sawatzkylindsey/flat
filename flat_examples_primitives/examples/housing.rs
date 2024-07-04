@@ -1,10 +1,10 @@
 use blarg::{derive::*, CommandLineParser, Parameter, Switch};
-use flat::{BarChart, BarChartConfig, Dataset, Render, Schemas};
+use flat::{DagChart, DagChartConfig, DatasetBuilder, Render, Schemas};
 
 fn main() {
     let parameters = Parameters::blarg_parse();
     let schema = Schemas::three("City", "Quadrant", "Green Rating");
-    let mut builder = Dataset::builder(schema);
+    let mut builder = DatasetBuilder::new(schema);
 
     for house in generate_dataset() {
         builder.update((house.0, house.1, house.2));
@@ -12,15 +12,18 @@ fn main() {
 
     let dataset = builder.build();
     let view = dataset.count_breakdown_3rd();
-    let flat = BarChart::new(&view).render(Render {
+    let flat = DagChart::new(&view).render(Render {
         show_aggregate: parameters.verbose,
-        widget_config: BarChartConfig {
+        widget_config: DagChartConfig {
             show_aggregate: parameters.verbose,
-            ..BarChartConfig::default()
+            ..DagChartConfig::default()
         },
         ..Render::default()
     });
+    println!("Produced via 'primitive_impls'.");
+    println!();
     println!("{flat}");
+    println!();
 }
 
 #[derive(Default, BlargParser)]

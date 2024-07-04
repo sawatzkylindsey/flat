@@ -106,13 +106,13 @@
 //! ### Construct a Dataset
 //! To construct a [`Dataset`], you need both data and a [`Schemas`] \[sic\].
 //!
-//! The data must come in the form of dense vectors expressed as a [rust tuple](https://doc.rust-lang.org/stable/book/ch03-02-data-types.html#the-tuple-type).
+//! The data must come in the form of dense vectors, typically expressed as a [rust tuple](https://doc.rust-lang.org/stable/book/ch03-02-data-types.html#the-tuple-type).
 //! For example, one data point in a dataset could be: `(49.238, -123.114, Direction::North, "Strawberry Bush")`.
 //! Then, all the data points for this example `Dataset` must come in this 4-dimensional form (and maintain the same type pattern).
 //! This is where `Schemas` come in - the schema defines the specific type pattern of your dataset, as well as the column names for that dataset.
 //! To continue our example, here's a schema to fit the dataset: `Schemas::four("Latitude", "Longitude", "Direction", "Object")`.
 //!
-//! From what we've shown, the actual type definitions are [inferred by the compiler](https://doc.rust-lang.org/stable/book/ch03-02-data-types.html).
+//! Typically, the actual type definitions can be [inferred by the compiler](https://doc.rust-lang.org/stable/book/ch03-02-data-types.html).
 //! This is the recommended way to use `flat`.
 //! If you prefer, the types can be annotated explicitly:
 //! ```
@@ -129,7 +129,7 @@
 //!
 //! ### Get a View
 //! A view describes *what* to look at the dataset (but not *how* to render it).
-//! It includes aspects like which columns form the frame vs. the rendering, as well as how to aggregate the rendering values.
+//! It includes aspects like which columns form the frame vs. the rendering, as well as how to label these.
 //!
 //! The visualizations in `flat` always come in the following form.
 //! ```text
@@ -143,13 +143,14 @@
 //! The "rendering" is a visualized value which may come directly from the dataset, but also may be inferred (ex: in the case of a "count").
 //! Notice, not every line of output in the visualization need necessarily show a rendering.
 //!
-//! Typically, the rendering does not show a single value from the dataset, but rather some aggregate of values.
+//! Typically, the rendering does not show a single value from the dataset, but rather some grouping of values.
 //! This is called the [`Aggregate`], and is defined at the time of rendering (next section).
 //!
 //! To get a view, simply invoke the appropriate method on your dataset.
 //! These methods are inferred based off the schema of the dataset, and multiple views may be drawn from the same dataset.
 //! For example: `dataset.reflect_1st()`, `dataset.view_2nd()`, `dataset.breakdown_3rd()`, or `dataset.count()`.
 //! See the [`Dataset`] docs for more details.
+//!
 //! **Note**: many views are made available through features, described later in this documentation.
 //!
 //! Additionally, custom view implementations may be defined by the user.
@@ -160,13 +161,13 @@
 //! This is where the specific appearance of the frame and rendering are defined.
 //!
 //! To render a widget, construct it with the view, and then invoke render with a `Render` configuration.
-//! This will produce a [`Flat`] which provides a `std::fmt::Display` implementation for the visualization.
+//! This will produce a [`Flat`] which provides a [`std::fmt::Display`] implementation for the visualization.
 //!
 //! The configuration includes a number of parameters, which come in two sections.
 //! 1. The general parameters which apply to all widgets.
 //! 2. The widget specific configuration (`widget_config`).
 //!
-//! We recommend using [the struct update syntax](https://doc.rust-lang.org/book/ch05-01-defining-structs.html#creating-instances-from-other-instances-with-struct-update-syntax) (with `std::default::Default`) to instantiate the config.
+//! We recommend using [the struct update syntax](https://doc.rust-lang.org/book/ch05-01-defining-structs.html#creating-instances-from-other-instances-with-struct-update-syntax) (with [`std::default::Default`]) to instantiate the config.
 //! ```
 //! # use flat::*;
 //! // Take the default widget specific configuration.
@@ -176,18 +177,18 @@
 //! };
 //!
 //! // Override the widget specific configuration.
-//! let config: Render<BarChartConfig> = Render {
+//! let config: Render<DagChartConfig> = Render {
 //!     width_hint: 50,
-//!     widget_config: BarChartConfig {
+//!     widget_config: DagChartConfig {
 //!         show_aggregate: true,
-//!         ..BarChartConfig::default()
+//!         ..DagChartConfig::default()
 //!     },
 //!     ..Render::default()
 //! };
 //! ```
 //!
 //! For specific details on the configurable values, take a look at the docs: [`Render`].
-//! The next section describes one of the key parameters to a rendering - the width (via `width_hint`).
+//! A subsequent section describes one of the key parameters to a rendering - the width (via `width_hint`).
 //!
 //! # Features
 //! `flat` uses features to enable rendering numeric types, specifically defined at the "Get a View" step.
@@ -197,11 +198,11 @@
 //! There are roughly three options:
 //! 1. `primitive_impls`: With this option, `flat` provides view implementations for all numeric primitive types.
 //! For example, a `SchemaN<*, u8>` knows to extract the `u8` value and render that within the view.
-//! Choosing this option is mutually exclusive with the next.
+//! Choosing this option is mutually exclusive with `pointer_impls`.
 //! This choice also limits the kinds of custom views you may implement (they must also follow the concrete numeric implementation pattern).
 //! 2. `pointer_impls`: With this option, `flat` provides view implementations for all `Deref` types.
 //! For example, a `SchemaN<*, Box<u8>>` knows to extract the `u8` value and render that within the view.
-//! Choosing this option is mutually exclusive with the previous.
+//! Choosing this option is mutually exclusive with `primitive_impls`.
 //! This choice also limits the kinds of custom views you may implement (they must also follow the Deref type implementation pattern).
 //! 3. `default`: With this option, `flat` does not provide any numeric view generation.
 //! You still get non-numeric view generation (such as counts).
@@ -231,7 +232,7 @@
 //! Negative values are rendering using a different character marker (ex: `'⊖'`).
 mod abbreviate;
 mod aggregate;
-mod barchart;
+mod dagchart;
 mod dataset;
 mod histogram;
 mod pathchart;
@@ -240,7 +241,7 @@ mod schema;
 mod view;
 
 pub use aggregate::{minimal_precision_string, Aggregate};
-pub use barchart::*;
+pub use dagchart::*;
 pub use dataset::*;
 pub use histogram::*;
 pub use pathchart::*;

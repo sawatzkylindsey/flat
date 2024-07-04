@@ -7,7 +7,7 @@ use std::ops::{Add, Deref, Div, Mul, Sub};
 fn main() {
     let parameters = Parameters::blarg_parse();
     let json_data: Vec<FlowerJson> = serde_json::from_str(IRIS_JSON).unwrap();
-    let mut builder = Dataset::builder(Schemas::two("Species", parameters.field.print_string()));
+    let mut builder = DatasetBuilder::new(Schemas::two("Species", parameters.field.print_string()));
 
     for flower in &json_data {
         let flower: Flower = flower.into();
@@ -23,7 +23,7 @@ fn main() {
     let dataset = builder.build();
     barchart_impl_view(&parameters, &dataset);
 
-    let mut builder = Dataset::builder(Schemas::one(parameters.field.print_string()));
+    let mut builder = DatasetBuilder::new(Schemas::one(parameters.field.print_string()));
 
     for flower in &json_data {
         let flower: Flower = flower.into();
@@ -45,13 +45,13 @@ fn barchart_impl_view(
     dataset: &Dataset<Schema2<Species, AttributeContainer>>,
 ) {
     let view = dataset.view_2nd();
-    let flat = BarChart::new(&view).render(Render {
+    let flat = DagChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: parameters.verbose,
         widget_config: {
-            BarChartConfig {
+            DagChartConfig {
                 show_aggregate: parameters.verbose,
-                ..BarChartConfig::default()
+                ..DagChartConfig::default()
             }
         },
         ..Render::default()
@@ -60,7 +60,7 @@ fn barchart_impl_view(
         "Shows the '{}' of flowers based off their species.",
         parameters.field
     );
-    println!("Produced via custom implementation of a `flat::View`.");
+    println!("Produced via 'pointer_impls'.");
     println!();
     println!("{flat}");
     println!();
@@ -78,7 +78,7 @@ fn histogram_impl_view(parameters: &Parameters, dataset: &Dataset<Schema1<Attrib
         "Shows the '{}' of flowers histogram-ed by their sepal length.",
         parameters.field
     );
-    println!("Produced via custom implementation of a `flat::View`.");
+    println!("Produced via 'pointer_impls'.");
     println!();
     println!("{flat}");
     println!();

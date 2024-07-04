@@ -20,7 +20,7 @@ use super::Schemas;
 /// # use flat::*;
 /// // Note, explicit type annotation included for clarity.
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
-/// let builder: Dataset<Schema1<f64>> = Dataset::builder(Schemas::one("dim1")).build();
+/// let builder: Dataset<Schema1<f64>> = DatasetBuilder::new(Schemas::one("dim1")).build();
 /// ```
 pub struct Dataset<S: Schema> {
     pub(crate) schema: S,
@@ -29,7 +29,7 @@ pub struct Dataset<S: Schema> {
 
 impl<S: Schema> Dataset<S> {
     /// Get the data held within this `Dataset`.
-    pub fn data(&self) -> &[S::Dimensions] {
+    pub(crate) fn data(&self) -> &[S::Dimensions] {
         self.data.as_slice()
     }
 }
@@ -40,7 +40,7 @@ impl<S: Schema> Dataset<S> {
 /// # use flat::*;
 /// // Note, explicit type annotation included for clarity.
 /// // We encourage consumers to allow the compiler to infer the type implicitly.
-/// let builder: DatasetBuilder<Schema1<f64>> = Dataset::builder(Schemas::one("dim1"));
+/// let builder: DatasetBuilder<Schema1<f64>> = DatasetBuilder::new(Schemas::one("dim1"));
 /// ```
 pub struct DatasetBuilder<S: Schema> {
     schema: S,
@@ -460,17 +460,15 @@ impl<T, U, V> Dataset<Schema3<T, U, V>> {
     }
 }
 
-impl<S: Schema> Dataset<S> {
+impl<S: Schema> DatasetBuilder<S> {
     /// Build a dataset based for the provided schema.
-    pub fn builder(schema: S) -> DatasetBuilder<S> {
-        DatasetBuilder {
+    pub fn new(schema: S) -> DatasetBuilder<S> {
+        Self {
             schema,
             data: Vec::default(),
         }
     }
-}
 
-impl<S: Schema> DatasetBuilder<S> {
     /// Update this dataset with a data point `vector`.
     /// Use this method to add data via mutation.
     ///
@@ -481,14 +479,14 @@ impl<S: Schema> DatasetBuilder<S> {
     /// use flat::*;
     ///
     /// let schema = Schemas::one("Things");
-    /// let mut builder = Dataset::builder(schema);
+    /// let mut builder = DatasetBuilder::new(schema);
     /// builder.update((0, ));
     /// builder.update((0, ));
     /// builder.update((1, ));
     /// let dataset = builder.build();
     /// let view = dataset.count();
     ///
-    /// let flat = BarChart::new(&view)
+    /// let flat = DagChart::new(&view)
     ///     .render(Render::default());
     /// assert_eq!(
     ///     format!("\n{}", flat.to_string()),
@@ -520,14 +518,14 @@ impl<S: Schema> DatasetBuilder<S> {
     /// use flat::*;
     ///
     /// let schema = Schemas::one("Things");
-    /// let dataset = Dataset::builder(schema)
+    /// let dataset = DatasetBuilder::new(schema)
     ///     .add((0, ))
     ///     .add((0, ))
     ///     .add((1, ))
     ///     .build();
     /// let view = dataset.count();
     ///
-    /// let flat = BarChart::new(&view)
+    /// let flat = DagChart::new(&view)
     ///     .render(Render::default());
     /// assert_eq!(
     ///     format!("\n{}", flat.to_string()),
@@ -565,14 +563,14 @@ mod tests {
     #[test]
     fn dataset_add() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let dataset = Dataset::builder(schema).add((1,)).add((2,)).add((3,));
+        let dataset = DatasetBuilder::new(schema).add((1,)).add((2,)).add((3,));
         assert_eq!(dataset.data.len(), 3);
     }
 
     #[test]
     fn dataset_update() {
         let schema: Schema1<i64> = Schemas::one("abc");
-        let mut dataset = Dataset::builder(schema);
+        let mut dataset = DatasetBuilder::new(schema);
         dataset.update((1,));
         dataset.update((2,));
         dataset.update((3,));

@@ -1,11 +1,11 @@
 #[cfg(feature = "pointer_impls")]
 mod tests {
-    use flat::{BarChart, Dataset, Histogram, Render, Schema3, Schemas};
+    use flat::{DagChart, Dataset, DatasetBuilder, Histogram, Render, Schema3, Schemas};
     use ordered_float::OrderedFloat;
 
     fn dataset_3d() -> Dataset<Schema3<String, bool, OrderedFloat<f64>>> {
         let schema = Schemas::three("animal", "stable", "length");
-        Dataset::builder(schema)
+        DatasetBuilder::new(schema)
             .add(("whale".to_string(), true, OrderedFloat(4.0)))
             .add(("shark".to_string(), false, OrderedFloat(4.0)))
             .add(("shark".to_string(), false, OrderedFloat(1.0)))
@@ -30,7 +30,7 @@ mod tests {
     fn pointer_barchart_3d() {
         let dataset = dataset_3d();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render::default());
+        let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
             r#"
@@ -49,7 +49,7 @@ length    stable    animal  |Sum(Count)
     fn histogram_count_breakdown() {
         let pets = vec!["ralf", "kipp", "orville"];
         let schema = Schemas::two("length", "pet");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {

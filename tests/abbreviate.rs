@@ -1,11 +1,11 @@
 #[cfg(feature = "primitive_impls")]
 mod tests {
-    use flat::{BarChart, Dataset, Histogram, PathChart, Render, Schemas};
+    use flat::{DagChart, DatasetBuilder, Histogram, PathChart, Render, Schemas};
 
     #[test]
-    fn abbreviate_barchart_count_breakdown_hint1() {
+    fn abbreviate_dagchart_count_breakdown_hint1() {
         let schema = Schemas::two("animal", "dinosaur");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("whale".to_string(), "tyrannosaurs".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
@@ -14,7 +14,7 @@ mod tests {
             .add(("tiger".to_string(), "pterodactyl".to_string()))
             .build();
         let view = dataset.count_breakdown_2nd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint: 1,
             abbreviate_breakdown: true,
             ..Render::default()
@@ -32,9 +32,9 @@ whale   |              |"#
     }
 
     #[test]
-    fn abbreviate_barchart_count_breakdown_hint15() {
+    fn abbreviate_dagchart_count_breakdown_hint15() {
         let schema = Schemas::two("animal", "dinosaur");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("whale".to_string(), "tyrannosaurs".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
@@ -43,7 +43,7 @@ whale   |              |"#
             .add(("tiger".to_string(), "pterodactyl".to_string()))
             .build();
         let view = dataset.count_breakdown_2nd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint: 15,
             abbreviate_breakdown: true,
             ..Render::default()
@@ -61,9 +61,9 @@ whale   |              |"#
     }
 
     #[test]
-    fn abbreviate_barchart_count_breakdown_hint30() {
+    fn abbreviate_dagchart_count_breakdown_hint30() {
         let schema = Schemas::two("animal", "dinosaur");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("whale".to_string(), "tyrannosaurs".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
@@ -72,7 +72,7 @@ whale   |              |"#
             .add(("tiger".to_string(), "pterodactyl".to_string()))
             .build();
         let view = dataset.count_breakdown_2nd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint: 30,
             abbreviate_breakdown: true,
             ..Render::default()
@@ -90,9 +90,9 @@ whale   |                *   |"#
     }
 
     #[test]
-    fn abbreviate_barchart_count_breakdown_hint180() {
+    fn abbreviate_dagchart_count_breakdown_hint180() {
         let schema = Schemas::two("animal", "dinosaur");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("whale".to_string(), "tyrannosaurs".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
@@ -101,7 +101,7 @@ whale   |                *   |"#
             .add(("tiger".to_string(), "pterodactyl".to_string()))
             .build();
         let view = dataset.count_breakdown_2nd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint: 180,
             abbreviate_breakdown: true,
             ..Render::default()
@@ -119,9 +119,9 @@ whale   |                               *      |"#
     }
 
     #[test]
-    fn barchart_3d_count_breakdown_abbreviate() {
+    fn dagchart_3d_count_breakdown_abbreviate() {
         let schema = Schemas::three("animal", "length", "stable");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("whale".to_string(), 4u32, true))
             .add(("shark".to_string(), 4u32, false))
             .add(("shark".to_string(), 1u32, true))
@@ -136,7 +136,7 @@ whale   |                               *      |"#
             .add(("tiger".to_string(), 1u32, false))
             .build();
         let view = dataset.count_breakdown_3rd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             abbreviate_breakdown: true,
             ..Render::default()
         });
@@ -159,7 +159,7 @@ length    animal  |false true |
     fn histogram_count_breakdown_abbreviate() {
         let pets = vec!["ralf", "kipp", "orville"];
         let schema = Schemas::two("length", "pet");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -191,7 +191,7 @@ length                    |  kipp     orvi..     ralf   |
     fn histogram_count_breakdown_abbreviate_hint1() {
         let pets = vec!["ralf", "kipp", "orville"];
         let schema = Schemas::two("length", "pet");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -224,7 +224,7 @@ length                    |k.. o.. r..|
     fn histogram_count_breakdown_abbreviate_hint15() {
         let pets = vec!["ralf", "kipp", "orville"];
         let schema = Schemas::two("length", "pet");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -257,7 +257,7 @@ length                    |k.. o.. r..|
     fn histogram_count_breakdown_abbreviate_hint30() {
         let pets = vec!["ralf", "kipp", "orville"];
         let schema = Schemas::two("length", "pet");
-        let mut builder = Dataset::builder(schema);
+        let mut builder = DatasetBuilder::new(schema);
 
         for i in 0..10 {
             for _ in 0..i {
@@ -287,9 +287,9 @@ length                    |k.. o.. r..|
     }
 
     #[test]
-    fn abbreviate_barchart_count_breakdown_separation() {
+    fn abbreviate_dagchart_count_breakdown_separation() {
         let schema = Schemas::two("pterodactyl", "dinosaur");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("triceratops".to_string(), "tyrannosaurs".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
@@ -298,7 +298,7 @@ length                    |k.. o.. r..|
             .add(("tiger".to_string(), "pterodactyl".to_string()))
             .build();
         let view = dataset.count_breakdown_2nd();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             width_hint: 1,
             abbreviate_breakdown: true,
             ..Render::default()
@@ -318,7 +318,7 @@ triceratops  |              |"#
     #[test]
     fn abbreviate_pathchart_count_breakdown_separation() {
         let schema = Schemas::two("pterodactyl", "dinosaur");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("triceratops".to_string(), "tyrannosaurs".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
@@ -347,7 +347,7 @@ triceratops  |              |"#
     #[test]
     fn abbreviate_non_breakdown() {
         let schema = Schemas::two("animal", "dinosaur");
-        let dataset = Dataset::builder(schema)
+        let dataset = DatasetBuilder::new(schema)
             .add(("whale".to_string(), "tyrannosaurs".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
             .add(("shark".to_string(), "triceratops".to_string()))
@@ -356,7 +356,7 @@ triceratops  |              |"#
             .add(("tiger".to_string(), "pterodactyl".to_string()))
             .build();
         let view = dataset.count();
-        let flat = BarChart::new(&view).render(Render {
+        let flat = DagChart::new(&view).render(Render {
             abbreviate_breakdown: true,
             ..Render::default()
         });

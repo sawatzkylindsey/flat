@@ -6,21 +6,21 @@ use super::super::Aggregate;
 use super::super::Render;
 // We use this in the doc strings.
 #[allow(unused_imports)]
-use super::BarChart;
+use super::DagChart;
 
-/// Render configuration specific to [`BarChart`]s.
+/// Render configuration specific to [`DagChart`]s.
 ///
 /// ### Example
 /// ```
-/// # use flat::BarChartConfig;
-/// let barchart_config = BarChartConfig {
+/// # use flat::DagChartConfig;
+/// let dagchart_config = DagChartConfig {
 ///     abbreviate: true,
 ///     show_aggregate: true,
-///     ..BarChartConfig::default()
+///     ..DagChartConfig::default()
 /// };
 /// ```
 #[derive(Debug, Default)]
-pub struct BarChartConfig {
+pub struct DagChartConfig {
     /// Whether to abbreviate the dimensional values in the rendering or not.
     /// Use this option when the dimensions have long [`std::fmt::Display`] forms.
     /// Abbreviation is attempted irrespective of the `width_hint`.

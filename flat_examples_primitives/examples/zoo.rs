@@ -1,12 +1,13 @@
 use auto_ops::impl_op_ex;
 use flat::{
-    minimal_precision_string, Aggregate, BarChart, Binnable, Dataset, Histogram, Render, Schemas,
+    minimal_precision_string, Aggregate, Binnable, DagChart, DatasetBuilder, Histogram, Render,
+    Schemas,
 };
 use std::ops::Deref;
 
 fn main() {
     let schema = Schemas::three("Quadrant", "Enclosure", "Animal");
-    let mut builder = Dataset::builder(schema);
+    let mut builder = DatasetBuilder::new(schema);
 
     for triple in enclosure_dataset() {
         builder.update((triple.0, triple.1, triple.2));
@@ -14,13 +15,13 @@ fn main() {
 
     let dataset = builder.build();
     let view = dataset.count();
-    let flat = BarChart::new(&view).render(Render::default());
+    let flat = DagChart::new(&view).render(Render::default());
     println!("Density across the zoo enclosures:");
     println!("{flat}");
     println!();
 
     let view = dataset.count_breakdown_3rd();
-    let flat = BarChart::new(&view).render(Render {
+    let flat = DagChart::new(&view).render(Render {
         abbreviate_breakdown: true,
         ..Render::default()
     });
@@ -29,7 +30,7 @@ fn main() {
     println!();
 
     let schema = Schemas::two("Animal", "Length (cm)");
-    let mut builder = Dataset::builder(schema);
+    let mut builder = DatasetBuilder::new(schema);
 
     for pair in attribute_dataset() {
         builder.update((pair.1, pair.0));
@@ -37,7 +38,7 @@ fn main() {
 
     let dataset = builder.build();
     let view = dataset.view_2nd();
-    let flat = BarChart::new(&view).render(Render {
+    let flat = DagChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: true,
         width_hint: 30,
@@ -48,7 +49,7 @@ fn main() {
     println!();
 
     let schema = Schemas::two("Length (cm)", "Animal");
-    let mut builder = Dataset::builder(schema);
+    let mut builder = DatasetBuilder::new(schema);
 
     for pair in attribute_dataset() {
         builder.update((pair.0, pair.1));

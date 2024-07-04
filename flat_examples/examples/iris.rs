@@ -7,7 +7,7 @@ use std::ops::{Add, Deref, Div, Mul, Sub};
 fn main() {
     let parameters = Parameters::blarg_parse();
     let json_data: Vec<FlowerJson> = serde_json::from_str(IRIS_JSON).unwrap();
-    let mut builder = Dataset::builder(FlowerSchema);
+    let mut builder = DatasetBuilder::new(FlowerSchema);
 
     for flower in &json_data {
         builder.update(flower.into());
@@ -20,16 +20,16 @@ fn main() {
 
 fn barchart_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
     let view = AttributeView {
-        data: dataset.data(),
+        dataset,
         field: parameters.field.clone(),
     };
-    let flat = BarChart::new(&view).render(Render {
+    let flat = DagChart::new(&view).render(Render {
         aggregate: Aggregate::Average,
         show_aggregate: parameters.verbose,
         widget_config: {
-            BarChartConfig {
+            DagChartConfig {
                 show_aggregate: parameters.verbose,
-                ..BarChartConfig::default()
+                ..DagChartConfig::default()
             }
         },
         ..Render::default()
@@ -46,7 +46,7 @@ fn barchart_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) 
 
 fn histogram_impl_view(parameters: &Parameters, dataset: &Dataset<FlowerSchema>) {
     let view = SepalLengthView {
-        data: dataset.data(),
+        dataset,
         field: parameters.field.clone(),
     };
     let flat = Histogram::new(&view, 10).render(Render {
@@ -134,7 +134,7 @@ impl AttributeField {
 }
 
 struct AttributeView<'a> {
-    data: &'a [<FlowerSchema as Schema>::Dimensions],
+    dataset: &'a Dataset<FlowerSchema>,
     field: AttributeField,
 }
 
@@ -143,8 +143,8 @@ impl<'a> View<FlowerSchema> for AttributeView<'a> {
     type BreakdownDimension = Nothing;
     type DisplayDimensions = (Species,);
 
-    fn data(&self) -> &[<FlowerSchema as Schema>::Dimensions] {
-        &self.data
+    fn dataset(&self) -> &Dataset<FlowerSchema> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
@@ -180,7 +180,7 @@ impl<'a> View<FlowerSchema> for AttributeView<'a> {
 }
 
 struct SepalLengthView<'a> {
-    data: &'a [<FlowerSchema as Schema>::Dimensions],
+    dataset: &'a Dataset<FlowerSchema>,
     field: AttributeField,
 }
 
@@ -189,8 +189,8 @@ impl<'a> View<FlowerSchema> for SepalLengthView<'a> {
     type BreakdownDimension = Nothing;
     type DisplayDimensions = (SepalLength,);
 
-    fn data(&self) -> &[<FlowerSchema as Schema>::Dimensions] {
-        &self.data
+    fn dataset(&self) -> &Dataset<FlowerSchema> {
+        &self.dataset
     }
 
     fn value(&self, dims: &<FlowerSchema as Schema>::Dimensions) -> f64 {
