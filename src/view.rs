@@ -1,4 +1,4 @@
-use crate::{Dimensions, Nothing, Schema, Schema1, Schema2, Schema3};
+use crate::{Dimensions, Nothing, Schema, Schema1, Schema2, Schema3, Schema4};
 use std::fmt::Display;
 // We use this in the doc strings.
 #[allow(unused_imports)]
@@ -614,8 +614,265 @@ where
     }
 }
 
+#[doc(hidden)]
+pub struct View4Full<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
+    pub(crate) value_header: String,
+}
+
+impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4Full<'a, Schema4<T, U, V, W>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
+    W: Clone + Display,
+{
+    type PrimaryDimension = T;
+    type BreakdownDimension = Nothing;
+    type DisplayDimensions = <Schema4<T, U, V, W> as Schema>::Dimensions;
+
+    fn dataset(&self) -> &Dataset<Schema4<T, U, V, W>> {
+        &self.dataset
+    }
+
+    fn value(&self, dims: &<Schema4<T, U, V, W> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
+    }
+
+    fn value_label(&self) -> String {
+        self.value_header.clone()
+    }
+
+    fn primary_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        _dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        None
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (
+            dims.0.clone(),
+            dims.1.clone(),
+            dims.2.clone(),
+            dims.3.clone(),
+        )
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![
+            self.dataset.schema.dimension_0.clone(),
+            self.dataset.schema.dimension_1.clone(),
+            self.dataset.schema.dimension_2.clone(),
+            self.dataset.schema.dimension_3.clone(),
+        ]
+    }
+}
+
+#[doc(hidden)]
+pub struct View4Regular<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
+}
+
+impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4Regular<'a, Schema4<T, U, V, W>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
+    W: Clone + Display,
+{
+    type PrimaryDimension = T;
+    type BreakdownDimension = Nothing;
+    type DisplayDimensions = (T, U, V);
+
+    fn dataset(&self) -> &Dataset<Schema4<T, U, V, W>> {
+        &self.dataset
+    }
+
+    fn value(&self, dims: &<Schema4<T, U, V, W> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
+    }
+
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_3.clone()
+    }
+
+    fn primary_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        _dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        Nothing
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        None
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (dims.0.clone(), dims.1.clone(), dims.2.clone())
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![
+            self.dataset.schema.dimension_0.clone(),
+            self.dataset.schema.dimension_1.clone(),
+            self.dataset.schema.dimension_2.clone(),
+        ]
+    }
+}
+
+#[doc(hidden)]
+pub struct View4Breakdown<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
+}
+
+impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4Breakdown<'a, Schema4<T, U, V, W>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
+    W: Clone + Display,
+{
+    type PrimaryDimension = T;
+    type BreakdownDimension = W;
+    type DisplayDimensions = (T, U, V);
+
+    fn dataset(&self) -> &Dataset<Schema4<T, U, V, W>> {
+        &self.dataset
+    }
+
+    fn value(&self, dims: &<Schema4<T, U, V, W> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
+    }
+
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_3.clone()
+    }
+
+    fn primary_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        dims.3.clone()
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_3.clone())
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (dims.0.clone(), dims.1.clone(), dims.2.clone())
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![
+            self.dataset.schema.dimension_0.clone(),
+            self.dataset.schema.dimension_1.clone(),
+            self.dataset.schema.dimension_2.clone(),
+        ]
+    }
+}
+
+#[doc(hidden)]
+pub struct View4BreakdownCount<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+}
+
+impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4BreakdownCount<'a, Schema4<T, U, V, W>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
+    W: Clone + Display,
+{
+    type PrimaryDimension = T;
+    type BreakdownDimension = W;
+    type DisplayDimensions = (T, U, V);
+
+    fn dataset(&self) -> &Dataset<Schema4<T, U, V, W>> {
+        &self.dataset
+    }
+
+    fn value(&self, _dims: &<Schema4<T, U, V, W> as Schema>::Dimensions) -> f64 {
+        1f64
+    }
+
+    fn value_label(&self) -> String {
+        "Count".to_string()
+    }
+
+    fn primary_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        dims.3.clone()
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_3.clone())
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (dims.0.clone(), dims.1.clone(), dims.2.clone())
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![
+            self.dataset.schema.dimension_0.clone(),
+            self.dataset.schema.dimension_1.clone(),
+            self.dataset.schema.dimension_2.clone(),
+        ]
+    }
+}
+
 // TODO
-// pub struct View4<T, U, V, W>;
 // pub struct View5<T, U, V, W, X>;
 // pub struct View6<T, U, V, W, X, Y>;
 // pub struct View7<T, U, V, W, X, Y, Z>;
@@ -625,7 +882,7 @@ mod tests {
 
     #[cfg(feature = "primitive_impls")]
     mod primitive_impls {
-        use crate::{DatasetBuilder, Nothing, Schema1, Schema2, Schema3, Schemas, View};
+        use crate::{DatasetBuilder, Nothing, Schema1, Schema2, Schema3, Schema4, Schemas, View};
 
         #[test]
         fn view1_reflective() {
@@ -850,6 +1107,125 @@ mod tests {
             );
             assert_eq!(view.value_label(), "Count".to_string());
             assert_eq!(view.breakdown_label(), Some("ghi".to_string()));
+        }
+
+        #[test]
+        fn view4_reflective() {
+            let schema: Schema4<u64, bool, bool, f64> = Schemas::four("abc", "def", "ghi", "jkl");
+            let dataset = DatasetBuilder::new(schema)
+                .add((1, true, true, 0.1))
+                .add((2, false, false, 0.2))
+                .add((3, true, true, 0.3))
+                .build();
+            let view = dataset.reflect_4th();
+            assert_eq!(view.primary_dim(&(2, false, false, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, false, false, 0.2)), Nothing);
+            assert_eq!(
+                view.display_dims(&(2, false, false, 0.2)),
+                (2, false, false, 0.2)
+            );
+            assert_eq!(
+                view.display_headers(),
+                vec![
+                    "abc".to_string(),
+                    "def".to_string(),
+                    "ghi".to_string(),
+                    "jkl".to_string()
+                ]
+            );
+            assert_eq!(view.value_label(), "jkl".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
+
+        #[test]
+        fn view4_counting() {
+            let schema: Schema4<u64, bool, bool, f64> = Schemas::four("abc", "def", "ghi", "jkl");
+            let dataset = DatasetBuilder::new(schema)
+                .add((1, true, true, 0.1))
+                .add((2, false, false, 0.2))
+                .add((3, true, true, 0.3))
+                .build();
+            let view = dataset.count();
+            assert_eq!(view.primary_dim(&(2, false, false, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, false, false, 0.2)), Nothing);
+            assert_eq!(
+                view.display_dims(&(2, false, false, 0.2)),
+                (2, false, false, 0.2)
+            );
+            assert_eq!(
+                view.display_headers(),
+                vec![
+                    "abc".to_string(),
+                    "def".to_string(),
+                    "ghi".to_string(),
+                    "jkl".to_string()
+                ]
+            );
+            assert_eq!(view.value_label(), "Count".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
+
+        #[test]
+        fn view4_4th() {
+            let schema: Schema4<u64, bool, bool, f64> = Schemas::four("abc", "def", "ghi", "jkl");
+            let dataset = DatasetBuilder::new(schema)
+                .add((1, true, true, 0.1))
+                .add((2, false, false, 0.2))
+                .add((3, true, false, 0.3))
+                .build();
+            let view = dataset.view_4th();
+            assert_eq!(view.primary_dim(&(2, false, false, 0.2)), 2);
+            assert_eq!(view.breakdown_dim(&(2, false, false, 0.2)), Nothing);
+            assert_eq!(
+                view.display_dims(&(2, false, false, 0.2)),
+                (2, false, false)
+            );
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
+            );
+            assert_eq!(view.value_label(), "jkl".to_string());
+            assert_eq!(view.breakdown_label(), None);
+        }
+
+        #[test]
+        fn view4_breakdown_4th() {
+            let schema: Schema4<u64, f32, f32, f64> = Schemas::four("abc", "def", "ghi", "jkl");
+            let dataset = DatasetBuilder::new(schema)
+                .add((1, 0.1, 0.1, 0.01))
+                .add((2, 0.2, 0.2, 0.02))
+                .add((3, 0.3, 0.3, 0.03))
+                .build();
+            let view = dataset.breakdown_4th();
+            assert_eq!(view.primary_dim(&(2, 0.2, 0.2, 0.02)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2, 0.2, 0.02)), 0.02);
+            assert_eq!(view.display_dims(&(2, 0.2, 0.2, 0.02)), (2, 0.2, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
+            );
+            assert_eq!(view.value_label(), "jkl".to_string());
+            assert_eq!(view.breakdown_label(), Some("jkl".to_string()));
+        }
+
+        #[test]
+        fn view4_count_breakdown_4th() {
+            let schema: Schema4<u64, f32, f32, bool> = Schemas::four("abc", "def", "ghi", "jkl");
+            let dataset = DatasetBuilder::new(schema)
+                .add((1, 0.1, 0.1, true))
+                .add((2, 0.2, 0.2, false))
+                .add((3, 0.3, 0.3, true))
+                .build();
+            let view = dataset.count_breakdown_4th();
+            assert_eq!(view.primary_dim(&(2, 0.2, 0.2, false)), 2);
+            assert_eq!(view.breakdown_dim(&(2, 0.2, 0.2, false)), false);
+            assert_eq!(view.display_dims(&(2, 0.2, 0.2, false)), (2, 0.2, 0.2));
+            assert_eq!(
+                view.display_headers(),
+                vec!["abc".to_string(), "def".to_string(), "ghi".to_string()]
+            );
+            assert_eq!(view.value_label(), "Count".to_string());
+            assert_eq!(view.breakdown_label(), Some("jkl".to_string()));
         }
     }
 }

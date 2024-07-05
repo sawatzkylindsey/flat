@@ -18,7 +18,7 @@ pub struct Schemas;
 
 impl Schemas {
     /// Define a 1-dimensional schema.
-    /// The names of the dimensions are specified in order, with the final name indicating the name of the values.
+    /// The names of the dimensions are specified in order.
     ///
     /// ### Example
     /// ```
@@ -42,7 +42,7 @@ impl Schemas {
     }
 
     /// Define a 2-dimensional schema.
-    /// The names of the dimensions are specified in order, with the final name indicating the name of the values.
+    /// The names of the dimensions are specified in order.
     ///
     /// ### Example
     /// ```
@@ -72,7 +72,7 @@ impl Schemas {
     }
 
     /// Define a 3-dimensional schema.
-    /// The names of the dimensions are specified in order, with the final name indicating the name of the values.
+    /// The names of the dimensions are specified in order.
     ///
     /// ### Example
     /// ```
@@ -106,7 +106,7 @@ impl Schemas {
     }
 
     /// Define a 4-dimensional schema.
-    /// The names of the dimensions are specified in order, with the final name indicating the name of the values.
+    /// The names of the dimensions are specified in order.
     ///
     /// ### Example
     /// ```
