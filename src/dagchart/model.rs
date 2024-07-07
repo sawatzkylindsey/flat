@@ -7,8 +7,16 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::marker::PhantomData;
+// We use this in the doc strings.
+#[allow(unused_imports)]
+use crate::PathChart;
 
 /// The dag-chart widget.
+///
+/// A dag-chart represents each unique tuple of the view's display dimensions as a path in a directed acyclic graph.
+/// Paths with common sub-paths, starting from the primary dimension (1st), are collapsed in the frame.
+///
+/// See also: [`PathChart`]
 ///
 /// ```
 /// use flat::*;

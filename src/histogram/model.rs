@@ -9,6 +9,10 @@ use std::ops::{Add, Sub};
 
 /// The histogram widget.
 ///
+/// A histogram represents the sole display dimension as a [`Binnable`] type.
+/// The dataset's values are collected based off how they bin across the range defined by 1st dimension.
+/// The number of bins is configured at initialization.
+///
 /// ```
 /// use flat::*;
 ///

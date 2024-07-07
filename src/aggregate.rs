@@ -1,3 +1,4 @@
+use ordered_float::OrderedFloat;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
@@ -8,6 +9,10 @@ use std::str::FromStr;
 pub enum Aggregate {
     /// The average aggregation variant (ex: `[1, 2, 3] -> 2`).
     Average,
+    /// The max aggregation variant (ex: `[1, 2, 3] -> 3`).
+    Max,
+    /// The min aggregation variant (ex: `[1, 2, 3] -> 1`).
+    Min,
     /// The sum aggregation variant (ex: `[1, 2, 3] -> 6`).
     Sum,
 }
@@ -22,6 +27,14 @@ impl Aggregate {
                     values.iter().sum::<f64>() / values.len() as f64
                 }
             }
+            Aggregate::Max => match values.iter().map(|v| OrderedFloat(*v)).max() {
+                Some(m) => m.0,
+                None => 0.0,
+            },
+            Aggregate::Min => match values.iter().map(|v| OrderedFloat(*v)).min() {
+                Some(m) => m.0,
+                None => 0.0,
+            },
             Aggregate::Sum => values.iter().sum(),
         }
     }
@@ -30,8 +43,10 @@ impl Aggregate {
 impl Display for Aggregate {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Aggregate::Sum => write!(f, "Sum"),
             Aggregate::Average => write!(f, "Average"),
+            Aggregate::Max => write!(f, "Max"),
+            Aggregate::Min => write!(f, "Min"),
+            Aggregate::Sum => write!(f, "Sum"),
         }
     }
 }
@@ -109,7 +124,14 @@ mod tests {
     #[test]
     fn apply() {
         assert_eq!(Aggregate::Average.apply(&[1.0, 2.0, 3.0]), 2.0);
+        assert_eq!(Aggregate::Max.apply(&[1.0, 2.0, 3.0]), 3.0);
+        assert_eq!(Aggregate::Min.apply(&[1.0, 2.0, 3.0]), 1.0);
         assert_eq!(Aggregate::Sum.apply(&[1.0, 2.0, 3.0]), 6.0);
+
+        assert_eq!(Aggregate::Average.to_string(), "Average".to_string());
+        assert_eq!(Aggregate::Max.to_string(), "Max".to_string());
+        assert_eq!(Aggregate::Min.to_string(), "Min".to_string());
+        assert_eq!(Aggregate::Sum.to_string(), "Sum".to_string());
     }
 
     #[test]

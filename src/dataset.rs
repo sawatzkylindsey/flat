@@ -1,10 +1,11 @@
 use crate::{
-    Schema, Schema1, Schema2, Schema3, Schema4, View1Full, View2BreakdownCount, View2Full,
-    View3BreakdownCount, View3Full, View4BreakdownCount, View4Full,
+    Schema, Schema1, Schema2, Schema3, Schema4, View1Full, View2Breakdown2ndCount, View2Full,
+    View3Breakdown3rdCount, View3Full, View4Breakdown4thCount, View4Full,
 };
 #[cfg(any(feature = "primitive_impls", feature = "pointer_impls"))]
 use crate::{
-    View2Breakdown, View2Regular, View3Breakdown, View3Regular, View4Breakdown, View4Regular,
+    View2Breakdown2nd, View2Regular, View3Breakdown2ndView3rd, View3Breakdown3rd, View3Regular,
+    View4Breakdown3rdView4th, View4Breakdown4th, View4Regular,
 };
 #[cfg(feature = "pointer_impls")]
 use std::ops::Deref;
@@ -164,10 +165,10 @@ impl<T, U: Clone + Into<f64>, Du: Deref<Target = U>> Dataset<Schema2<T, Du>> {
         }
     }
 
-    pub fn breakdown_2nd(&self) -> View2Breakdown<Schema2<T, Du>> {
+    pub fn breakdown_2nd(&self) -> View2Breakdown2nd<Schema2<T, Du>> {
         let extractor: Box<dyn Fn(&<Schema2<T, Du> as Schema>::Dimensions) -> f64> =
             Box::new(|d| (*d.1).clone().into());
-        View2Breakdown {
+        View2Breakdown2nd {
             dataset: &self,
             extractor,
         }
@@ -238,17 +239,17 @@ mod primitive_impls2 {
                 /// This view will render the breakdown of the final dimension (2nd), and use all other dimensions in the frame of the widget.
                 /// ```text
                 /// r#"
-                /// Frame..   | Breakdown Rendering..        |
-                /// (dim1, )  | breakdown(aggregate(dim2)).. |"#
+                /// Frame..   | Breakdown Rendering..              |
+                /// (dim1, )  | breakdown(dim2, aggregate(dim2)).. |"#
                 /// ```
                 ///
                 /// Requires feature `primitives_impl` or `pointers_impl`.
                 /// * `primitives_impl`: implemented for `Schema2<_, U>` where `U = {f64, .., u8}`.
                 /// * `pointers_impl`: implemented for `Schema2<_, Du>` where `U: Clone + Into<f64>, Du: Deref<Target = U>`.
-                pub fn breakdown_2nd(&self) -> View2Breakdown<Schema2<T, $T>> {
+                pub fn breakdown_2nd(&self) -> View2Breakdown2nd<Schema2<T, $T>> {
                     let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.1 as f64);
-                    View2Breakdown {
+                    View2Breakdown2nd {
                         dataset: &self,
                         extractor,
                     }
@@ -293,13 +294,13 @@ impl<T, U> Dataset<Schema2<T, U>> {
     /// Rather than displaying the value of the final dimension, the occurrences of each dimensional vector are counted.
     /// ```text
     /// r#"
-    /// Frame..   | Breakdown Rendering..           |
-    /// (dim1, )  | breakdown(aggregate(count())).. |"#
+    /// Frame..   | Breakdown Rendering..                 |
+    /// (dim1, )  | breakdown(dim2, aggregate(count())).. |"#
     /// ```
     ///
     /// Implemented for `Schema2<_, _>`.
-    pub fn count_breakdown_2nd(&self) -> View2BreakdownCount<Schema2<T, U>> {
-        View2BreakdownCount { dataset: &self }
+    pub fn count_breakdown_2nd(&self) -> View2Breakdown2ndCount<Schema2<T, U>> {
+        View2Breakdown2ndCount { dataset: &self }
     }
 }
 
@@ -367,17 +368,42 @@ mod primitive_impls3 {
                 /// This view will render the breakdown of the final dimension (3rd), and use all other dimensions in the frame of the widget.
                 /// ```text
                 /// r#"
-                /// Frame..       | Breakdown Rendering..        |
-                /// (dim1, dim2)  | breakdown(aggregate(dim3)).. |"#
+                /// Frame..       | Breakdown Rendering..              |
+                /// (dim1, dim2)  | breakdown(dim3, aggregate(dim3)).. |"#
                 /// ```
                 ///
                 /// Requires feature `primitives_impl` or `pointers_impl`.
                 /// * `primitives_impl`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
                 /// * `pointers_impl`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
-                pub fn breakdown_3rd(&self) -> View3Breakdown<Schema3<T, U, $T>> {
+                pub fn breakdown_3rd(&self) -> View3Breakdown3rd<Schema3<T, U, $T>> {
                     let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.2 as f64);
-                    View3Breakdown {
+                    View3Breakdown3rd {
+                        dataset: &self,
+                        extractor,
+                    }
+                }
+
+                /// Take a breakdown+view view of this 3-dimensional dataset.
+                /// Views are rendered differently by different widgets, but
+                /// always have a frame on the left and a rendering on the right.
+                ///
+                /// This view will render the final dimension (3rd) under a breakdown of the next dimension (2nd), and use all other dimensions in the frame of the widget.
+                /// ```text
+                /// r#"
+                /// Frame..   | Breakdown Rendering..              |
+                /// (dim1, )  | breakdown(dim2, aggregate(dim3)).. |"#
+                /// ```
+                ///
+                /// Requires feature `primitives_impl` or `pointers_impl`.
+                /// * `primitives_impl`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
+                /// * `pointers_impl`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
+                pub fn breakdown_2nd_view_3rd(
+                    &self,
+                ) -> View3Breakdown2ndView3rd<Schema3<T, U, $T>> {
+                    let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                        Box::new(|d| d.2 as f64);
+                    View3Breakdown2ndView3rd {
                         dataset: &self,
                         extractor,
                     }
@@ -423,10 +449,19 @@ impl<T, U, V: Clone + Into<f64>, Dv: Deref<Target = V>> Dataset<Schema3<T, U, Dv
         }
     }
 
-    pub fn breakdown_3rd(&self) -> View3Breakdown<Schema3<T, U, Dv>> {
+    pub fn breakdown_3rd(&self) -> View3Breakdown3rd<Schema3<T, U, Dv>> {
         let extractor: Box<dyn Fn(&<Schema3<T, U, Dv> as Schema>::Dimensions) -> f64> =
             Box::new(|d| (*d.2).clone().into());
-        View3Breakdown {
+        View3Breakdown3rd {
+            dataset: &self,
+            extractor,
+        }
+    }
+
+    pub fn breakdown_2nd_view_3rd(&self) -> View3Breakdown2ndView3rd<Schema3<T, U, Dv>> {
+        let extractor: Box<dyn Fn(&<Schema3<T, U, Dv> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| (*d.2).clone().into());
+        View3Breakdown2ndView3rd {
             dataset: &self,
             extractor,
         }
@@ -452,13 +487,13 @@ impl<T, U, V> Dataset<Schema3<T, U, V>> {
     /// This view will render the breakdown of the final dimension (3rd), and use all other dimensions in the frame of the widget.
     /// ```text
     /// r#"
-    /// Frame..       | Breakdown Rendering..           |
-    /// (dim1, dim2)  | breakdown(aggregate(count())).. |"#
+    /// Frame..       | Breakdown Rendering..                 |
+    /// (dim1, dim2)  | breakdown(dim3, aggregate(count())).. |"#
     /// ```
     ///
     /// Implemented for `Schema3<_, _, _>`.
-    pub fn count_breakdown_3rd(&self) -> View3BreakdownCount<Schema3<T, U, V>> {
-        View3BreakdownCount { dataset: &self }
+    pub fn count_breakdown_3rd(&self) -> View3Breakdown3rdCount<Schema3<T, U, V>> {
+        View3Breakdown3rdCount { dataset: &self }
     }
 }
 
@@ -528,18 +563,44 @@ mod primitive_impls4 {
                 /// This view will render the breakdown of the final dimension (4th), and use all other dimensions in the frame of the widget.
                 /// ```text
                 /// r#"
-                /// Frame..             | Breakdown Rendering..        |
-                /// (dim1, dim2, dim3)  | breakdown(aggregate(dim4)).. |"#
+                /// Frame..             | Breakdown Rendering..              |
+                /// (dim1, dim2, dim3)  | breakdown(dim4, aggregate(dim4)).. |"#
                 /// ```
                 ///
                 /// Requires feature `primitives_impl` or `pointers_impl`.
                 /// * `primitives_impl`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
                 /// * `pointers_impl`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
-                pub fn breakdown_4th(&self) -> View4Breakdown<Schema4<T, U, V, $T>> {
+                pub fn breakdown_4th(&self) -> View4Breakdown4th<Schema4<T, U, V, $T>> {
                     let extractor: Box<
                         dyn Fn(&<Schema4<T, U, V, $T> as Schema>::Dimensions) -> f64,
                     > = Box::new(|d| d.3 as f64);
-                    View4Breakdown {
+                    View4Breakdown4th {
+                        dataset: &self,
+                        extractor,
+                    }
+                }
+
+                /// Take a breakdown+view view of this 4-dimensional dataset.
+                /// Views are rendered differently by different widgets, but
+                /// always have a frame on the left and a rendering on the right.
+                ///
+                /// This view will render the final dimension (4th) under a breakdown of the next dimension (3rd), and use all other dimensions in the frame of the widget.
+                /// ```text
+                /// r#"
+                /// Frame..       | Breakdown Rendering..              |
+                /// (dim1, dim2)  | breakdown(dim3, aggregate(dim4)).. |"#
+                /// ```
+                ///
+                /// Requires feature `primitives_impl` or `pointers_impl`.
+                /// * `primitives_impl`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
+                /// * `pointers_impl`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
+                pub fn breakdown_3rd_view_4th(
+                    &self,
+                ) -> View4Breakdown3rdView4th<Schema4<T, U, V, $T>> {
+                    let extractor: Box<
+                        dyn Fn(&<Schema4<T, U, V, $T> as Schema>::Dimensions) -> f64,
+                    > = Box::new(|d| d.3 as f64);
+                    View4Breakdown3rdView4th {
                         dataset: &self,
                         extractor,
                     }
@@ -585,10 +646,19 @@ impl<T, U, V, W: Clone + Into<f64>, Dw: Deref<Target = W>> Dataset<Schema4<T, U,
         }
     }
 
-    pub fn breakdown_4th(&self) -> View4Breakdown<Schema4<T, U, V, Dw>> {
+    pub fn breakdown_4th(&self) -> View4Breakdown4th<Schema4<T, U, V, Dw>> {
         let extractor: Box<dyn Fn(&<Schema4<T, U, V, Dw> as Schema>::Dimensions) -> f64> =
             Box::new(|d| (*d.3).clone().into());
-        View4Breakdown {
+        View4Breakdown4th {
+            dataset: &self,
+            extractor,
+        }
+    }
+
+    pub fn breakdown_3rd_view_4th(&self) -> View4Breakdown3rdView4th<Schema4<T, U, V, Dw>> {
+        let extractor: Box<dyn Fn(&<Schema4<T, U, V, Dw> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| (*d.3).clone().into());
+        View4Breakdown3rdView4th {
             dataset: &self,
             extractor,
         }
@@ -614,13 +684,13 @@ impl<T, U, V, W> Dataset<Schema4<T, U, V, W>> {
     /// This view will render the breakdown of the final dimension (4th), and use all other dimensions in the frame of the widget.
     /// ```text
     /// r#"
-    /// Frame..             | Breakdown Rendering..           |
-    /// (dim1, dim2, dim3)  | breakdown(aggregate(count())).. |"#
+    /// Frame..             | Breakdown Rendering..                 |
+    /// (dim1, dim2, dim3)  | breakdown(dim4, aggregate(count())).. |"#
     /// ```
     ///
     /// Implemented for `Schema4<_, _, _, _>`.
-    pub fn count_breakdown_4th(&self) -> View4BreakdownCount<Schema4<T, U, V, W>> {
-        View4BreakdownCount { dataset: &self }
+    pub fn count_breakdown_4th(&self) -> View4Breakdown4thCount<Schema4<T, U, V, W>> {
+        View4Breakdown4thCount { dataset: &self }
     }
 }
 

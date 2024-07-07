@@ -687,6 +687,47 @@ true    - whale   |                                            ****             
     }
 
     #[test]
+    fn dagchart_3d_breakdown_view() {
+        let dataset = dataset_3d();
+        let view = dataset.breakdown_2nd_view_3rd();
+        let flat = DagChart::new(&view).render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+         stable
+         Sum(length)
+animal  |            false                           true             |
+shark   |            *****                           ***              |
+tiger   |         ***********           ******************************|
+whale   |                                            ****             |"#
+        );
+    }
+
+    #[test]
+    fn dagchart_4d_breakdown_view() {
+        let schema = Schemas::four("animal", "stable", "length", "width");
+        let dataset = DatasetBuilder::new(schema)
+            .add(("whale".to_string(), true, 4u32, 5u32))
+            .add(("shark".to_string(), false, 4u32, 5u32))
+            .add(("shark".to_string(), true, 2u32, 3u32))
+            .add(("tiger".to_string(), false, 1u32, 2u32))
+            .build();
+        let view = dataset.breakdown_3rd_view_4th();
+        let flat = DagChart::new(&view).render(Render::default());
+        assert_eq!(
+            format!("\n{}", flat.to_string()),
+            r#"
+                   length
+                   Sum(width)
+stable    animal  |  1     2     4  |
+false   - shark   |       ***  *****|
+true    ┘
+false   - tiger   | **              |
+true    - whale   |            *****|"#
+        );
+    }
+
+    #[test]
     fn abbreviate_dagchart_1d() {
         let schema = Schemas::one("animal");
         let dataset = DatasetBuilder::new(schema)

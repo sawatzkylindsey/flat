@@ -262,12 +262,12 @@ where
 }
 
 #[doc(hidden)]
-pub struct View2Breakdown<'a, S: Schema> {
+pub struct View2Breakdown2nd<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
     pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
 }
 
-impl<'a, T, U> View<Schema2<T, U>> for View2Breakdown<'a, Schema2<T, U>>
+impl<'a, T, U> View<Schema2<T, U>> for View2Breakdown2nd<'a, Schema2<T, U>>
 where
     T: Clone + Display,
     U: Clone + Display,
@@ -316,11 +316,11 @@ where
 }
 
 #[doc(hidden)]
-pub struct View2BreakdownCount<'a, S: Schema> {
+pub struct View2Breakdown2ndCount<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T, U> View<Schema2<T, U>> for View2BreakdownCount<'a, Schema2<T, U>>
+impl<'a, T, U> View<Schema2<T, U>> for View2Breakdown2ndCount<'a, Schema2<T, U>>
 where
     T: Clone + Display,
     U: Clone + Display,
@@ -334,7 +334,6 @@ where
     }
 
     fn value(&self, _dims: &<Schema2<T, U> as Schema>::Dimensions) -> f64 {
-        // Breakdown's always use counts.
         1f64
     }
 
@@ -494,12 +493,12 @@ where
 }
 
 #[doc(hidden)]
-pub struct View3Breakdown<'a, S: Schema> {
+pub struct View3Breakdown3rd<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
     pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
 }
 
-impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown3rd<'a, Schema3<T, U, V>>
 where
     T: Clone + Display,
     U: Clone + Display,
@@ -555,11 +554,11 @@ where
 }
 
 #[doc(hidden)]
-pub struct View3BreakdownCount<'a, S: Schema> {
+pub struct View3Breakdown3rdCount<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T, U, V> View<Schema3<T, U, V>> for View3BreakdownCount<'a, Schema3<T, U, V>>
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown3rdCount<'a, Schema3<T, U, V>>
 where
     T: Clone + Display,
     U: Clone + Display,
@@ -611,6 +610,64 @@ where
             self.dataset.schema.dimension_0.clone(),
             self.dataset.schema.dimension_1.clone(),
         ]
+    }
+}
+
+#[doc(hidden)]
+pub struct View3Breakdown2ndView3rd<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
+}
+
+impl<'a, T, U, V> View<Schema3<T, U, V>> for View3Breakdown2ndView3rd<'a, Schema3<T, U, V>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
+{
+    type PrimaryDimension = T;
+    type BreakdownDimension = U;
+    type DisplayDimensions = (T,);
+
+    fn dataset(&self) -> &Dataset<Schema3<T, U, V>> {
+        &self.dataset
+    }
+
+    fn value(&self, dims: &<Schema3<T, U, V> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
+    }
+
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_2.clone()
+    }
+
+    fn primary_dim(
+        &self,
+        dims: &<Schema3<T, U, V> as Schema>::Dimensions,
+    ) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        dims: &<Schema3<T, U, V> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        dims.1.clone()
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_1.clone())
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema3<T, U, V> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (dims.0.clone(),)
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![self.dataset.schema.dimension_0.clone()]
     }
 }
 
@@ -748,12 +805,12 @@ where
 }
 
 #[doc(hidden)]
-pub struct View4Breakdown<'a, S: Schema> {
+pub struct View4Breakdown4th<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
     pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
 }
 
-impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4Breakdown<'a, Schema4<T, U, V, W>>
+impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4Breakdown4th<'a, Schema4<T, U, V, W>>
 where
     T: Clone + Display,
     U: Clone + Display,
@@ -811,11 +868,73 @@ where
 }
 
 #[doc(hidden)]
-pub struct View4BreakdownCount<'a, S: Schema> {
+pub struct View4Breakdown3rdView4th<'a, S: Schema> {
+    pub(crate) dataset: &'a Dataset<S>,
+    pub(crate) extractor: Box<dyn Fn(&S::Dimensions) -> f64>,
+}
+
+impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4Breakdown3rdView4th<'a, Schema4<T, U, V, W>>
+where
+    T: Clone + Display,
+    U: Clone + Display,
+    V: Clone + Display,
+    W: Clone + Display,
+{
+    type PrimaryDimension = T;
+    type BreakdownDimension = V;
+    type DisplayDimensions = (T, U);
+
+    fn dataset(&self) -> &Dataset<Schema4<T, U, V, W>> {
+        &self.dataset
+    }
+
+    fn value(&self, dims: &<Schema4<T, U, V, W> as Schema>::Dimensions) -> f64 {
+        (self.extractor)(dims)
+    }
+
+    fn value_label(&self) -> String {
+        self.dataset.schema.dimension_3.clone()
+    }
+
+    fn primary_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::PrimaryDimension {
+        dims.0.clone()
+    }
+
+    fn breakdown_dim(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::BreakdownDimension {
+        dims.2.clone()
+    }
+
+    fn breakdown_label(&self) -> Option<String> {
+        Some(self.dataset.schema.dimension_2.clone())
+    }
+
+    fn display_dims(
+        &self,
+        dims: &<Schema4<T, U, V, W> as Schema>::Dimensions,
+    ) -> Self::DisplayDimensions {
+        (dims.0.clone(), dims.1.clone())
+    }
+
+    fn display_headers(&self) -> Vec<String> {
+        vec![
+            self.dataset.schema.dimension_0.clone(),
+            self.dataset.schema.dimension_1.clone(),
+        ]
+    }
+}
+
+#[doc(hidden)]
+pub struct View4Breakdown4thCount<'a, S: Schema> {
     pub(crate) dataset: &'a Dataset<S>,
 }
 
-impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4BreakdownCount<'a, Schema4<T, U, V, W>>
+impl<'a, T, U, V, W> View<Schema4<T, U, V, W>> for View4Breakdown4thCount<'a, Schema4<T, U, V, W>>
 where
     T: Clone + Display,
     U: Clone + Display,
