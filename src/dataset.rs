@@ -384,7 +384,7 @@ mod primitive_impls3 {
                     }
                 }
 
-                /// Take a breakdown+view view of this 3-dimensional dataset.
+                /// Take a view+breakdown view of this 3-dimensional dataset.
                 /// Views are rendered differently by different widgets, but
                 /// always have a frame on the left and a rendering on the right.
                 ///
@@ -398,6 +398,18 @@ mod primitive_impls3 {
                 /// Requires feature `primitives_impl` or `pointers_impl`.
                 /// * `primitives_impl`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
                 /// * `pointers_impl`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
+                pub fn view_3rd_breakdown_2nd(
+                    &self,
+                ) -> View3Breakdown2ndView3rd<Schema3<T, U, $T>> {
+                    let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
+                        Box::new(|d| d.2 as f64);
+                    View3Breakdown2ndView3rd {
+                        dataset: &self,
+                        extractor,
+                    }
+                }
+
+                #[doc(hidden)]
                 pub fn breakdown_2nd_view_3rd(
                     &self,
                 ) -> View3Breakdown2ndView3rd<Schema3<T, U, $T>> {
@@ -453,6 +465,15 @@ impl<T, U, V: Clone + Into<f64>, Dv: Deref<Target = V>> Dataset<Schema3<T, U, Dv
         let extractor: Box<dyn Fn(&<Schema3<T, U, Dv> as Schema>::Dimensions) -> f64> =
             Box::new(|d| (*d.2).clone().into());
         View3Breakdown3rd {
+            dataset: &self,
+            extractor,
+        }
+    }
+
+    pub fn view_3rd_breakdown_2nd_view(&self) -> View3Breakdown2ndView3rd<Schema3<T, U, Dv>> {
+        let extractor: Box<dyn Fn(&<Schema3<T, U, Dv> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| (*d.2).clone().into());
+        View3Breakdown2ndView3rd {
             dataset: &self,
             extractor,
         }
@@ -580,7 +601,7 @@ mod primitive_impls4 {
                     }
                 }
 
-                /// Take a breakdown+view view of this 4-dimensional dataset.
+                /// Take a view+breakdown of this 4-dimensional dataset.
                 /// Views are rendered differently by different widgets, but
                 /// always have a frame on the left and a rendering on the right.
                 ///
@@ -594,6 +615,19 @@ mod primitive_impls4 {
                 /// Requires feature `primitives_impl` or `pointers_impl`.
                 /// * `primitives_impl`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
                 /// * `pointers_impl`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
+                pub fn view_4th_breakdown_3rd(
+                    &self,
+                ) -> View4Breakdown3rdView4th<Schema4<T, U, V, $T>> {
+                    let extractor: Box<
+                        dyn Fn(&<Schema4<T, U, V, $T> as Schema>::Dimensions) -> f64,
+                    > = Box::new(|d| d.3 as f64);
+                    View4Breakdown3rdView4th {
+                        dataset: &self,
+                        extractor,
+                    }
+                }
+
+                #[doc(hidden)]
                 pub fn breakdown_3rd_view_4th(
                     &self,
                 ) -> View4Breakdown3rdView4th<Schema4<T, U, V, $T>> {
@@ -650,6 +684,15 @@ impl<T, U, V, W: Clone + Into<f64>, Dw: Deref<Target = W>> Dataset<Schema4<T, U,
         let extractor: Box<dyn Fn(&<Schema4<T, U, V, Dw> as Schema>::Dimensions) -> f64> =
             Box::new(|d| (*d.3).clone().into());
         View4Breakdown4th {
+            dataset: &self,
+            extractor,
+        }
+    }
+
+    pub fn view_4th_breakdown_3rd(&self) -> View4Breakdown3rdView4th<Schema4<T, U, V, Dw>> {
+        let extractor: Box<dyn Fn(&<Schema4<T, U, V, Dw> as Schema>::Dimensions) -> f64> =
+            Box::new(|d| (*d.3).clone().into());
+        View4Breakdown3rdView4th {
             dataset: &self,
             extractor,
         }

@@ -689,7 +689,7 @@ true    - whale   |                                            ****             
     #[test]
     fn dagchart_3d_breakdown_view() {
         let dataset = dataset_3d();
-        let view = dataset.breakdown_2nd_view_3rd();
+        let view = dataset.view_3rd_breakdown_2nd();
         let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),
