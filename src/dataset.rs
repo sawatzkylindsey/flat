@@ -89,9 +89,9 @@ mod primitive_impls1 {
                 /// (dim1, )  | aggregate(dim1)"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema1<T>` where `T = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema1<Dt>` where `T: Clone + Into<f64>, Dt: Deref<Target = T>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema1<T>` where `T = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema1<Dt>` where `T: Clone + Into<f64>, Dt: Deref<Target = T>`.
                 pub fn reflect_1st(&self) -> View1Full<Schema1<$T>> {
                     let extractor: Box<dyn Fn(&<Schema1<$T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.0 as f64);
@@ -196,9 +196,9 @@ mod primitive_impls2 {
                 /// (dim1, dim2)  | aggregate(dim2)"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema2<_, U>` where `U = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema2<_, Du>` where `U: Clone + Into<f64>, Du: Deref<Target = U>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema2<_, U>` where `U = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema2<_, Du>` where `U: Clone + Into<f64>, Du: Deref<Target = U>`.
                 pub fn reflect_2nd(&self) -> View2Full<Schema2<T, $T>> {
                     let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.1 as f64);
@@ -220,9 +220,9 @@ mod primitive_impls2 {
                 /// (dim1, )  | aggregate(dim2)"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema2<_, U>` where `U = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema2<_, Du>` where `U: Clone + Into<f64>, Du: Deref<Target = U>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema2<_, U>` where `U = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema2<_, Du>` where `U: Clone + Into<f64>, Du: Deref<Target = U>`.
                 pub fn view_2nd(&self) -> View2Regular<Schema2<T, $T>> {
                     let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.1 as f64);
@@ -243,9 +243,9 @@ mod primitive_impls2 {
                 /// (dim1, )  | breakdown(dim2, aggregate(dim2)).. |"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema2<_, U>` where `U = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema2<_, Du>` where `U: Clone + Into<f64>, Du: Deref<Target = U>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema2<_, U>` where `U = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema2<_, Du>` where `U: Clone + Into<f64>, Du: Deref<Target = U>`.
                 pub fn breakdown_2nd(&self) -> View2Breakdown2nd<Schema2<T, $T>> {
                     let extractor: Box<dyn Fn(&<Schema2<T, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.1 as f64);
@@ -325,9 +325,9 @@ mod primitive_impls3 {
                 /// (dim1, dim2, dim3)  | aggregate(dim3)"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
                 pub fn reflect_3rd(&self) -> View3Full<Schema3<T, U, $T>> {
                     let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.2 as f64);
@@ -349,9 +349,9 @@ mod primitive_impls3 {
                 /// (dim1, dim2)  | aggregate(dim3)"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
                 pub fn view_3rd(&self) -> View3Regular<Schema3<T, U, $T>> {
                     let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.2 as f64);
@@ -372,9 +372,9 @@ mod primitive_impls3 {
                 /// (dim1, dim2)  | breakdown(dim3, aggregate(dim3)).. |"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
                 pub fn breakdown_3rd(&self) -> View3Breakdown3rd<Schema3<T, U, $T>> {
                     let extractor: Box<dyn Fn(&<Schema3<T, U, $T> as Schema>::Dimensions) -> f64> =
                         Box::new(|d| d.2 as f64);
@@ -395,9 +395,9 @@ mod primitive_impls3 {
                 /// (dim1, )  | breakdown(dim2, aggregate(dim3)).. |"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema3<_, _, V>` where `V = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema3<_, _, Dv>` where `V: Clone + Into<f64>, Dv: Deref<Target = V>`.
                 pub fn view_3rd_breakdown_2nd(
                     &self,
                 ) -> View3Breakdown2ndView3rd<Schema3<T, U, $T>> {
@@ -539,9 +539,9 @@ mod primitive_impls4 {
                 /// (dim1, dim2, dim3, dim4)  | aggregate(dim4)"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
                 pub fn reflect_4th(&self) -> View4Full<Schema4<T, U, V, $T>> {
                     let extractor: Box<
                         dyn Fn(&<Schema4<T, U, V, $T> as Schema>::Dimensions) -> f64,
@@ -564,9 +564,9 @@ mod primitive_impls4 {
                 /// (dim1, dim2, dim3)  | aggregate(dim4)"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
                 pub fn view_4th(&self) -> View4Regular<Schema4<T, U, V, $T>> {
                     let extractor: Box<
                         dyn Fn(&<Schema4<T, U, V, $T> as Schema>::Dimensions) -> f64,
@@ -588,9 +588,9 @@ mod primitive_impls4 {
                 /// (dim1, dim2, dim3)  | breakdown(dim4, aggregate(dim4)).. |"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
                 pub fn breakdown_4th(&self) -> View4Breakdown4th<Schema4<T, U, V, $T>> {
                     let extractor: Box<
                         dyn Fn(&<Schema4<T, U, V, $T> as Schema>::Dimensions) -> f64,
@@ -612,9 +612,9 @@ mod primitive_impls4 {
                 /// (dim1, dim2)  | breakdown(dim3, aggregate(dim4)).. |"#
                 /// ```
                 ///
-                /// Requires feature `primitives_impl` or `pointers_impl`.
-                /// * `primitives_impl`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
-                /// * `pointers_impl`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
+                /// Requires feature `primitive_impls` or `pointer_impls`.
+                /// * `primitive_impls`: implemented for `Schema4<_, _, _, W>` where `W = {f64, .., u8}`.
+                /// * `pointer_impls`: implemented for `Schema4<_, _, _, Dw>` where `W: Clone + Into<f64>, Dw: Deref<Target = W>`.
                 pub fn view_4th_breakdown_3rd(
                     &self,
                 ) -> View4Breakdown3rdView4th<Schema4<T, U, V, $T>> {
