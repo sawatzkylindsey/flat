@@ -712,7 +712,7 @@ whale   |                                            ****             |"#
             .add(("shark".to_string(), true, 2u32, 3u32))
             .add(("tiger".to_string(), false, 1u32, 2u32))
             .build();
-        let view = dataset.breakdown_3rd_view_4th();
+        let view = dataset.view_4th_breakdown_3rd();
         let flat = DagChart::new(&view).render(Render::default());
         assert_eq!(
             format!("\n{}", flat.to_string()),

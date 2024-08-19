@@ -113,8 +113,7 @@
 //! To continue our example, here's a schema to fit the dataset: `Schemas::four("Latitude", "Longitude", "Direction", "Object")`.
 //!
 //! Typically, the actual type definitions can be [inferred by the compiler](https://doc.rust-lang.org/stable/book/ch03-02-data-types.html).
-//! This is the recommended way to use `flat`.
-//! If you prefer, the types can be annotated explicitly:
+//! However, using explicit types is recommended, since this informs method discovery for the next section.
 //! ```
 //! # use flat::*;
 //! # enum Direction {

@@ -410,6 +410,7 @@ mod primitive_impls3 {
                 }
 
                 #[doc(hidden)]
+                #[deprecated(note = "Use view_3rd_breakdown_2nd")]
                 pub fn breakdown_2nd_view_3rd(
                     &self,
                 ) -> View3Breakdown2ndView3rd<Schema3<T, U, $T>> {
@@ -479,6 +480,7 @@ impl<T, U, V: Clone + Into<f64>, Dv: Deref<Target = V>> Dataset<Schema3<T, U, Dv
         }
     }
 
+    #[deprecated(note = "Use view_3rd_breakdown_2nd")]
     pub fn breakdown_2nd_view_3rd(&self) -> View3Breakdown2ndView3rd<Schema3<T, U, Dv>> {
         let extractor: Box<dyn Fn(&<Schema3<T, U, Dv> as Schema>::Dimensions) -> f64> =
             Box::new(|d| (*d.2).clone().into());
@@ -628,6 +630,7 @@ mod primitive_impls4 {
                 }
 
                 #[doc(hidden)]
+                #[deprecated(note = "Use view_4th_breakdown_3rd")]
                 pub fn breakdown_3rd_view_4th(
                     &self,
                 ) -> View4Breakdown3rdView4th<Schema4<T, U, V, $T>> {
@@ -698,6 +701,7 @@ impl<T, U, V, W: Clone + Into<f64>, Dw: Deref<Target = W>> Dataset<Schema4<T, U,
         }
     }
 
+    #[deprecated(note = "Use view_4th_breakdown_3rd")]
     pub fn breakdown_3rd_view_4th(&self) -> View4Breakdown3rdView4th<Schema4<T, U, V, Dw>> {
         let extractor: Box<dyn Fn(&<Schema4<T, U, V, Dw> as Schema>::Dimensions) -> f64> =
             Box::new(|d| (*d.3).clone().into());
