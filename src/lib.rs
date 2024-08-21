@@ -127,7 +127,7 @@
 //! See the [`DatasetBuilder`] docs for more details.
 //!
 //! ### Get a View
-//! A view describes *what* to look at the dataset (but not *how* to render it).
+//! A view describes *what* to look at within the dataset (but not *how* to render it).
 //! It includes aspects like which columns form the frame vs. the rendering, as well as how to label these.
 //!
 //! The visualizations in `flat` always come in the following form.
@@ -159,7 +159,7 @@
 //! A widget describes *how* to render a view - the same view may be rendered differently by different widgets.
 //! This is where the specific appearance of the frame and rendering are defined.
 //!
-//! To render a widget, construct it with the view, and then invoke render with a `Render` configuration.
+//! To render a widget, first instantiate it with a view, and then invoke render on it with a `Render` configuration.
 //! This will produce a [`Flat`] which provides a [`std::fmt::Display`] implementation for the visualization.
 //!
 //! The configuration includes a number of parameters, which come in two sections.
@@ -190,7 +190,7 @@
 //! A subsequent section describes one of the key parameters to a rendering - the width (via `width_hint`).
 //!
 //! # Features
-//! `flat` uses features to enable rendering numeric types, specifically defined at the "Get a View" step.
+//! `flat` uses features to enable rendering for numeric types, specifically defined at the "Get a View" step.
 //! This is required due to how rust handles [specialization](https://rust-lang.github.io/rfcs/1210-impl-specialization.html).
 //!
 //! When deciding to use `flat`, you need to also decide the flavour of view generation.
@@ -226,7 +226,7 @@
 //! Values will never be *up-scaled* to fit the `width_hint`.
 //!
 //! The above process also applies for fractional and negative values.
-//! For fractions, `flat` always round the aggregate value before scaling.
+//! For fractions, `flat` always rounds the aggregate value before scaling.
 //! In the case of negatives, `flat` takes the absolute value to detect the appropriate bounds and to render the representation characters.
 //! Negative values are rendering using a different character marker (ex: `'⊖'`).
 mod abbreviate;
