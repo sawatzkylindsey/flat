@@ -546,7 +546,10 @@ impl Display for Flat {
                 ColumnType::Count | ColumnType::Breakdown => 1,
             })
             .sum();
-        view_width = view_width.saturating_div(view_columns);
+
+        if view_columns != 0 {
+            view_width = view_width.saturating_div(view_columns);
+        }
 
         if view_width < 2 {
             view_width = 2;
@@ -1743,5 +1746,40 @@ mod tests {
             )])]
         );
         assert_eq!(grid.build_overflow_overrides(), HashMap::default());
+    }
+
+    #[derive(Default)]
+    struct TestConfig {}
+
+    #[test]
+    fn display_flat_empty() {
+        let render: Render<TestConfig> = Render::default();
+        let value_range = 0.0..1.0;
+        let columns = Columns::default();
+        let grid = Grid::new(columns);
+        let flat = Flat::new(render, value_range, grid);
+
+        assert_eq!(flat.to_string(), "");
+    }
+
+    #[test]
+    fn display_flat() {
+        let render: Render<TestConfig> = Render::default();
+        let value_range = 0.0..1.0;
+        let mut columns = Columns::default();
+        columns.push(Column::string(Alignment::Left));
+        let mut grid = Grid::new(columns);
+        let mut row1 = Row::default();
+        row1.push(Value::Value(1.0));
+        grid.add(row1);
+        let mut row2 = Row::default();
+        row2.push(Value::Value(0.0));
+        grid.add(row2);
+        let mut row3 = Row::default();
+        row3.push(Value::Value(2.0));
+        grid.add(row3);
+        let flat = Flat::new(render, value_range, grid);
+
+        assert_eq!(flat.to_string(), "*\n\n**");
     }
 }
